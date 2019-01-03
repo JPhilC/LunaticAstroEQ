@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using ASCOM;
+using ASCOM.LunaticAstroEQ.Controller;
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -134,7 +135,7 @@ namespace ASCOM.LunaticAstroEQ
       /// The Key is the connection number that identifies the device, it could be the COM port name,
       /// USB ID or IP Address, the Value is the DeviceHardware class
       /// </summary>
-      private static Dictionary<string, DeviceHardware> connectedDevices = new Dictionary<string, DeviceHardware>();
+      private static Dictionary<string, AstroEQController> connectedDevices = new Dictionary<string, AstroEQController>();
 
       /// <summary>
       /// This is called in the driver Connect(true) property,
@@ -146,8 +147,11 @@ namespace ASCOM.LunaticAstroEQ
          lock (lockObject)
          {
             if (!connectedDevices.ContainsKey(deviceId))
-               connectedDevices.Add(deviceId, new DeviceHardware());
-            connectedDevices[deviceId].count++;       // increment the value
+            {
+               connectedDevices.Add(deviceId, new AstroEQController(deviceId));
+            }
+            connectedDevices[deviceId].Count++;       // increment the value
+            connectedDevices[deviceId].Connect();
          }
       }
 
@@ -157,9 +161,12 @@ namespace ASCOM.LunaticAstroEQ
          {
             if (connectedDevices.ContainsKey(deviceId))
             {
-               connectedDevices[deviceId].count--;
-               if (connectedDevices[deviceId].count <= 0)
+               connectedDevices[deviceId].Count--;
+               if (connectedDevices[deviceId].Count <= 0)
+               {
+                  connectedDevices[deviceId].Disconnect();
                   connectedDevices.Remove(deviceId);
+               }
             }
          }
       }
@@ -167,7 +174,7 @@ namespace ASCOM.LunaticAstroEQ
       public static bool IsConnected(string deviceId)
       {
          if (connectedDevices.ContainsKey(deviceId))
-            return (connectedDevices[deviceId].count > 0);
+            return (connectedDevices[deviceId].Count > 0 && connectedDevices[deviceId].IsConnected);
          else
             return false;
       }
@@ -176,19 +183,6 @@ namespace ASCOM.LunaticAstroEQ
 
    }
 
-   /// <summary>
-   /// Skeleton of a hardware class, all this does is hold a count of the connections,
-   /// in reality extra code will be needed to handle the hardware in some way
-   /// </summary>
-   public class DeviceHardware
-   {
-      internal int count { set; get; }
-
-      internal DeviceHardware()
-      {
-         count = 0;
-      }
-   }
 
    //#region ServedClassName attribute
    ///// <summary>

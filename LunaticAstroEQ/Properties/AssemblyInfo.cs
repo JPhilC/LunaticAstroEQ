@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("ASCOM LunaticAstroEQ server")]
-[assembly: AssemblyDescription("ASCOM multi-interface server for LunaticAstroEQ")]
+[assembly: AssemblyDescription("ASCOM multi-interface server for AstroEQ Controllers")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("ASCOM Initiative")]
+[assembly: AssemblyCompany("Lunatic Software")]
 [assembly: AssemblyProduct("")]
-[assembly: AssemblyCopyright("Copyright © 2018, phil")]
+[assembly: AssemblyCopyright("Copyright © 2019, Lunatic Software")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("6.4.0.0")]
-[assembly: AssemblyFileVersion("6.4.0.0")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
 
 [assembly: ComVisibleAttribute(false)]
