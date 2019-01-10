@@ -1,12 +1,17 @@
 ﻿using ASCOM;
 using ASCOM.Utilities.Exceptions;
+using ASCOM.LunaticAstroEQ.Controller;
+using ASCOM.LunaticAstroEQ.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using TA.Ascom.ReactiveCommunications;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
@@ -14,17 +19,79 @@ namespace ASCOM.LunaticAstroEQ.Controller
    /// Skeleton of a hardware class, all this does is hold a count of the connections,
    /// in reality extra code will be needed to handle the hardware in some way
    /// </summary>
-   public class AstroEQController : IDisposable
+   [ComVisible(false)]
+   public partial class AstroEQController
    {
-      private ASCOM.Utilities.Serial serialPort = null;
-      private string serialPortName;
+      #region Singleton code ...
+      private static AstroEQController _Instance = null;
 
-      public int Count { set; get; }
-
-      public AstroEQController(string portName)
+      public static AstroEQController Instance
       {
-         Count = 0;
-         serialPortName = portName;
+         get
+         {
+            if (_Instance == null)
+            {
+               _Instance = new AstroEQController();
+            }
+            return _Instance;
+         }
+      }
+
+      #endregion
+
+      #region Settings related stuff ...
+      private ISettingsProvider<ControllerSettings> _SettingsManager = null;
+
+      public ISettingsProvider<ControllerSettings> SettingsManager
+      {
+         get
+         {
+            if (_SettingsManager == null)
+            {
+               _SettingsManager = new SettingsProvider();
+            }
+            return _SettingsManager;
+         }
+      }
+
+      private ControllerSettings Settings
+      {
+         get
+         {
+            return SettingsManager.Settings;
+         }
+      }
+      #endregion
+
+      private object lockObject = new object();
+
+      /// <summary>
+      /// Connection string that is currently being used'
+      /// </summary>
+      private string ConnectionString;
+
+      /// <summary>
+      /// End point for connection to mount.
+      /// </summary>
+      private DeviceEndpoint EndPoint;
+
+      /// <summary>
+      /// Timeout in seconds.
+      /// </summary>
+      private double TimeOut = 2;
+
+      private int Retry = 1;
+
+
+      private int OpenConnections;
+
+      private bool ControllerActive;
+
+      private AstroEQController()
+      {
+         ConnectionString = string.Empty;
+         EndPoint = null;
+
          MCVersion = 0;
 
          Positions[0] = 0;
@@ -41,54 +108,54 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <summary>
       /// Distructor as per IDisposable documentation
       /// </summary>
-      ~AstroEQController()
-      {
-         Dispose(false);
-      }
+      //~AstroEQController()
+      //{
+      //   Dispose(false);
+      //}
 
       #region Connect/Disconnect taken from ASCOM example
-      public void Connect()
+      public int Connect(string ComPort, int baud, int timeout, int retry)
       {
-         try
+         if ((timeout == 0) || (timeout > 50000))
          {
-            serialPort = new ASCOM.Utilities.Serial();
-            serialPort.PortName = serialPortName;
-            serialPort.Connected = true;
-
-            // No initialise variables
-            MCInit();
-
+            return Constants.MOUNT_BADPARAM;
          }
-         catch (Exception ex)
+
+         if (retry > 100)
          {
-            if (serialPort != null)
-            {
-               serialPort.Dispose();
-               serialPort = null;
-            }
-            throw new ASCOM.DriverException("Failed to connect to COM port", ex);
+            return Constants.MOUNT_BADPARAM;
+         }
+
+         lock (lockObject)
+         {
+            int result = MCInit(ComPort, baud, timeout, retry);
+            Interlocked.Increment(ref OpenConnections);
+            return result;
          }
       }
 
-      public void Disconnect()
+      public int Disconnect()
       {
-         if (serialPort != null)
+         lock (lockObject)
          {
-            if (serialPort.Connected)
+            int result = 0;
+            Interlocked.Decrement(ref OpenConnections);
+            if (OpenConnections <= 0)
             {
-               serialPort.Connected = false;
-               serialPort.Dispose();
-               serialPort = null;
+               EndPoint = null;
+               ConnectionString = string.Empty;
+               ControllerActive = false;
             }
+            SettingsManager.SaveSettings();
+            return result;
          }
       }
-
 
       public bool IsConnected
       {
          get
          {
-            return (serialPort != null && serialPort.Connected);
+            return (EndPoint != null);
          }
       }
 
@@ -118,7 +185,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       const char cErrChar = '!';              // Leading charactor of an ABNORMAL response.
       const char cEndChar = (char)13;         // Tailing charactor of command and response.
       const double MAX_SPEED = 500;           //?
-      const double LOW_SPEED_MARGIN = (128.0 * CONSTANT.SIDEREALRATE);
+      const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE);
 
       private char dir = '0'; // direction
                               // Mount code: 0x00=EQ6, 0x01=HEQ5, 0x02=EQ5, 0x03=EQ3
@@ -135,6 +202,140 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       private bool InstantStop;              // Use InstantStop command for MCAxisStop
 
+      #region ASCOM serial comms stuff (hopefully can be removed once ReactiveStuff working)
+
+      ///// <summary>
+      ///// One communication between mount and client
+      ///// </summary>
+      ///// <param name="Axis">The target of command</param>
+      ///// <param name="Command">The comamnd char set</param>
+      ///// <param name="cmdDataStr">The data need to send</param>
+      ///// <returns>The response string from mount</returns>
+      //protected virtual String TalkWithAxis_ASCOM(AXISID Axis, char Command, string cmdDataStr)
+      //{
+      //   /// Lock the serial connection
+      //   /// It grantee there is only one thread entering this function in one time
+      //   /// ref: http://msdn.microsoft.com/en-us/library/ms173179.aspx
+      //   /// TODO: handle exception
+      //   lock (serialPort)
+      //   {
+      //      for (int i = 0; i < 2; i++)
+      //      {
+      //         // prepare to communicate
+      //         try
+      //         {
+      //            serialPort.ClearBuffers();
+      //            // send the request
+      //            SendRequest(Axis, Command, cmdDataStr);
+      //            //Trace.TraceInformation("Send command successful");
+      //            // receive the response
+      //            return ReceiveResponse();
+      //         }
+      //         catch (SerialPortInUseException e)
+      //         {
+      //            Trace.TraceError("Timeout, need Resend the Command");
+      //         }
+      //         catch (IOException e)
+      //         {
+      //            Trace.TraceError("Connnection Lost");
+      //            throw new DriverException("AstroEQ not responding", e);
+      //         }
+      //      }
+      //      //Trace.TraceError("Timeout, stop send");
+      //      if (Axis == AXISID.AXIS1)
+      //         throw new DriverException("AstroEQ axis 1 not responding");
+      //      else
+      //         throw new DriverException("AstroEQ axis 2 not responding");
+      //   }
+
+      //}
+
+
+      //protected void SendRequest(AXISID Axis, char Command, string cmdDataStr)
+      //{
+      //   if (cmdDataStr == null)
+      //      cmdDataStr = "";
+
+      //   const int BufferSize = 20;
+      //   StringBuilder CommandStr = new StringBuilder(BufferSize);
+      //   CommandStr.Append(cStartChar_Out);                  // 0: Leading char
+      //   CommandStr.Append(Command);                         // 1: Length of command( Source, distination, command char, data )
+
+      //   // Target Device
+      //   CommandStr.Append(Axis == AXISID.AXIS1 ? '1' : '2');    // 2: Target Axis
+      //                                                           // Copy command data to buffer
+      //   CommandStr.Append(cmdDataStr);
+
+      //   CommandStr.Append(cEndChar);    // CR Character            
+
+      //   serialPort.Transmit(CommandStr.ToString());
+      //}
+
+      //protected string ReceiveResponse()
+      //{
+      //   //string response = null;
+      //   //try
+      //   //{
+      //   //   // Receive Response
+      //   //   response = serialPort.Receive();
+      //   //}
+      //   //catch (TimeoutException tox)
+      //   //{
+      //   //   throw new ASCOM.DriverException("Receive timeout error", tox);
+      //   //}
+      //   //catch { throw; }
+
+      //   //return response;
+
+      //   // format "::e1\r=020883\r"
+      //   long startticks = DateTime.Now.Ticks;
+
+      //   StringBuilder mBuffer = new StringBuilder(15);
+      //   bool StartReading = false, EndReading = false;
+
+      //   int index = 0;
+      //   long interval = 0;
+      //   while (!EndReading)
+      //   {
+      //      index++;
+      //      long curticks = DateTime.Now.Ticks;
+      //      interval = curticks - startticks;
+
+      //      if ((curticks - startticks) > 10000 * 1000)
+      //      {
+      //         //Trace.TraceError("Timeout {0} / {1}", mConnection.mBuffer, mBuffer);          
+      //         throw new ASCOM.DriverException("Receive timeout error");
+      //      }
+
+      //      string r = serialPort.Receive();
+
+      //      for (int i = 0; i < r.Length; i++)
+      //      {
+      //         // this code order is important
+      //         if (r[i] == cStartChar_In || r[i] == cErrChar)
+      //            StartReading = true;
+
+      //         if (StartReading)
+      //            mBuffer.Append(r[i]);
+
+      //         if (r[i] == cEndChar)
+      //         {
+      //            if (StartReading)
+      //            {
+      //               EndReading = true;
+      //               break;
+      //            }
+      //         }
+      //      }
+
+      //      Thread.Sleep(1);
+      //   }
+
+      //   //Trace.TraceInformation("Loop :" + index.ToString() + "Ticks :" + interval);
+      //   return mBuffer.ToString();
+      //}
+
+      #endregion
 
       /// <summary>
       /// One communication between mount and client
@@ -143,174 +344,179 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <param name="Command">The comamnd char set</param>
       /// <param name="cmdDataStr">The data need to send</param>
       /// <returns>The response string from mount</returns>
-      protected virtual String TalkWithAxis(AXISID Axis, char Command, string cmdDataStr)
+      private String TalkWithAxis(AXISID axis, char cmd, string cmdDataStr)
       {
-         /// Lock the serial connection
-         /// It grantee there is only one thread entering this function in one time
-         /// ref: http://msdn.microsoft.com/en-us/library/ms173179.aspx
-         /// TODO: handle exception
-         lock (serialPort)
-         {
-            for (int i = 0; i < 2; i++)
-            {
-               // prepare to communicate
-               try
-               {
-                  serialPort.ClearBuffers();
-                  // send the request
-                  SendRequest(Axis, Command, cmdDataStr);
-                  //Trace.TraceInformation("Send command successful");
-                  // receive the response
-                  return ReceiveResponse();
-               }
-               catch (SerialPortInUseException e)
-               {
-                  Trace.TraceError("Timeout, need Resend the Command");
-               }
-               catch (IOException e)
-               {
-                  Trace.TraceError("Connnection Lost");
-                  throw new DriverException("AstroEQ not responding", e);
-               }
-            }
-            //Trace.TraceError("Timeout, stop send");
-            if (Axis == AXISID.AXIS1)
-               throw new DriverException("AstroEQ axis 1 not responding");
-            else
-               throw new DriverException("AstroEQ axis 2 not responding");
-         }
-
-      }
-
-      protected void SendRequest(AXISID Axis, char Command, string cmdDataStr)
-      {
-         if (cmdDataStr == null)
-            cmdDataStr = "";
+         System.Diagnostics.Debug.Write(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
+         string response = string.Empty;
 
          const int BufferSize = 20;
-         StringBuilder CommandStr = new StringBuilder(BufferSize);
-         CommandStr.Append(cStartChar_Out);                  // 0: Leading char
-         CommandStr.Append(Command);                         // 1: Length of command( Source, distination, command char, data )
+         StringBuilder sb = new StringBuilder(BufferSize);
+         sb.Append(cStartChar_Out);                  // 0: Leading char
+         sb.Append(cmd);                         // 1: Length of command( Source, distination, command char, data )
 
          // Target Device
-         CommandStr.Append(Axis == AXISID.AXIS1 ? '1' : '2');    // 2: Target Axis
-                                                                 // Copy command data to buffer
-         CommandStr.Append(cmdDataStr);
+         sb.Append(((int)axis + 1).ToString());    // 2: Target Axis
+                                                   // Copy command data to buffer
+         sb.Append(cmdDataStr);
 
-         CommandStr.Append(cEndChar);    // CR Character            
+         sb.Append(cEndChar);    // CR Character            
 
-         serialPort.Transmit(CommandStr.ToString());
-      }
+         string cmdString = sb.ToString();
+         //string.Format("{0}{1}{2}{3}{4}",
+         //cStartChar_Out,
+         //command,
+         //(int)axis,
+         //(cmdDataStr ?? "."),
+         //cEndChar);
 
-      protected string ReceiveResponse()
-      {
-         //string response = null;
-         //try
-         //{
-         //   // Receive Response
-         //   response = serialPort.Receive();
-         //}
-         //catch (TimeoutException tox)
-         //{
-         //   throw new ASCOM.DriverException("Receive timeout error", tox);
-         //}
-         //catch { throw; }
+         var cmdTransaction = new EQTransaction(cmdString) { Timeout = TimeSpan.FromSeconds(TimeOut) };
 
-         //return response;
 
-         // format "::e1\r=020883\r"
-         long startticks = DateTime.Now.Ticks;
-
-         StringBuilder mBuffer = new StringBuilder(15);
-         bool StartReading = false, EndReading = false;
-
-         int index = 0;
-         long interval = 0;
-         while (!EndReading)
+         using (ICommunicationChannel channel = new SerialCommunicationChannel(EndPoint))
+         using (var processor = new ReactiveTransactionProcessor())
          {
-            index++;
-            long curticks = DateTime.Now.Ticks;
-            interval = curticks - startticks;
-
-            if ((curticks - startticks) > 10000 * 1000)
+            var transactionObserver = new TransactionObserver(channel);
+            processor.SubscribeTransactionObserver(transactionObserver);
+            try
             {
-               //Trace.TraceError("Timeout {0} / {1}", mConnection.mBuffer, mBuffer);          
-               throw new ASCOM.DriverException("Receive timeout error");
-            }
+               channel.Open();
 
-            string r = serialPort.Receive();
-
-            for (int i = 0; i < r.Length; i++)
-            {
-               // this code order is important
-               if (r[i] == cStartChar_In || r[i] == cErrChar)
-                  StartReading = true;
-
-               if (StartReading)
-                  mBuffer.Append(r[i]);
-
-               if (r[i] == cEndChar)
+               // prepare to communicate
+               for (int i = 0; i < Retry; i++)
                {
-                  if (StartReading)
+
+                  Task.Run(() => processor.CommitTransaction(cmdTransaction));
+                  cmdTransaction.WaitForCompletionOrTimeout();
+                  if (!cmdTransaction.Failed)
                   {
-                     EndReading = true;
+                     response = cmdTransaction.Value;
                      break;
+                  }
+                  else
+                  {
+                     Trace.TraceError(cmdTransaction.ErrorMessage.Single());
                   }
                }
             }
+            catch (Exception ex)
+            {
+               Trace.TraceError("Connnection Lost");
+               throw new DriverException("AstroEQ not responding", ex);
+            }
+            finally
+            {
+               // To clean up, we just need to dispose the TransactionObserver and the channel is closed automatically.
+               // Not strictly necessary, but good practice.
+               transactionObserver.OnCompleted(); // There will be no more transactions.
+               transactionObserver = null; // not necessary, but good practice.
+            }
 
-            Thread.Sleep(1);
          }
-
-         //Trace.TraceInformation("Loop :" + index.ToString() + "Ticks :" + interval);
-         return mBuffer.ToString();
+         //if (string.IsNullOrWhiteSpace(response)) {
+         //   if (axis == AxisId.Axis1)
+         //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS1);
+         //   else
+         //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS2);
+         //}
+         System.Diagnostics.Debug.WriteLine(string.Format(" -> Response: {0} (0x{0:X})", response));
+         return response;
       }
-      public void MCInit()
+
+      public int MCInit(string comportname, int baud, int timeout, int retry)
       {
-         try
+
+         int result;
+         if (ControllerActive)
          {
-            InquireMotorBoardVersion(AXISID.AXIS1);
-         }
-         catch
-         {
-            // try again
-            System.Threading.Thread.Sleep(200);
-            InquireMotorBoardVersion(AXISID.AXIS1);
+            return Constants.MOUNT_COMCONNECTED;
          }
 
-         MountCode = MCVersion & 0xFF;
+         if ((timeout == 0) || (timeout > 50000))
+         {
+            return Constants.MOUNT_BADPARAM;
+         }
 
-         //// NOTE: Simulator settings, Mount dependent Settings
+         if (retry > 100)
+         {
+            return Constants.MOUNT_BADPARAM;
+         }
 
-         // Inquire Gear Rate
-         InquireGridPerRevolution(AXISID.AXIS1);
-         InquireGridPerRevolution(AXISID.AXIS2);
+         lock (lockObject)
+         {
+            try
+            {
+               result = Constants.MOUNT_SUCCESS;
+               if (EndPoint == null)
+               {
+                  #region Capture connection parameters ...
+                  // ConnectionString = string.Format("{0}:{1},None,8,One,DTR,RTS", ComPort, baud);
+                  ConnectionString = string.Format("{0}:{1},None,8,One,NoDTR,NoRTS", comportname, baud);
+                  EndPoint = SerialDeviceEndpoint.FromConnectionString(ConnectionString);
+                  TimeOut = timeout * 0.001;  // Convert from milliseconds to seconds.
+                  Retry = retry;
+                  #endregion
 
-         // Inquire motor timer interrup frequency
-         InquireTimerInterruptFreq(AXISID.AXIS1);
-         InquireTimerInterruptFreq(AXISID.AXIS2);
+                  ControllerActive = false;
+                  try
+                  {
+                     InquireMotorBoardVersion(AXISID.AXIS1);
+                  }
+                  catch
+                  {
+                     // try again
+                     System.Threading.Thread.Sleep(200);
+                     InquireMotorBoardVersion(AXISID.AXIS1);
+                  }
 
-         // Inquire motor high speed ratio
-         InquireHighSpeedRatio(AXISID.AXIS1);
-         InquireHighSpeedRatio(AXISID.AXIS2);
+                  MountCode = MCVersion & 0xFF;
 
-         // Inquire PEC period
-         InquirePECPeriod(AXISID.AXIS1);
-         InquirePECPeriod(AXISID.AXIS2);
+                  //// NOTE: Simulator settings, Mount dependent Settings
 
-         // Inquire Axis Position
-         Positions[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
-         Positions[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
+                  // Inquire Gear Rate
+                  InquireGridPerRevolution(AXISID.AXIS1);
+                  InquireGridPerRevolution(AXISID.AXIS2);
 
-         InitializeMC();
+                  // Inquire motor timer interrup frequency
+                  InquireTimerInterruptFreq(AXISID.AXIS1);
+                  InquireTimerInterruptFreq(AXISID.AXIS2);
 
-         // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
-         LowSpeedGotoMargin[(int)AXISID.AXIS1] = (long)(640 * CONSTANT.SIDEREALRATE * FactorRadToStep[(int)AXISID.AXIS1]);
-         LowSpeedGotoMargin[(int)AXISID.AXIS2] = (long)(640 * CONSTANT.SIDEREALRATE * FactorRadToStep[(int)AXISID.AXIS2]);
+                  // Inquire motor high speed ratio
+                  InquireHighSpeedRatio(AXISID.AXIS1);
+                  InquireHighSpeedRatio(AXISID.AXIS2);
 
-         // Default break steps
-         BreakSteps[(int)AXISID.AXIS1] = 3500;
-         BreakSteps[(int)AXISID.AXIS2] = 3500;
+                  // Inquire PEC period
+                  InquirePECPeriod(AXISID.AXIS1);
+                  InquirePECPeriod(AXISID.AXIS2);
+
+                  // Inquire Axis Position
+                  Positions[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
+                  Positions[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
+
+                  InitializeMC();
+
+                  // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
+                  LowSpeedGotoMargin[(int)AXISID.AXIS1] = (long)(640 * Constants.SIDEREALRATE * FactorRadToStep[(int)AXISID.AXIS1]);
+                  LowSpeedGotoMargin[(int)AXISID.AXIS2] = (long)(640 * Constants.SIDEREALRATE * FactorRadToStep[(int)AXISID.AXIS2]);
+
+                  // Default break steps
+                  BreakSteps[(int)AXISID.AXIS1] = 3500;
+                  BreakSteps[(int)AXISID.AXIS2] = 3500;
+
+                  ControllerActive = true;
+
+                  result = Constants.MOUNT_SUCCESS;
+               }
+               else
+               {
+                  result = Constants.MOUNT_COMCONNECTED;
+               }
+            }
+            catch (Exception ex)
+            {
+               result = Constants.MOUNT_COMERROR;
+            }
+         }
+         return result;
       }
 
       public void MCAxisSlew(AXISID Axis, double Speed)
@@ -325,7 +531,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          bool forward = false, highspeed = false;
 
          // InternalSpeed lower than 1/1000 of sidereal rate?
-         if (Math.Abs(InternalSpeed) <= CONSTANT.SIDEREALRATE / 1000.0)
+         if (Math.Abs(InternalSpeed) <= Constants.SIDEREALRATE / 1000.0)
          {
             MCAxisStop(Axis);
             return;
@@ -730,41 +936,41 @@ namespace ASCOM.LunaticAstroEQ.Controller
       #endregion
 
       #region IDisposable
-      private bool disposed = false;
+      //private bool disposed = false;
 
-      public void Dispose()
-      {
-         Dispose(true);
-         // This object will be cleaned up by the Dispose method.
-         // Therefore, you should call GC.SupressFinalize to
-         // take this object off the finalization queue
-         // and prevent finalization code for this object
-         // from executing a second time.
-         GC.SuppressFinalize(this);
-      }
+      //public void Dispose()
+      //{
+      //   Dispose(true);
+      //   // This object will be cleaned up by the Dispose method.
+      //   // Therefore, you should call GC.SupressFinalize to
+      //   // take this object off the finalization queue
+      //   // and prevent finalization code for this object
+      //   // from executing a second time.
+      //   GC.SuppressFinalize(this);
+      //}
 
-      private void Dispose(bool disposing)
-      {
-         // Check to see if Dispose has already been called.
-         if (!this.disposed)
-         {
-            // If disposing equals true, dispose all managed
-            // and unmanaged resources.
-            if (disposing)
-            {
-               // Dispose managed resources.
-               if (serialPort != null)
-               {
-                  serialPort.Connected = false;
-                  serialPort.Dispose();
-                  serialPort = null;
-               }
-            }
+      //private void Dispose(bool disposing)
+      //{
+      //   // Check to see if Dispose has already been called.
+      //   if (!this.disposed)
+      //   {
+      //      // If disposing equals true, dispose all managed
+      //      // and unmanaged resources.
+      //      if (disposing)
+      //      {
+      //         // Dispose managed resources.
+      //         if (serialPort != null)
+      //         {
+      //            serialPort.Connected = false;
+      //            serialPort.Dispose();
+      //            serialPort = null;
+      //         }
+      //      }
 
-            // Note disposing has been done.
-            disposed = true;
-         }
-      }
+      //      // Note disposing has been done.
+      //      disposed = true;
+      //   }
+      //}
 
 
       #endregion

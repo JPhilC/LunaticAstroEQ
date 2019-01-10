@@ -40,6 +40,10 @@ using ASCOM.DeviceInterface;
 using System.Globalization;
 using System.Collections;
 using System.Linq;
+using System.Reflection;
+using Core = ASCOM.LunaticAstroEQ.Core;
+using ASCOM.LunaticAstroEQ.Controller;
+
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -61,7 +65,7 @@ namespace ASCOM.LunaticAstroEQ
    [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
    [ServedClassName("Driver for AstroEQ telescope controllers")]
    [ClassInterface(ClassInterfaceType.None)]
-   public class Telescope : ReferenceCountedObjectBase, ITelescopeV3
+   public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
    {
       /// <summary>
       /// ASCOM DeviceID (COM ProgID) for this driver.
@@ -74,12 +78,7 @@ namespace ASCOM.LunaticAstroEQ
       /// </summary>
       internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ.";
 
-      internal static string comPortProfileName = "COM Port"; // Constants used for Profile persistence
-      internal static string comPortDefault = "COM1";
-      internal static string traceStateProfileName = "Trace Level";
-      internal static string traceStateDefault = "false";
-
-      internal static string comPort; // Variables to hold the currrent device configuration
+      private AstroEQController _Controller;
 
       /// <summary>
       /// Private variable to hold the connected state
@@ -101,6 +100,28 @@ namespace ASCOM.LunaticAstroEQ
       /// </summary>
       internal static TraceLogger tl;
 
+      internal bool TraceState
+      {
+         get
+         {
+            return tl.Enabled;
+         }
+         set
+         {
+            tl.Enabled = value;
+            Settings.TracingState = value;
+         }
+      }
+
+      internal TelescopeSettings Settings
+      {
+         get
+         {
+            return SettingsProvider.Current.Settings;
+         }
+      }
+
+
       /// <summary>
       /// Initializes a new instance of the <see cref="LunaticAstroEQ"/> class.
       /// Must be public for COM registration.
@@ -111,7 +132,7 @@ namespace ASCOM.LunaticAstroEQ
          driverDescription = GetDriverDescription();
 
          tl = new TraceLogger("", "LunaticAstroEQ");
-         ReadProfile(); // Read device configuration from the ASCOM Profile store
+         tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
 
          tl.LogMessage("Telescope", "Starting initialisation");
 
@@ -155,14 +176,16 @@ namespace ASCOM.LunaticAstroEQ
          // consider only showing the setup dialog if not connected
          // or call a different dialog if connected
          if (IsConnected)
+         {
             System.Windows.Forms.MessageBox.Show("Already connected, just press OK");
+         }
 
-         using (SetupDialogForm F = new SetupDialogForm())
+         using (SetupDialogForm F = new SetupDialogForm(this))
          {
             var result = F.ShowDialog();
             if (result == System.Windows.Forms.DialogResult.OK)
             {
-               WriteProfile(); // Persist device configuration values to the ASCOM Profile store
+               SettingsProvider.Current.SaveSettings(); 
             }
          }
       }
@@ -233,24 +256,39 @@ namespace ASCOM.LunaticAstroEQ
          }
          set
          {
-            tl.LogMessage("Connected", "Set {0}", value);
+            LogMessage("Connected", "Set {0}", value);
             if (value == IsConnected)
                return;
 
             if (value)
             {
-               if (string.IsNullOrWhiteSpace(comPort)) {
+               if (string.IsNullOrWhiteSpace(Settings.COMPort))
+               {
                   throw new ASCOM.ValueNotSetException("comPort");
                }
                connectedState = true;
-               LogMessage("Connected Set", "Connecting to port {0}", comPort);
-               SharedResources.Connect(comPort);
+               LogMessage("Connected Set", "Connecting to port {0}", Settings.COMPort);
+               int connectionResult = _Controller.Connect(Settings.COMPort, (int)Settings.BaudRate, (int)Settings.Timeout, (int)Settings.Retry);
+               if (connectionResult == Core.Constants.MOUNT_SUCCESS)
+               {
+                  connectedState = true;
+               }
+               else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
+               {
+                  IsConnected = true;
+               }
+               else
+               {
+                  // Something went wrong so not connected.
+                  IsConnected = false;
+               }
             }
             else
             {
+               _Controller.Disconnect();
                connectedState = false;
-               LogMessage("Connected Set", "Disconnecting from port {0}", comPort);
-               SharedResources.Disconnect(comPort);
+               LogMessage("Connected Set", "Disconnecting from port {0}", Settings.COMPort);
+               IsConnected = false; ;
             }
          }
       }
@@ -742,13 +780,21 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("SiteElevation Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SiteElevation", false);
+            if (!Settings.SiteElevation.HasValue)
+            {
+               throw new ASCOM.ValueNotSetException("SiteElevation");
+            }
+            LogMessage("SiteElevation", "Get {0}", Settings.SiteElevation.Value);
+            return Settings.SiteElevation.Value;
          }
          set
          {
-            tl.LogMessage("SiteElevation Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SiteElevation", true);
+            LogMessage("SiteElevation", "Set {0}", value);
+            if (Settings.SiteElevation.HasValue && Settings.SiteElevation.Value == value)
+            {
+               return;
+            }
+            Settings.SiteElevation = value;
          }
       }
 
@@ -756,13 +802,23 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("SiteLatitude Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SiteLatitude", false);
+            if (!Settings.SiteLatitude.HasValue)
+            {
+               throw new ASCOM.ValueNotSetException("SiteLatitude");
+            }
+            LogMessage("SiteLatitude", "Get {0}", Settings.SiteLatitude.Value);
+            return Settings.SiteLatitude.Value;
          }
          set
          {
-            tl.LogMessage("SiteLatitude Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SiteLatitude", true);
+            LogMessage("SiteLatitud", "Set {0}", value);
+            if (Settings.SiteLatitude.HasValue && Settings.SiteLatitude.Value == value)
+            {
+               return;
+            }
+            Settings.SiteLatitude = value;
+            Settings.StartAltitude = Settings.SiteLatitude.Value;
+            SettingsProvider.Current.SaveSettings();
          }
       }
 
@@ -770,13 +826,21 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("SiteLongitude Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SiteLongitude", false);
+            if (!Settings.SiteLongitude.HasValue)
+            {
+               throw new ASCOM.ValueNotSetException("SiteLongitude");
+            }
+            LogMessage("SiteLongitude", "Get {0}", Settings.SiteLongitude.Value);
+            return Settings.SiteLongitude.Value;
          }
          set
          {
-            tl.LogMessage("SiteLongitude Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SiteLongitude", true);
+            LogMessage("SiteLongitude", "Set {0}", value);
+            if (Settings.SiteLongitude.HasValue && Settings.SiteLongitude.Value == value)
+            {
+               return;
+            }
+            Settings.SiteLongitude = value;
          }
       }
 
@@ -933,7 +997,7 @@ namespace ASCOM.LunaticAstroEQ
          get
          {
             DateTime utcDate = DateTime.UtcNow;
-            tl.LogMessage("TrackingRates", "Get - " + String.Format("MM/dd/yy HH:mm:ss", utcDate));
+            tl.LogMessage("UTCDate", "Get - " + String.Format("MM/dd/yy HH:mm:ss", utcDate));
             return utcDate;
          }
          set
@@ -952,20 +1016,14 @@ namespace ASCOM.LunaticAstroEQ
       #endregion
 
       #region Private properties and methods
+
       // here are some useful properties and methods that can be used as required
       // to help with driver development
 
       /// <summary>
       /// Returns true if there is a valid connection to the driver hardware
       /// </summary>
-      private bool IsConnected
-      {
-         get
-         {
-            // TODO check that the driver hardware connection exists and is connected to the hardware
-            return SharedResources.IsConnected(comPort);
-         }
-      }
+      private bool IsConnected { get; set; }
 
       /// <summary>
       /// Use this function to throw an exception if we aren't connected to the hardware
@@ -979,31 +1037,7 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      /// <summary>
-      /// Read the device configuration from the ASCOM Profile store
-      /// </summary>
-      internal void ReadProfile()
-      {
-         using (Profile driverProfile = new Profile())
-         {
-            driverProfile.DeviceType = "Telescope";
-            tl.Enabled = Convert.ToBoolean(driverProfile.GetValue(driverID, traceStateProfileName, string.Empty, traceStateDefault));
-            comPort = driverProfile.GetValue(driverID, comPortProfileName, string.Empty, comPortDefault);
-         }
-      }
 
-      /// <summary>
-      /// Write the device configuration to the  ASCOM  Profile store
-      /// </summary>
-      internal void WriteProfile()
-      {
-         using (Profile driverProfile = new Profile())
-         {
-            driverProfile.DeviceType = "Telescope";
-            driverProfile.WriteValue(driverID, traceStateProfileName, tl.Enabled.ToString());
-            driverProfile.WriteValue(driverID, comPortProfileName, comPort.ToString());
-         }
-      }
 
       /// <summary>
       /// Log helper function that takes formatted strings and arguments

@@ -245,7 +245,7 @@ namespace ASCOM.LunaticAstroEQ
                   object[] attrbutes = info.GetCustomAttributes(typeof(ServedClassNameAttribute), false);
                   if (attrbutes.Length > 0)
                   {
-                     //MessageBox.Show("Adding Type: " + type.Name + " " + type.FullName);
+                     MessageBox.Show("Adding Type: " + type.Name + " " + type.FullName);
                      s_ComObjectTypes.Add(type); //PWGS - much simpler
                      s_ComObjectAssys.Add(so);
                   }

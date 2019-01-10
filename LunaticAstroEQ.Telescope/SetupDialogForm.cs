@@ -1,20 +1,17 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
-using ASCOM.Utilities;
-using ASCOM.LunaticAstroEQ;
 
 namespace ASCOM.LunaticAstroEQ
 {
    [ComVisible(false)]              // Form not registered for COM!
    public partial class SetupDialogForm : Form
    {
-      public SetupDialogForm()
+
+      private Telescope  _Telescope = null;
+      public SetupDialogForm(Telescope telescope)
       {
+         _Telescope = telescope;
          InitializeComponent();
          // Initialise current values of user settings from the ASCOM Profile
          InitUI();
@@ -24,12 +21,17 @@ namespace ASCOM.LunaticAstroEQ
       {
          // Place any validation constraint checks here
          // Update the state variables with results from the dialogue
-         Telescope.comPort = (string)comboBoxComPort.SelectedItem;
-         Telescope.tl.Enabled = chkTrace.Checked;
+         _Telescope.Settings.COMPort = (string)comboBoxComPort.SelectedItem;
+         _Telescope.Settings.StartAltitude = Convert.ToDouble(startAltitudeTextBox.Text);
+         _Telescope.Settings.StartAzimuth = Convert.ToDouble(startAzimuthTextBox.Text);
+         _Telescope.TraceState = chkTrace.Checked;    // The property will update the Settings object.
+
+         _Telescope = null;
       }
 
       private void cmdCancel_Click(object sender, EventArgs e) // Cancel button event handler
       {
+         _Telescope = null;   // Remove circular reference
          Close();
       }
 
@@ -52,15 +54,17 @@ namespace ASCOM.LunaticAstroEQ
 
       private void InitUI()
       {
-         chkTrace.Checked = Telescope.tl.Enabled;
+         chkTrace.Checked = _Telescope.TraceState;
          // set the list of com ports to those that are currently available
          comboBoxComPort.Items.Clear();
          comboBoxComPort.Items.AddRange(System.IO.Ports.SerialPort.GetPortNames());      // use System.IO because it's static
                                                                                          // select the current port if possible
-         if (comboBoxComPort.Items.Contains(Telescope.comPort))
+         if (comboBoxComPort.Items.Contains(_Telescope.Settings.COMPort))
          {
-            comboBoxComPort.SelectedItem = Telescope.comPort;
+            comboBoxComPort.SelectedItem = _Telescope.Settings.COMPort;
          }
+         startAltitudeTextBox.Text = _Telescope.Settings.StartAltitude.ToString();
+         startAzimuthTextBox.Text = _Telescope.Settings.StartAzimuth.ToString();
       }
    }
 }
