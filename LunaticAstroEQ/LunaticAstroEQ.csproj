@@ -122,6 +122,9 @@
     <None Include="app.config" />
     <None Include="LocalServer.snk" />
     <None Include="LunaticSoftwareStrongNameKey.snk" />
+    <None Include="NLog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

@@ -173,15 +173,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="GitVersionTask">
-      <Version>3.6.5</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="JetBrains.Annotations">
-      <Version>2018.2.1</Version>
-      <PrivateAssets>All</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="NLog">
       <Version>4.5.10</Version>
     </PackageReference>

@@ -9,7 +9,7 @@ namespace LunaticAstroEQ.Tests
    [TestClass]
    public class TakiTests
    {
-      DateTime _localTime = new DateTime(2017, 3, 17, 9, 9, 38);
+      readonly DateTime _localTime = new DateTime(2017, 3, 17, 9, 9, 38);
       [TestMethod]
       public void TakiExample5_4_4()
       {

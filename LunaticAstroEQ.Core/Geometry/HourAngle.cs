@@ -70,8 +70,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       private static Regex[] _HmsRegexes;
       private static Regex[] _CadRegexes;
 
-      private static int _NumberDecimalDigitsForHours = NumberFormatInfo.CurrentInfo.NumberDecimalDigits;
-      private static int _NumberDecimalDigitsForSeconds = NumberFormatInfo.CurrentInfo.NumberDecimalDigits;
+      private static readonly int _NumberDecimalDigitsForHours = NumberFormatInfo.CurrentInfo.NumberDecimalDigits;
+      private static readonly int _NumberDecimalDigitsForSeconds = NumberFormatInfo.CurrentInfo.NumberDecimalDigits;
 
       private double _Value;
       private int _Hours;

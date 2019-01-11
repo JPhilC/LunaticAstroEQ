@@ -81,11 +81,6 @@ namespace ASCOM.LunaticAstroEQ
       private AstroEQController _Controller;
 
       /// <summary>
-      /// Private variable to hold the connected state
-      /// </summary>
-      private bool connectedState;
-
-      /// <summary>
       /// Private variable to hold an ASCOM Utilities object
       /// </summary>
       private Util utilities;
@@ -133,15 +128,16 @@ namespace ASCOM.LunaticAstroEQ
 
          _Controller = AstroEQController.Instance;
 
-         tl = new TraceLogger("", "LunaticAstroEQ");
-         tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
+         tl = new TraceLogger("", "LunaticAstroEQ")
+         {
+            Enabled = Settings.TracingState // This will also load the settings as it is the first time it is accessed.
+         };
 
          tl.LogMessage("Telescope", "Starting initialisation");
 
-         connectedState = false; // Initialise connected to false
+         IsConnected = false;
          utilities = new Util(); //Initialise util object
          astroUtilities = new AstroUtils(); // Initialise astro utilities object
-                                            //TODO: Implement your additional construction here
 
          tl.LogMessage("Telescope", "Completed initialisation");
       }
@@ -149,8 +145,7 @@ namespace ASCOM.LunaticAstroEQ
       private string GetDriverDescription()
       {
          string descr;
-         ServedClassNameAttribute attr = this.GetType().GetCustomAttributes(typeof(ServedClassNameAttribute), true).FirstOrDefault() as ServedClassNameAttribute;
-         if (attr != null)
+         if (this.GetType().GetCustomAttributes(typeof(ServedClassNameAttribute), true).FirstOrDefault() is ServedClassNameAttribute attr)
          {
             descr = attr.DisplayName;
          }
@@ -269,12 +264,11 @@ namespace ASCOM.LunaticAstroEQ
                {
                   throw new ASCOM.ValueNotSetException("comPort");
                }
-               connectedState = true;
                LogMessage("Connected Set", "Connecting to port {0}", Settings.COMPort);
                int connectionResult = _Controller.Connect(Settings.COMPort, (int)Settings.BaudRate, (int)Settings.Timeout, (int)Settings.Retry);
                if (connectionResult == Core.Constants.MOUNT_SUCCESS)
                {
-                  connectedState = true;
+                  IsConnected = true;
                }
                else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
                {
@@ -289,7 +283,6 @@ namespace ASCOM.LunaticAstroEQ
             else
             {
                _Controller.Disconnect();
-               connectedState = false;
                LogMessage("Connected Set", "Disconnecting from port {0}", Settings.COMPort);
                IsConnected = false; ;
             }

@@ -110,6 +110,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="LunaticSoftwareStrongNameKey.snk" />
+    <None Include="NLog.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

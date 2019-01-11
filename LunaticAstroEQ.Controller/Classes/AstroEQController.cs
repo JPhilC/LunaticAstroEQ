@@ -638,7 +638,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          long NewStepIndex = AngleToStep(Axis, NewValue);
          NewStepIndex += 0x800000;
 
-         string szCmd = longTo6BitHEX(NewStepIndex);
+         string szCmd = LongTo6BitHEX(NewStepIndex);
          TalkWithAxis(Axis, 'E', szCmd);
 
          Positions[(int)Axis] = NewValue;
@@ -734,7 +734,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          // + Integer.parseInt(response.substring(2, 4), 16) * 256
          // + Integer.parseInt(response.substring(4, 6), 16) * 256 * 256;
       }
-      protected string longTo6BitHEX(long number)
+      protected string LongTo6BitHEX(long number)
       {
          // 31 -> 0F0000
          String A = ((int)number & 0xFF).ToString("X").ToUpper();
@@ -908,24 +908,24 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
       protected void SetGotoTargetIncrement(AXISID Axis, long StepsCount)
       {
-         string cmd = longTo6BitHEX(StepsCount);
+         string cmd = LongTo6BitHEX(StepsCount);
 
          TalkWithAxis(Axis, 'H', cmd);
       }
       protected void SetBreakPointIncrement(AXISID Axis, long StepsCount)
       {
-         string szCmd = longTo6BitHEX(StepsCount);
+         string szCmd = LongTo6BitHEX(StepsCount);
 
          TalkWithAxis(Axis, 'M', szCmd);
       }
       protected void SetBreakSteps(AXISID Axis, long NewBrakeSteps)
       {
-         string szCmd = longTo6BitHEX(NewBrakeSteps);
+         string szCmd = LongTo6BitHEX(NewBrakeSteps);
          TalkWithAxis(Axis, 'U', szCmd);
       }
       protected void SetStepPeriod(AXISID Axis, long StepsCount)
       {
-         string szCmd = longTo6BitHEX(StepsCount);
+         string szCmd = LongTo6BitHEX(StepsCount);
          TalkWithAxis(Axis, 'I', szCmd);
       }
       protected void StartMotion(AXISID Axis)

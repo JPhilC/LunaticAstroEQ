@@ -22,13 +22,13 @@ namespace ASCOM.LunaticAstroEQ.TelescopeTester
          Properties.Settings.Default.Save();
       }
 
-      private void buttonChoose_Click(object sender, EventArgs e)
+      private void ButtonChoose_Click(object sender, EventArgs e)
       {
          Properties.Settings.Default.DriverId = ASCOM.DriverAccess.Telescope.Choose(Properties.Settings.Default.DriverId);
          SetUIState();
       }
 
-      private void buttonConnect_Click(object sender, EventArgs e)
+      private void ButtonConnect_Click(object sender, EventArgs e)
       {
          if (IsConnected)
          {
@@ -36,8 +36,10 @@ namespace ASCOM.LunaticAstroEQ.TelescopeTester
          }
          else
          {
-            driver = new ASCOM.DriverAccess.Telescope(Properties.Settings.Default.DriverId);
-            driver.Connected = true;
+            driver = new ASCOM.DriverAccess.Telescope(Properties.Settings.Default.DriverId)
+            {
+               Connected = true
+            };
          }
          SetUIState();
       }
