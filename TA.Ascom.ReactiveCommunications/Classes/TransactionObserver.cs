@@ -56,7 +56,6 @@ namespace TA.Ascom.ReactiveCommunications
         ///     Called when the next transaction is available.
         /// </summary>
         /// <param name="transaction">The transaction.</param>
-        [UsedImplicitly]
         public void OnNext(DeviceTransaction transaction)
             {
             log.Info($"Committing transaction {transaction}");
@@ -68,7 +67,6 @@ namespace TA.Ascom.ReactiveCommunications
         ///     Notifies the observer that the provider has experienced an error condition.
         /// </summary>
         /// <param name="error">An object that provides additional information about the error.</param>
-        [UsedImplicitly]
         public void OnError(Exception error)
             {
             //ToDo - currently we will just go 'belly up'. Is there a better way of handling errors?

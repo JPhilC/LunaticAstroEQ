@@ -131,31 +131,31 @@
     <AssemblyOriginatorKeyFile>LunaticSoftwareStrongNameKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="ChannelFactory.cs" />
-    <Compile Include="DeviceEndpoint.cs" />
-    <Compile Include="DeviceTransaction.cs" />
+    <Compile Include="Classes\ChannelFactory.cs" />
+    <Compile Include="Classes\DeviceEndpoint.cs" />
+    <Compile Include="Classes\DeviceTransaction.cs" />
+    <Compile Include="Classes\SerialPort.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Diagnostics\AsciiExtensions.cs" />
     <Compile Include="Diagnostics\AsciiSymbols.cs" />
     <Compile Include="Diagnostics\ObservableDiagnosticExtensions.cs" />
-    <Compile Include="ICommunicationsChannel.cs" />
-    <Compile Include="InvalidEndpoint.cs" />
-    <Compile Include="ISerialPort.cs" />
-    <Compile Include="ITransactionProcessor.cs" />
-    <Compile Include="Maybe.cs" />
-    <Compile Include="NetworkCommunicationsChannel.cs" />
+    <Compile Include="Interfaces\ICommunicationsChannel.cs" />
+    <Compile Include="Classes\InvalidEndpoint.cs" />
+    <Compile Include="Interfaces\ISerialPort.cs" />
+    <Compile Include="Interfaces\ITransactionProcessor.cs" />
+    <Compile Include="Classes\Maybe.cs" />
+    <Compile Include="Classes\NetworkCommunicationsChannel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReactiveTransactionProcessor.cs" />
-    <Compile Include="RegisteredChannelBuilder.cs" />
-    <Compile Include="SerialCommunicationChannel.cs" />
-    <Compile Include="SerialDeviceEndpoint.cs" />
-    <Compile Include="ObservableExtensions.cs" />
-    <Compile Include="SerialPort.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="NetworkDeviceEndpoint.cs" />
-    <Compile Include="TransactionAvailableEventArgs.cs" />
-    <Compile Include="TransactionLifecycle.cs" />
-    <Compile Include="TransactionObserver.cs" />
+    <Compile Include="Classes\ReactiveTransactionProcessor.cs" />
+    <Compile Include="Classes\RegisteredChannelBuilder.cs" />
+    <Compile Include="Classes\SerialCommunicationChannel.cs" />
+    <Compile Include="Classes\SerialDeviceEndpoint.cs" />
+    <Compile Include="Classes\ObservableExtensions.cs" />
+    <Compile Include="Classes\NetworkDeviceEndpoint.cs" />
+    <Compile Include="Classes\TransactionAvailableEventArgs.cs" />
+    <Compile Include="Classes\TransactionLifecycle.cs" />
+    <Compile Include="Classes\TransactionObserver.cs" />
     <Compile Include="Transactions\BooleanTransaction.cs" />
     <Compile Include="Transactions\NoReplyTransaction.cs" />
     <Compile Include="Transactions\TerminatedSingleCharacterTransaction.cs" />
@@ -168,9 +168,6 @@
     <None Include="ClassDiagram1.cd" />
     <None Include="ClassDiagram2.cd" />
     <None Include="LunaticSoftwareStrongNameKey.snk" />
-    <None Include="TA.Ascom.ReactiveCommunications.nuspec">
-      <SubType>Designer</SubType>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NLog">
@@ -183,6 +180,7 @@
   <ItemGroup>
     <Reference Include="System" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
