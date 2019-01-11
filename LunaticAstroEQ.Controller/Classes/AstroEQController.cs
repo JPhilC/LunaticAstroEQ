@@ -346,7 +346,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <returns>The response string from mount</returns>
       private String TalkWithAxis(AXISID axis, char cmd, string cmdDataStr)
       {
-         System.Diagnostics.Debug.Write(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
+         System.Diagnostics.Debug.WriteLine(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
          string response = string.Empty;
 
          const int BufferSize = 20;
@@ -362,6 +362,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          sb.Append(cEndChar);    // CR Character            
 
          string cmdString = sb.ToString();
+         System.Diagnostics.Debug.WriteLine($" - > Command: {cmdString}");
          //string.Format("{0}{1}{2}{3}{4}",
          //cStartChar_Out,
          //command,
@@ -418,7 +419,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          //   else
          //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS2);
          //}
-         System.Diagnostics.Debug.WriteLine(string.Format(" -> Response: {0} (0x{0:X})", response));
+         System.Diagnostics.Debug.WriteLine($" -> Response: {response} (0x{response:X})");
          return response;
       }
 
@@ -459,6 +460,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   ControllerActive = false;
                   try
                   {
+                     System.Diagnostics.Debug.WriteLine("InquireMotorBoardVersion");
                      InquireMotorBoardVersion(AXISID.AXIS1);
                   }
                   catch
@@ -473,25 +475,31 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   //// NOTE: Simulator settings, Mount dependent Settings
 
                   // Inquire Gear Rate
+                  System.Diagnostics.Debug.WriteLine("InquireGridPerRevolution");
                   InquireGridPerRevolution(AXISID.AXIS1);
                   InquireGridPerRevolution(AXISID.AXIS2);
 
                   // Inquire motor timer interrup frequency
+                  System.Diagnostics.Debug.WriteLine("InquireTimerInterruptFreq");
                   InquireTimerInterruptFreq(AXISID.AXIS1);
                   InquireTimerInterruptFreq(AXISID.AXIS2);
 
                   // Inquire motor high speed ratio
+                  System.Diagnostics.Debug.WriteLine("InquireHighSpeedRatio");
                   InquireHighSpeedRatio(AXISID.AXIS1);
                   InquireHighSpeedRatio(AXISID.AXIS2);
 
                   // Inquire PEC period
+                  System.Diagnostics.Debug.WriteLine("InquirePECPeriod");
                   InquirePECPeriod(AXISID.AXIS1);
                   InquirePECPeriod(AXISID.AXIS2);
 
                   // Inquire Axis Position
+                  System.Diagnostics.Debug.WriteLine("MCGetAxisPosition");
                   Positions[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
                   Positions[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
 
+                  System.Diagnostics.Debug.WriteLine("InitializeMC");
                   InitializeMC();
 
                   // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate

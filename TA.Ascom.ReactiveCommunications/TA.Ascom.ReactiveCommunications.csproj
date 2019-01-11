@@ -171,10 +171,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NLog">
-      <Version>4.5.10</Version>
+      <Version>4.5.11</Version>
     </PackageReference>
     <PackageReference Include="System.Reactive">
-      <Version>4.1.0</Version>
+      <Version>4.1.2</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
