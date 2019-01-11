@@ -257,6 +257,10 @@ namespace ASCOM.LunaticAstroEQ
                // Just swallow the exception and continue to the next item.
                continue;
             }
+            catch (ReflectionTypeLoadException)
+            {
+               continue;
+            }
             catch (Exception e)
             {
                MessageBox.Show("Failed to load served COM class assembly " + fi.Name + " - " + e.Message,

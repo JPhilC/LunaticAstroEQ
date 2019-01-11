@@ -60,7 +60,10 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>LocalServer.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>LunaticSoftwareStrongNameKey.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ASCOM.Attributes, Version=6.0.0.0, Culture=neutral, PublicKeyToken=565de7938946fba7, processorArchitecture=MSIL" />
@@ -109,9 +112,6 @@
     <Reference Include="System.Windows" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
-    <Reference Include="TA.Ascom.ReactiveCommunications, Version=1.2.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\TA.Ascom.ReactiveCommunications.1.2.2\lib\net471\TA.Ascom.ReactiveCommunications.dll</HintPath>
-    </Reference>
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
@@ -139,6 +139,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="LocalServer.snk" />
+    <None Include="LunaticSoftwareStrongNameKey.snk" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

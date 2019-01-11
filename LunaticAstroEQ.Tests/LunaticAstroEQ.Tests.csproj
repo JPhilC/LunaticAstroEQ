@@ -43,6 +43,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ASCOM.Astrometry, Version=6.0.0.0, Culture=neutral, PublicKeyToken=565de7938946fba7, processorArchitecture=MSIL" />
+    <Reference Include="ASCOM.DeviceInterfaces, Version=6.0.0.0, Culture=neutral, PublicKeyToken=565de7938946fba7, processorArchitecture=MSIL" />
     <Reference Include="ASCOM.Utilities, Version=6.0.0.0, Culture=neutral, PublicKeyToken=565de7938946fba7, processorArchitecture=MSIL" />
     <Reference Include="CommonServiceLocator, Version=2.0.4.0, Culture=neutral, PublicKeyToken=489b6accfaf20ef0, processorArchitecture=MSIL">
       <HintPath>..\packages\CommonServiceLocator.2.0.4\lib\net47\CommonServiceLocator.dll</HintPath>
@@ -78,6 +79,10 @@
     <ProjectReference Include="..\LunaticAstroEQ.Core\LunaticAstroEQ.Core.csproj">
       <Project>{bab4e803-5772-42f2-8843-059074bab448}</Project>
       <Name>LunaticAstroEQ.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LunaticAstroEQ.Telescope\LunaticAstroEQ.Telescope.csproj">
+      <Project>{64308775-BD4A-469C-BCAB-3ED830B811AF}</Project>
+      <Name>LunaticAstroEQ.Telescope</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

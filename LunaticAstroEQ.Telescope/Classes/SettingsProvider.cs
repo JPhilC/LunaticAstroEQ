@@ -8,19 +8,19 @@ using System.Reflection;
 
 namespace ASCOM.LunaticAstroEQ
 {
-   public class SettingsProvider : ISettingsProvider<TelescopeSettings>
+   public class TelescopeSettingsProvider : ISettingsProvider<TelescopeSettings>
    {
 
       #region Singleton implimentation
-      private static SettingsProvider _Current = null;
+      private static TelescopeSettingsProvider _Current = null;
 
-      public static SettingsProvider Current
+      public static TelescopeSettingsProvider Current
       {
          get
          {
             if (_Current == null)
             {
-               _Current = new SettingsProvider();
+               _Current = new TelescopeSettingsProvider();
             }
             return _Current;
          }
@@ -134,7 +134,7 @@ namespace ASCOM.LunaticAstroEQ
 
 
 
-      private SettingsProvider()
+      private TelescopeSettingsProvider()
       {
          if (_Settings == null)
          {
@@ -146,7 +146,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            return SettingsProvider._Settings;
+            return TelescopeSettingsProvider._Settings;
          }
       }
 

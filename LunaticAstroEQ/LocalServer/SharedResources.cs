@@ -15,6 +15,7 @@
 //
 
 using ASCOM.LunaticAstroEQ.Controller;
+using System.Collections.Generic;
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -30,8 +31,8 @@ namespace ASCOM.LunaticAstroEQ
    {
 
 
-      //// object used for locking to prevent multiple drivers accessing common code at the same time
-      //private static readonly object lockObject = new object();
+      // object used for locking to prevent multiple drivers accessing common code at the same time
+      private static readonly object lockObject = new object();
 
       //// Shared serial port. This will allow multiple drivers to use one single serial port.
       //private static ASCOM.Utilities.Serial s_sharedSerial = new ASCOM.Utilities.Serial();      // Shared serial port
@@ -41,21 +42,6 @@ namespace ASCOM.LunaticAstroEQ
       // Public access to shared resources
       //
 
-      public static AstroEQController Controller
-      {
-         get
-         {
-            return AstroEQController.Instance; ;
-         }
-      }
-
-      public static bool IsConnected
-      {
-         get
-         {
-            return Controller.IsConnected;
-         }
-      }
       #region single serial port connector
       //
       // this region shows a way that a single serial port could be connected to by multiple 
@@ -185,13 +171,14 @@ namespace ASCOM.LunaticAstroEQ
       //   }
       //}
 
-      //public static bool IsConnected(string deviceId)
-      //{
-      //   if (connectedDevices.ContainsKey(deviceId))
-      //      return (connectedDevices[deviceId].Count > 0 && connectedDevices[deviceId].IsConnected);
-      //   else
-      //      return false;
-      //}
+      public static bool IsConnected(string deviceId)
+      {
+         return AstroEQController.Instance.IsConnected;
+         //if (connectedDevices.ContainsKey(deviceId))
+         //   return connectedDevices[deviceId].IsConnected;
+         //else
+         //   return false;
+      }
 
       #endregion
 

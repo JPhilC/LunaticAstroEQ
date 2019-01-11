@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace ASCOM.LunaticAstroEQ
+namespace ASCOM.LunaticAstroEQ.TelescopeTester
 {
    public partial class Form1 : Form
    {

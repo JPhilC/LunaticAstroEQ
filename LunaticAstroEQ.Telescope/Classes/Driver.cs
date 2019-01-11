@@ -65,7 +65,8 @@ namespace ASCOM.LunaticAstroEQ
    [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
    [ServedClassName("Driver for AstroEQ telescope controllers")]
    [ClassInterface(ClassInterfaceType.None)]
-   public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
+   public partial class Telescope : ITelescopeV3
+   // public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
    {
       /// <summary>
       /// ASCOM DeviceID (COM ProgID) for this driver.
@@ -117,7 +118,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            return SettingsProvider.Current.Settings;
+            return TelescopeSettingsProvider.Current.Settings;
          }
       }
 
@@ -130,6 +131,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          driverID = Marshal.GenerateProgIdForType(this.GetType());
          driverDescription = GetDriverDescription();
+
+         _Controller = AstroEQController.Instance;
 
          tl = new TraceLogger("", "LunaticAstroEQ");
          tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
@@ -185,7 +188,7 @@ namespace ASCOM.LunaticAstroEQ
             var result = F.ShowDialog();
             if (result == System.Windows.Forms.DialogResult.OK)
             {
-               SettingsProvider.Current.SaveSettings(); 
+               TelescopeSettingsProvider.Current.SaveSettings(); 
             }
          }
       }
@@ -818,7 +821,7 @@ namespace ASCOM.LunaticAstroEQ
             }
             Settings.SiteLatitude = value;
             Settings.StartAltitude = Settings.SiteLatitude.Value;
-            SettingsProvider.Current.SaveSettings();
+            TelescopeSettingsProvider.Current.SaveSettings();
          }
       }
 
