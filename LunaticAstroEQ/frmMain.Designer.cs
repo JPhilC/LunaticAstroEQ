@@ -40,6 +40,7 @@ namespace ASCOM.LunaticAstroEQ
          this.label1.Size = new System.Drawing.Size(199, 33);
          this.label1.TabIndex = 0;
          this.label1.Text = "This is an ASCOM driver, not a program for you to use.";
+         this.label1.Click += new System.EventHandler(this.label1_Click);
          // 
          // frmMain
          // 

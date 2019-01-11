@@ -65,8 +65,7 @@ namespace ASCOM.LunaticAstroEQ
    [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
    [ServedClassName("Driver for AstroEQ telescope controllers")]
    [ClassInterface(ClassInterfaceType.None)]
-   public partial class Telescope : ITelescopeV3
-   // public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
+   public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
    {
       /// <summary>
       /// ASCOM DeviceID (COM ProgID) for this driver.
@@ -183,12 +182,13 @@ namespace ASCOM.LunaticAstroEQ
             System.Windows.Forms.MessageBox.Show("Already connected, just press OK");
          }
 
+
          using (SetupDialogForm F = new SetupDialogForm(this))
          {
             var result = F.ShowDialog();
             if (result == System.Windows.Forms.DialogResult.OK)
             {
-               TelescopeSettingsProvider.Current.SaveSettings(); 
+               TelescopeSettingsProvider.Current.SaveSettings();
             }
          }
       }

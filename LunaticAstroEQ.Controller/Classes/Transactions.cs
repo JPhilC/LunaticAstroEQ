@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TA.Ascom.ReactiveCommunications;
 using System.Reactive.Linq;
-using System.Diagnostics;
-using TA.Ascom.ReactiveCommunications.Diagnostics;
 using System.Runtime.InteropServices;
+using TA.Ascom.ReactiveCommunications;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
