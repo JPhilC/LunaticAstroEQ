@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TA.Ascom.ReactiveCommunications</RootNamespace>
     <AssemblyName>TA.Ascom.ReactiveCommunications</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <CodeContractsAssemblyMode>1</CodeContractsAssemblyMode>
     <TargetFrameworkProfile />
@@ -174,7 +174,7 @@
       <Version>4.5.11</Version>
     </PackageReference>
     <PackageReference Include="System.Reactive">
-      <Version>4.1.2</Version>
+      <Version>3.1.1</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

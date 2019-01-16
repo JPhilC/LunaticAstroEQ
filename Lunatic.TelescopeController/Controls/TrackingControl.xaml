@@ -1,0 +1,70 @@
+﻿<UserControl x:Class="Lunatic.TelescopeController.Controls.TrackingControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Lunatic.TelescopeController.Controls"
+             xmlns:ltc="clr-namespace:Lunatic.TelescopeController"
+             mc:Ignorable="d" >
+    <GroupBox Template="{StaticResource LunaticGroupBoxControlTemplate}">
+        <GroupBox.Header>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Track Rate: "/>
+                <TextBlock Text="{Binding CurrentTrackingMode}"/>
+            </StackPanel>
+        </GroupBox.Header>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="5" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Button Style="{StaticResource SmallSquareButton}"  
+                    Command="{Binding StartTrackingCommand}" CommandParameter="{x:Static ltc:TrackingMode.Stop}">
+                <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/Stop Sign-96.png" />
+            </Button>
+            <Button Grid.Column="2" Style="{StaticResource SmallSquareButton}"
+                    Command="{Binding StartTrackingCommand}" CommandParameter="{x:Static ltc:TrackingMode.Sidereal}">
+                <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/Star-96.png" />
+            </Button>
+            <Button Grid.Column="4" Style="{StaticResource SmallSquareButton}"
+                    Command="{Binding StartTrackingCommand}" CommandParameter="{x:Static ltc:TrackingMode.Lunar}">
+                <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/Moon-96.png" />
+            </Button>
+            <Button Grid.Column="6" Style="{StaticResource SmallSquareButton}"
+                    Command="{Binding StartTrackingCommand}" CommandParameter="{x:Static ltc:TrackingMode.Solar}">
+                <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/Sun-96.png" />
+            </Button>
+            <Button  Grid.Column="8" Style="{StaticResource SmallSquareButton}"
+                     Command="{Binding StartTrackingCommand}" CommandParameter="{x:Static ltc:TrackingMode.Custom}">
+                <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/Comet-96.png" />
+            </Button>
+            <Grid Grid.Row="2" Grid.ColumnSpan="9">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock>RA</TextBlock>
+                <TextBox Grid.Column="2">RA Rate</TextBox>
+                <TextBlock Grid.Column="4">DEC</TextBlock>
+                <TextBox Grid.Column="6">DEC Rate</TextBox>
+            </Grid>
+        </Grid>
+    </GroupBox>
+</UserControl>

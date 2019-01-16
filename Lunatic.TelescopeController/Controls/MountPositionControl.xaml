@@ -1,0 +1,59 @@
+﻿<UserControl x:Class="Lunatic.TelescopeController.Controls.MountPositionControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Lunatic.TelescopeController.Controls"
+             xmlns:lcc="clr-namespace:ASCOM.LunaticAstroEQ.Controls;assembly=ASCOM.LunaticAstroEQ.Core"
+             mc:Ignorable="d"
+             d:DesignWidth="240"
+             DataContext="{Binding Main, Source={StaticResource Locator}}">
+    <UserControl.Resources>
+        <lcc:HourAngleValueConverter x:Key="HourAngleValueConverter" />
+        <lcc:AngleValueConverter x:Key="AngleValueConverter" />
+    </UserControl.Resources>
+    <GroupBox Header="Mount Position" Template="{StaticResource LunaticGroupBoxControlTemplate}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Column="0" Grid.Row="0" Text="LST" Style="{StaticResource RedLEDLabelLarge}" />
+            <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding LocalSiderealTime, Converter={StaticResource HourAngleValueConverter}}" Style="{StaticResource RedLEDValueLarge}"  />
+
+
+            <TextBlock Grid.Column="0" Grid.Row="2" Text="RA" Style="{StaticResource RedLEDLabelLarge}" />
+            <TextBlock Grid.Column="2" Grid.Row="2" Text="{Binding RightAscension, Converter={StaticResource HourAngleValueConverter}}" Style="{StaticResource RedLEDValueLarge}"/>
+
+            <TextBlock Grid.Column="0" Grid.Row="4" Text="DEC" Style="{StaticResource RedLEDLabelLarge}"/>
+            <TextBlock Grid.Column="2" Grid.Row="4" Text="{Binding Declination, Converter={StaticResource AngleValueConverter}}" Style="{StaticResource RedLEDValueLarge}"/>
+
+            <TextBlock Grid.Column="0" Grid.Row="6" Text="AZ" Style="{StaticResource RedLEDLabelLarge}"/>
+            <TextBlock Grid.Column="2" Grid.Row="6" Text="{Binding Azimuth, Converter={StaticResource AngleValueConverter}}" Style="{StaticResource RedLEDValueLarge}"/>
+
+            <TextBlock Grid.Column="0" Grid.Row="8" Text="ALT" Style="{StaticResource RedLEDLabelLarge}"/>
+            <TextBlock Grid.Column="2" Grid.Row="8" Text="{Binding Altitude, Converter={StaticResource AngleValueConverter}}" Style="{StaticResource RedLEDValueLarge}"/>
+
+            <TextBlock Grid.Column="0" Grid.Row="10" Text="PierSide" Style="{StaticResource RedLEDLabelLarge}"/>
+            <TextBlock Grid.Column="2" Grid.Row="10" Text="{Binding PierSide}" Style="{StaticResource RedLEDValueLarge}"/>
+
+            <TextBlock Grid.Column="0"  Grid.ColumnSpan="3"
+                       Grid.Row="0" Grid.RowSpan="11"
+                       Text="PARKED" Style="{StaticResource ParkedTextBlock}" Visibility="{Binding IsParked, Converter={StaticResource BooleanToVisiblityConverter}}" RenderTransformOrigin="0.5,0.5" />
+        </Grid>
+    </GroupBox>
+</UserControl>

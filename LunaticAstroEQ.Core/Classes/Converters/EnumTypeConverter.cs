@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace ASCOM.LunaticAstroEQ.Core
+namespace ASCOM.LunaticAstroEQ.Controls
 {
    [ComVisible(false)]
     public class EnumTypeConverter : EnumConverter

@@ -1,0 +1,82 @@
+﻿<UserControl
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:tc="clr-namespace:Lunatic.TelescopeController"
+             xmlns:lcore="clr-namespace:ASCOM.LunaticAstroEQ.Core;assembly=ASCOM.LunaticAstroEQ.Core"
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity" 
+             xmlns:cmd="http://www.galasoft.ch/mvvmlight"
+             x:Class="Lunatic.TelescopeController.Controls.SlewButtons"
+             mc:Ignorable="d">
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="32" />
+            <ColumnDefinition Width="32" />
+            <ColumnDefinition Width="32" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="32" />
+            <RowDefinition Height="32" />
+        </Grid.RowDefinitions>
+        <Button Grid.Column="1" Style="{StaticResource SmallSquareButton}" x:Name="North">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                    <cmd:EventToCommand Command="{Binding StartSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.North}"
+                                        PassEventArgsToCommand="True"/>
+                </i:EventTrigger>
+                <i:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                    <cmd:EventToCommand Command="{Binding StopSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.North}"
+                                        PassEventArgsToCommand="True"/>
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+            <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/North-96.png" />
+        </Button>
+        <Button Grid.Column="1" Grid.Row="2" Style="{StaticResource SmallSquareButton}" x:Name="South">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="PreviewMouseDown">
+                    <cmd:EventToCommand Command="{Binding StartSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.South}"/>
+                </i:EventTrigger>
+                <i:EventTrigger EventName="PreviewMouseUp">
+                    <cmd:EventToCommand Command="{Binding StopSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.South}"/>
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+            <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/South-96.png" />
+        </Button>
+        <Button Grid.Column="2" Grid.Row="1" Style="{StaticResource SmallSquareButton}" x:Name="East">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="PreviewMouseDown">
+                    <cmd:EventToCommand Command="{Binding StartSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.East}"/>
+                </i:EventTrigger>
+                <i:EventTrigger EventName="PreviewMouseUp">
+                    <cmd:EventToCommand Command="{Binding StopSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.East}"/>
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+            <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/East-96.png" />
+        </Button>
+        <Button Grid.Column="0" Grid.Row="1" Style="{StaticResource SmallSquareButton}" x:Name="West">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="PreviewMouseDown">
+                    <cmd:EventToCommand Command="{Binding StartSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.West}"/>
+                </i:EventTrigger>
+                <i:EventTrigger EventName="PreviewMouseUp">
+                    <cmd:EventToCommand Command="{Binding StopSlewCommand}"
+                                        CommandParameter="{x:Static lcore:SlewButton.West}"/>
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+            <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/West-96.png" />
+        </Button>
+        <Button Grid.Column="1" Grid.Row="1" Style="{StaticResource SmallSquareButton}"
+                Command="{Binding StopSlewCommand}" CommandParameter="{x:Static lcore:SlewButton.Stop}">
+            <Image Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/Stop Sign-96.png" />
+        </Button>
+    </Grid>
+</UserControl>

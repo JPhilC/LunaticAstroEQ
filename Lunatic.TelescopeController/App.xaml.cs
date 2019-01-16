@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using GalaSoft.MvvmLight.Threading;
+using Lunatic.TelescopeController.ViewModel;
 using System.Windows;
 
 namespace Lunatic.TelescopeController
@@ -13,5 +9,13 @@ namespace Lunatic.TelescopeController
    /// </summary>
    public partial class App : Application
    {
+      private void Application_Startup(object sender, StartupEventArgs e)
+      {
+         DispatcherHelper.Initialize();
+      }
+      private void Application_Exit(object sender, ExitEventArgs e)
+      {
+         ViewModelLocator.Cleanup();
+      }
    }
 }

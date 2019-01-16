@@ -4,9 +4,96 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Lunatic.TelescopeController"
+        xmlns:localcontrols="clr-namespace:Lunatic.TelescopeController.Controls"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Lunatic Telescope Control" 
+        DataContext="{Binding Main, Source={StaticResource Locator}}"
+        SizeToContent="WidthAndHeight"
+        d:DesignHeight="650" d:DesignWidth="750" 
+        Background="Black"
+        Icon="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/LunaticMoon.ico">
+    <Window.Resources>
+        <local:DisplayModeToBooleanConverter x:Key="DisplayModeConverter" />
+    </Window.Resources>
     <Grid>
-        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Menu Template="{DynamicResource LunaticMenuControlTemplate2}" >
+            <MenuItem Header="Telescope" ItemContainerStyle="{DynamicResource LunaticMenuItemStyle}">
+                <MenuItem Header="Choose ..." 
+                          Command="{Binding ChooseCommand}" Visibility="{Binding IsConnected, Converter={StaticResource ReversedBooleanToVisiblityConverter}}" ItemsPanel="{DynamicResource ItemsPanelTemplate1}"/>
+                <MenuItem Header="{Binding ConnectMenuHeader}" 
+                          Command="{Binding ConnectCommand}" Visibility="{Binding IsConnected, Converter={StaticResource ReversedBooleanToVisiblityConverter}}"/>
+                <MenuItem Header="{Binding DisconnectMenuHeader}" 
+                          Command="{Binding ConnectCommand}" Visibility="{Binding IsConnected, Converter={StaticResource BooleanToVisiblityConverter}}"/>
+                <MenuItem Header="{Binding SetupMenuHeader}" 
+                          Command="{Binding SetupCommand}" Visibility="{Binding DriverSelected, Converter={StaticResource BooleanToVisiblityConverter}}"/>
+                <Separator></Separator>
+                <MenuItem Header="Exit" Command="{Binding SaveChangesAndCloseCommand}"/>
+            </MenuItem>
+            <MenuItem Header="Display">
+                <MenuItem Header="Mount position" Command="{Binding DisplayModeCommand}" CommandParameter="{x:Static local:DisplayMode.MountPosition}" 
+                          IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.MountPosition}}"/>
+                <MenuItem Header="Slew Controls Only" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.ReducedSlew}"  
+                           IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.ReducedSlew}}"/>
+                <MenuItem Header="Mount Axis Position" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.AxisPosition}"  
+                          IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.AxisPosition}}"/>
+                <MenuItem Header="Message Centre" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.MessageCentre}"  
+                          IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.MessageCentre}}"/>
+                <MenuItem Header="PEC Chart" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.PEC}"  
+                          IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.PEC}}"/>
+                <MenuItem Header="Pulse Guiding"  Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.PulseGuideMonitor}"  
+                          IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.PulseGuideMonitor}}"/>
+                <Separator />
+                <MenuItem Header="Goto Coordinate" Command="{Binding ShowGotoWindowCommand}" />
+            </MenuItem>
+        </Menu>
+        <Grid Grid.Row="1" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Row="1" Grid.Column="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="240" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <localcontrols:ReducedSlewControl Grid.Row="0" Visibility="{Binding ReducedSlewVisibility}" IsEnabled="{Binding IsConnected}"/>
+                <localcontrols:MountPositionControl Grid.Row="1" Visibility="{Binding MountPositionVisibility}" IsEnabled="{Binding IsConnected}"/>
+                <localcontrols:AxisPositionControl Grid.Row="1" Visibility="{Binding AxisPositionVisibility}" IsEnabled="{Binding IsConnected}"/>
+                <localcontrols:SlewControl Grid.Row="2" Visibility="{Binding SlewVisibility}" IsEnabled="{Binding IsConnected}"/>
+                <localcontrols:TrackingControl Grid.Row="3" Visibility="{Binding TrackingVisibility}" IsEnabled="{Binding IsConnected}"/>
+                <localcontrols:ParkControl Grid.Row="4" Visibility="{Binding ParkStatusVisibility}" IsEnabled="{Binding IsConnected}"/>
+                <Expander Grid.RowSpan="5" Grid.Column="1"
+                          ExpandDirection="Right"
+                          Visibility="{Binding ExpanderVisibility}">
+                    <Grid>
+                        <localcontrols:SettingsControl />
+                    </Grid>
+                </Expander>
+            </Grid>
+            <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Bottom"/>
+                <Image HorizontalAlignment="Center" VerticalAlignment="Top" 
+                       Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/LunaticMoon.png" 
+                    Stretch="None" Margin="0,0,0,10" />
+
+
+            </DockPanel>
+        </Grid>
+        <StatusBar Grid.Row="2" Background="#FF4B0909" Foreground="#FFEE0707">
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
+        </StatusBar>
     </Grid>
 </Window>

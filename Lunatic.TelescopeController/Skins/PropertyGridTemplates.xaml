@@ -1,0 +1,142 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+                    xmlns:ld="clr-namespace:Lunatic.TelescopeController"
+                    xmlns:lcc="clr-namespace:ASCOM.LunaticAstroEQ.Controls;assembly=ASCOM.LunaticAstroEQ.Core">
+    <ResourceDictionary.MergedDictionaries>
+        <!-- Load XCEED generic resource dictionary for some styles -->
+        <ResourceDictionary Source="pack://application:,,,/Xceed.Wpf.Toolkit;component/PropertyGrid/Themes/Generic.xaml"/>
+        <ResourceDictionary Source="pack://application:,,,/Lunatic.TelescopeController;component/Skins/MainSkin.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <lcc:GeoCoordinateToStringConverter x:Key="CoordinateConverter" />
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+
+    <!-- Implicit style for PropertyItem type (to make vertical content top alighed) -->
+    <Style TargetType="{x:Type xctk:PropertyItem}">
+        <Setter Property="VerticalContentAlignment"
+              Value="Top" />
+    </Style>
+
+    <!-- Bring all the data templates together in ab EditorDefinitionCollection -->
+    <xctk:EditorDefinitionCollection x:Key="SitePropertyGridPropertyEditors">
+        <xctk:EditorTemplateDefinition TargetProperties="Latitude">
+            <xctk:EditorTemplateDefinition.EditingTemplate>
+                <DataTemplate>
+                    <xctk:PropertyGridEditorTextBox Text="{Binding Value, Converter={StaticResource CoordinateConverter}, ConverterParameter={x:Static lcc:LatLong.Latitude}}"/>
+                </DataTemplate>
+            </xctk:EditorTemplateDefinition.EditingTemplate>
+        </xctk:EditorTemplateDefinition>
+        <xctk:EditorTemplateDefinition TargetProperties="Longitude">
+            <xctk:EditorTemplateDefinition.EditingTemplate>
+                <DataTemplate>
+                    <xctk:PropertyGridEditorTextBox Text="{Binding Value, Converter={StaticResource CoordinateConverter}, ConverterParameter={x:Static lcc:LatLong.Longitude}}"/>
+                </DataTemplate>
+            </xctk:EditorTemplateDefinition.EditingTemplate>
+        </xctk:EditorTemplateDefinition>
+    </xctk:EditorDefinitionCollection>
+
+    <DataTemplate x:Key="SiteDataTemplate">
+        <xctk:PropertyGrid
+                                SelectedObject="{Binding Value}"
+                                EditorDefinitions="{StaticResource SitePropertyGridPropertyEditors}"
+                                AutoGenerateProperties="False"
+                                IsMiscCategoryLabelHidden="True"
+                                ShowSearchBox="False"
+                                ShowAdvancedOptions="False"
+                                ShowDescriptionByTooltip="True"
+                                ShowSortOptions="False"
+                                ShowSummary="False"
+                                ShowTitle="False" BorderThickness="0">
+            <xctk:PropertyGrid.PropertyDefinitions>
+                <xctk:PropertyDefinition TargetProperties="SiteName,
+                                                         Elevation,
+                                                         Latitude,
+                                                         Longitude,
+                                                         Temperature,
+                                                         Hemisphere"/>
+            </xctk:PropertyGrid.PropertyDefinitions>
+        </xctk:PropertyGrid>
+    </DataTemplate>
+    
+    <DataTemplate x:Key="SiteCollectionDataTemplate">
+        <DockPanel>
+            <Button DockPanel.Dock="Top" Content="Add Site" 
+                    Style="{StaticResource HyperlinkLikeButton}"
+                    Command="{Binding SelectedObject.AddSiteCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type xctk:PropertyGrid}}}"
+                    CommandParameter="{Binding Value}"
+                    Margin="10,3,0,3"/>
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Value}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Expander Header="{Binding}"  Style="{StaticResource ExpanderStyle}">
+                            <Expander.HeaderTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="5" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="5" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="5" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <xctk:PropertyGridEditorCheckBox IsChecked="{Binding IsCurrentSite}" />
+                                        <xctk:PropertyGridEditorTextBlock  Grid.Column="2"  Text="{Binding SiteName}" />
+                                        <Button Grid.Column="4" Content="Map"
+                                                Style="{StaticResource HyperlinkLikeButton}"
+                                                Command="{Binding SelectedObject.GetSiteCoordinateCommand,
+                                                RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type xctk:PropertyGrid}}}"
+                                                CommandParameter="{Binding}" FontWeight="Normal"/>
+                                        <Button Grid.Column="6" Content="Remove"
+                                                Style="{StaticResource HyperlinkLikeButton}"
+                                                Command="{Binding SelectedObject.RemoveSiteCommand,
+                                                RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type xctk:PropertyGrid}}}"
+                                                CommandParameter="{Binding}" FontWeight="Normal"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </Expander.HeaderTemplate>
+                            <xctk:PropertyGrid
+                                SelectedObject="{Binding}"
+                                EditorDefinitions="{StaticResource SitePropertyGridPropertyEditors}"
+                                AutoGenerateProperties="False"
+                                IsMiscCategoryLabelHidden="True"
+                                ShowSearchBox="False"
+                                ShowAdvancedOptions="False"
+                                ShowDescriptionByTooltip="True"
+                                ShowSortOptions="False"
+                                ShowSummary="False"
+                                ShowTitle="False" BorderThickness="0">
+                                <xctk:PropertyGrid.PropertyDefinitions>
+                                    <xctk:PropertyDefinition TargetProperties="SiteName,
+                                                         Elevation,
+                                                         Latitude,
+                                                         Longitude,
+                                                         Hemisphere"/>
+                                </xctk:PropertyGrid.PropertyDefinitions>
+                            </xctk:PropertyGrid>
+                        </Expander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DockPanel>
+    </DataTemplate>
+
+    <xctk:EditorDefinitionCollection x:Key="PropertyGridPropertyEditors">
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource SiteCollectionDataTemplate}">
+            <xctk:EditorTemplateDefinition.TargetProperties>
+                <xctk:TargetPropertyType Type="{x:Type ld:SiteCollection}"/>
+            </xctk:EditorTemplateDefinition.TargetProperties>
+        </xctk:EditorTemplateDefinition>
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource SiteDataTemplate}">
+            <xctk:EditorTemplateDefinition.TargetProperties>
+                <xctk:TargetPropertyType Type="{x:Type ld:Site}"/>
+            </xctk:EditorTemplateDefinition.TargetProperties>
+        </xctk:EditorTemplateDefinition>
+    </xctk:EditorDefinitionCollection>
+
+
+
+</ResourceDictionary>
