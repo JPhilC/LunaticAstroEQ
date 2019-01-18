@@ -1,11 +1,4 @@
-﻿using ASCOM.Astrometry.Transform;
-using ASCOM.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 
 namespace ASCOM.LunaticAstroEQ.Core.Geometry
 {
@@ -27,6 +20,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       private AltAzCoordinate _AltAzimuth;
       private AxisPosition _AxesPosition;
       private DateTime _SyncTime;
+      private HourAngle _LocalApparentSiderialTime;
 
       /// <summary>
       /// Held for reference so that when a refresh is requested we know which coordinate
@@ -83,6 +77,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
       }
 
+
       /// <summary>
       /// The last time everything was syncronised 
       /// </summary>
@@ -95,6 +90,19 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          private set
          {
             _SyncTime = value;
+         }
+      }
+
+
+      public HourAngle LocalApparentSiderialTime
+      {
+         get
+         {
+            return _LocalApparentSiderialTime;
+         }
+         private set
+         {
+            _LocalApparentSiderialTime = value;
          }
       }
 
@@ -112,7 +120,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <summary>
       /// Simple initialisation with an equatorial coordinate
       /// </summary>
-      public MountCoordinate(EquatorialCoordinate equatorial) 
+      private MountCoordinate(EquatorialCoordinate equatorial) 
       {
          _Equatorial = equatorial;
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
@@ -121,19 +129,26 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <summary>
       /// Simple initialisation with an altAzimuth coordinate
       /// </summary>
-      public MountCoordinate(AltAzCoordinate altAz)
+      private MountCoordinate(AltAzCoordinate altAz)
       {
          _AltAzimuth = altAz;
          _MasterCoordinate = MasterCoordinateEnum.AltAzimuth;
       }
 
       /// <summary>
-      /// Initialisation with an equatorial coordinate, a transform instance and the local julian time (corrected)
+      /// Initialisation with an equatorial coordinate, a transform instance using the current time
+      /// </summary>
+      public MountCoordinate(EquatorialCoordinate equatorial, AscomTools tools) : this(equatorial, tools, DateTime.Now)
+      {
+      }
+
+      /// <summary>
+      /// Initialisation with an equatorial coordinate, a transform instance and the local time
       /// which then means that the AltAzimunth at the time is available.
       /// </summary>
-      public MountCoordinate(EquatorialCoordinate equatorial, Transform transform, DateTime localTime):this(equatorial)
+      public MountCoordinate(EquatorialCoordinate equatorial, AscomTools tools, DateTime localTime):this(equatorial)
       {
-         _AltAzimuth = this.GetAltAzimuth(transform, localTime);
+         _AltAzimuth = this.GetAltAzimuth(tools, localTime);
       }
 
       /// <summary>
@@ -142,11 +157,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="altAz">The AltAzimuth coordinate for the mount</param>
       /// <param name="suggested">The suggested position for the axes (e.g. via a star catalogue lookup)</param>
       /// <param name="localTime">The local time of the observation</param>
-      public MountCoordinate(string ra, string dec, AxisPosition axisPosition, Transform transform, DateTime localTime) : this(new EquatorialCoordinate(ra, dec))
+      public MountCoordinate(string ra, string dec, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(new EquatorialCoordinate(ra, dec))
       {
-         _SyncTime = localTime;
          _Equatorial = new EquatorialCoordinate(ra, dec);
-         _AltAzimuth = this.GetAltAzimuth(transform, localTime);
+         _AltAzimuth = this.GetAltAzimuth(tools, currentTime);
          _AxesPosition = axisPosition;
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
       }
@@ -155,118 +169,122 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// Initialisation with an equatorial coordinate, a transform instance and the local julian time (corrected)
       /// which then means that the AltAzimunth at the time is available.
       /// </summary>
-      public MountCoordinate(EquatorialCoordinate equatorial, AxisPosition axisPosition, Transform transform, DateTime localTime) : this(equatorial)
+      public MountCoordinate(EquatorialCoordinate equatorial, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(equatorial)
       {
-         _AltAzimuth = this.GetAltAzimuth(transform, localTime);
+         _AltAzimuth = this.GetAltAzimuth(tools, currentTime);
          _AxesPosition = axisPosition;
-         _SyncTime = localTime;
 
       }
 
       /// <summary>
-      /// Initialisation with an equatorial coordinate, a transform instance and the local julian time (corrected)
+      /// Initialisation with an equatorial coordinate, a transform instance the current time
+      /// </summary>
+      public MountCoordinate(AltAzCoordinate altAz, AscomTools tools) : this(altAz, tools, DateTime.Now)
+      {
+      }
+
+      /// <summary>
+      /// Initialisation with an equatorial coordinate, a transform instance and the local time
       /// which then means that the AltAzimunth at the time is available.
       /// </summary>
-      public MountCoordinate(AltAzCoordinate altAz, Transform transform, DateTime localTime) : this(altAz)
+      public MountCoordinate(AltAzCoordinate altAz, AscomTools tools, DateTime localTime) : this(altAz)
       {
-         _Equatorial = this.GetEquatorial(transform, localTime);
+         _Equatorial = this.GetEquatorial(tools, localTime);
       }
 
-      public MountCoordinate(AltAzCoordinate altAz, AxisPosition axisPosition, Transform transform, DateTime localTime) : this(altAz)
+      public MountCoordinate(AltAzCoordinate altAz, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(altAz)
       {
-         _Equatorial = this.GetEquatorial(transform, localTime);
+         _Equatorial = this.GetEquatorial(tools, currentTime);
          _AxesPosition = axisPosition;
-         _SyncTime = localTime;
       }
 
 
 
       /// <summary>
       /// Returns the AltAzimuth coordinate for the equatorial using the values
-      /// currently set in the passed Transform instance.
+      /// currently set in the passed AscomTools instance.
       /// </summary>
       /// <param name="transform"></param>
       /// <returns></returns>
-      public AltAzCoordinate GetAltAzimuth(Transform transform)
+      public AltAzCoordinate GetAltAzimuth(AscomTools tools)
       {
-         transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
-         transform.Refresh();
-         AltAzCoordinate coord = new AltAzCoordinate(transform.ElevationTopocentric, transform.AzimuthTopocentric);
+         tools.Transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
+         //tools.Transform.Refresh();
+         AltAzCoordinate coord = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
          return coord;
       }
 
       /// <summary>
       /// Returns the AltAzimuth coordinate for the equatorial using the values
-      /// currently set in the passed Transform instance.
+      /// currently set in the passed AscomTools instance.
       /// </summary>
       /// <param name="transform"></param>
       /// <returns></returns>
-      public AltAzCoordinate GetAltAzimuth(Transform transform, DateTime currentTime)
+      public AltAzCoordinate GetAltAzimuth(AscomTools tools, DateTime currentTime)
       {
-         transform.JulianDateUTC = AstroConvert.DateLocalToJulian(currentTime);
-         transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
-         // transform.Refresh();
-         AltAzCoordinate coord = new AltAzCoordinate(transform.ElevationTopocentric, transform.AzimuthTopocentric);
-         return coord;
+         _SyncTime = currentTime;
+         _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
+         tools.Transform.JulianDateTT = tools.Util.DateLocalToJulian(currentTime);
+         tools.Transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
+         _AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
+         return _AltAzimuth;
       }
 
       /// <summary>
       /// Returns the RADec coordinate for the observed AltAzimuth using the values
-      /// currently set in the passed Transform instance.
+      /// currently set in the passed AscomTools instance. Also sets the stored Equatorial
       /// </summary>
       /// <param name="transform"></param>
       /// <returns></returns>
-      public EquatorialCoordinate GetEquatorial(Transform transform, DateTime currentTime)
+      public EquatorialCoordinate GetEquatorial(AscomTools tools, DateTime currentTime)
       {
-         transform.JulianDateUTC = AstroConvert.JulianDateUTC(currentTime);
-         transform.SetAzimuthElevation(_AltAzimuth.Azimuth, _AltAzimuth.Altitude);
-         transform.Refresh();
-         EquatorialCoordinate coord = new EquatorialCoordinate(transform.RATopocentric, transform.DECTopocentric);
-         return coord;
+         _SyncTime = currentTime;
+         _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
+         tools.Transform.JulianDateTT = tools.Util.DateLocalToJulian(currentTime);
+         tools.Transform.SetAzimuthElevation(_AltAzimuth.Azimuth, _AltAzimuth.Altitude);
+         _Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, tools.Transform.DECTopocentric);
+         return _Equatorial;
       }
 
 
-      public void SetObservedAxis(AxisPosition axisPosition, DateTime observationTime)
-      {
-         _AxesPosition = axisPosition;
-         _SyncTime = observationTime;
-      }
 
-      public void Refresh(Transform transform, double julianDateUTC)
+      public void Refresh(AscomTools tools, DateTime currentTime)
       {
-         transform.JulianDateUTC = julianDateUTC;
-         if (_MasterCoordinate == MasterCoordinateEnum.Equatorial) {
+         _SyncTime = currentTime;
+         _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
+         tools.Transform.JulianDateTT = tools.Util.DateLocalToJulian(currentTime);
+         if (_MasterCoordinate == MasterCoordinateEnum.Equatorial)
+         {
             // Update the AltAzimuth
-            transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
-            transform.Refresh();
-            _AltAzimuth = new AltAzCoordinate(transform.ElevationTopocentric, transform.AzimuthTopocentric);
+            tools.Transform.SetTopocentric(_Equatorial.RightAscension.Value, _Equatorial.Declination.Value);
+            //tools.Transform.Refresh();
+            _AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
          }
-         else {
+         else
+         {
             // Update the Equatorial
-            transform.SetAzimuthElevation(_AltAzimuth.Azimuth, _AltAzimuth.Altitude);
-            transform.Refresh();
-            _Equatorial = new EquatorialCoordinate(transform.RATopocentric, transform.DECTopocentric);
+            tools.Transform.SetAzimuthElevation(_AltAzimuth.Azimuth.Value, _AltAzimuth.Altitude.Value);
+            _Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, tools.Transform.DECTopocentric);
          }
       }
 
-      public void Refresh(EquatorialCoordinate equatorial, AxisPosition axisPosition, Transform transform, DateTime localTime)
+      public void Refresh(EquatorialCoordinate equatorial, AxisPosition axisPosition, AscomTools tools, DateTime currentTime)
       {
          _Equatorial = equatorial;
          _AxesPosition = axisPosition;
-         _SyncTime = localTime;
-         _AltAzimuth = this.GetAltAzimuth(transform, localTime);
+         _AltAzimuth = this.GetAltAzimuth(tools, currentTime);
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
 
       }
 
-      public void Refresh(AltAzCoordinate altAz, AxisPosition axisPosition, Transform transform, DateTime localTime)
+      public void Refresh(AltAzCoordinate altAz, AxisPosition axisPosition, AscomTools tools, DateTime currentTime)
       {
          _AltAzimuth = altAz;
          _AxesPosition = axisPosition;
-         _SyncTime = localTime;
-         _Equatorial = this.GetEquatorial(transform, localTime);
+         _Equatorial = this.GetEquatorial(tools, currentTime);
          _MasterCoordinate = MasterCoordinateEnum.AltAzimuth;
       }
+
 
    }
 

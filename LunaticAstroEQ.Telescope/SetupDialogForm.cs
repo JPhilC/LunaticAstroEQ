@@ -1,3 +1,4 @@
+using ASCOM.LunaticAstroEQ.Core.Geometry;
 using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -9,6 +10,7 @@ namespace ASCOM.LunaticAstroEQ
    {
 
       private Telescope  _Telescope = null;
+
       public SetupDialogForm(Telescope telescope)
       {
          _Telescope = telescope;
@@ -22,8 +24,7 @@ namespace ASCOM.LunaticAstroEQ
          // Place any validation constraint checks here
          // Update the state variables with results from the dialogue
          _Telescope.Settings.COMPort = (string)comboBoxComPort.SelectedItem;
-         _Telescope.Settings.StartAltitude = Convert.ToDouble(startAltitudeTextBox.Text);
-         _Telescope.Settings.StartAzimuth = Convert.ToDouble(startAzimuthTextBox.Text);
+
          _Telescope.TraceState = chkTrace.Checked;    // The property will update the Settings object.
 
          _Telescope = null;
@@ -63,8 +64,6 @@ namespace ASCOM.LunaticAstroEQ
          {
             comboBoxComPort.SelectedItem = _Telescope.Settings.COMPort;
          }
-         startAltitudeTextBox.Text = _Telescope.Settings.StartAltitude.ToString();
-         startAzimuthTextBox.Text = _Telescope.Settings.StartAzimuth.ToString();
       }
    }
 }

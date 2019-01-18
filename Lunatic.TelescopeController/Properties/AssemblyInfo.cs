@@ -10,7 +10,7 @@ using System.Windows;
 [assembly: AssemblyTitle("Lunatic.TelescopeController")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Lunatic Software")]
 [assembly: AssemblyProduct("Lunatic.TelescopeController")]
 [assembly: AssemblyCopyright("Copyright ©  2019")]
 [assembly: AssemblyTrademark("")]

@@ -8,13 +8,13 @@ using System.Reflection;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
-   public class SettingsProvider : ISettingsProvider<ControllerSettings>
+   public class SettingsManager : ISettingsProvider<ControllerSettings>
    {
       private static ControllerSettings _Settings = null;
 
       private object _Lock = new object();
 
-      private const string CONFIG_SETTINGS_FILENAME = "SyntaController.config";
+      private const string CONFIG_SETTINGS_FILENAME = "AstroEQController.config";
 
 
       #region Version info ...
@@ -117,7 +117,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
 
 
-      public SettingsProvider()
+      public SettingsManager()
       {
          if (_Settings == null)
          {
@@ -129,7 +129,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          get
          {
-            return SettingsProvider._Settings;
+            return SettingsManager._Settings;
          }
       }
 

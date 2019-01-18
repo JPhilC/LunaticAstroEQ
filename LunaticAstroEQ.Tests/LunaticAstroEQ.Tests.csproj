@@ -111,6 +111,7 @@
     <Compile Include="TakiTests.cs" />
     <Compile Include="MountCoordinateTests.cs" />
     <Compile Include="UnitTest1.cs" />
+    <Compile Include="UnitTest2.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LunaticAstroEQ.Controller\LunaticAstroEQ.Controller.csproj">

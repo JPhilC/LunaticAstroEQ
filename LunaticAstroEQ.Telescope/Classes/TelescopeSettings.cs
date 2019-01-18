@@ -1,4 +1,5 @@
 ﻿using ASCOM.LunaticAstroEQ.Core;
+using ASCOM.LunaticAstroEQ.Core.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,13 +23,12 @@ namespace ASCOM.LunaticAstroEQ
       public bool TracingState { get; set; }
 
 
-      public double? SiteLatitude;
-      public double? SiteLongitude;
-      public double? SiteElevation;
 
-      public double StartAltitude { get; set; }
-      public double StartAzimuth { get; set; }
+      public ParkStatus ParkStatus { get; set; }
 
+      public AxisPosition AxisUnparkPosition { get; set; }
+      public AxisPosition AxisParkPosition { get; set; }
+      public double[] CustomTrackingRate { get; set; } = new double[2];
 
       public TelescopeSettings()
       {
@@ -42,9 +42,7 @@ namespace ASCOM.LunaticAstroEQ
          BaudRate = BaudRate.Baud9600;
          Timeout = TimeOutOption.TO2000;
          Retry = RetryOption.Once;
-         SiteLatitude = null;
-         SiteLongitude = null;
-         SiteElevation = null;
+         CustomTrackingRate = new double[] { 0.0D, 0.0D};
 
       }
    }

@@ -16,22 +16,19 @@ namespace LunaticAstroEQ.Tests
       {
          double localTimeZoneOffset = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalHours;   // Taken from Util.GetTimeZoneOffset()
          DateTime testTime = _localTime.AddHours(localTimeZoneOffset).AddSeconds(Constants.UTIL_LOCAL2JULIAN_TIME_CORRECTION);     // Fix for daylight saving 0.2 seconds
-         using (Util util = new Util())
-         using (Transform transform = new Transform())
-         {
+         using (AscomTools tools = new AscomTools()) {
             Angle longitude = new Angle("-1°20'20.54\"");
             double last = AstroConvert.LocalApparentSiderealTime(longitude, testTime);
-            double uJulian = util.DateLocalToJulian(testTime);
-            double myJulian = AstroConvert.JulianDateUTC(_localTime);
-            System.Diagnostics.Debug.WriteLine(string.Format("Local Sidereal Time = {0}, Expecting 20:44:51.7", util.HoursToHMS(last, ":", ":", "", 1)));
-            transform.SiteLatitude = new Angle("52°40'6.38\"");
-            transform.SiteLongitude = longitude;
-            transform.SiteElevation = 175.0;
+            double myJulian = AstroConvert.DateLocalToJulianUTC(_localTime);
+            System.Diagnostics.Debug.WriteLine(string.Format("Local Sidereal Time = {0}, Expecting 20:44:51.7", tools.Util.HoursToHMS(last, ":", ":", "", 1)));
+            tools.Transform.SiteLatitude = new Angle("52°40'6.38\"");
+            tools.Transform.SiteLongitude = longitude;
+            tools.Transform.SiteElevation = 175.0;
             MountCoordinate deneb = new MountCoordinate("+20h42m5.66s", "+45°21'03.8\"")
             {
                AltAzimuth = new AltAzCoordinate("+52°39'10.5\"", "+77°33'0.8\"")
             };
-            AltAzCoordinate suggestedAltAz = deneb.GetAltAzimuth(transform, _localTime);
+            AltAzCoordinate suggestedAltAz = deneb.GetAltAzimuth(tools, _localTime);
 
             System.Diagnostics.Debug.WriteLine(string.Format("{0} (Suggested), Expecting {1}",
                suggestedAltAz,

@@ -171,6 +171,12 @@ namespace ASCOM.LunaticAstroEQ.Core
          return LocalApparentSiderealTime(longitude, DateTime.Now);
       }
 
+      /// <summary>
+      /// Returns LAST for a given longitude and local time.
+      /// </summary>
+      /// <param name="longitude"></param>
+      /// <param name="localTime"></param>
+      /// <returns></returns>
       public static double LocalApparentSiderealTime(double longitude, DateTime localTime)
       {
          // get greenwich sidereal time: https://en.wikipedia.org/wiki/Sidereal_time
@@ -195,35 +201,16 @@ namespace ASCOM.LunaticAstroEQ.Core
 
       #region JulanDateUTC ...
       /// <summary>
-      /// Converts a local datetime into the JulianDateUTC value
-      /// </summary>
-      /// <param name="localTime"></param>
-      /// <returns></returns>
-      public static double JulianDateUTC(DateTime localTime)
-      {
-         double julianDateUTC;
-         using (NOVAS31 novas31 = new NOVAS31())
-         {
-            DateTime utc = localTime.ToUniversalTime();
-            double utcHour = utc.Hour + (utc.Minute + utc.Second / 60.0) / 60.0;
-            julianDateUTC = novas31.JulianDate((short)utc.Year, (short)utc.Month, (short)utc.Day, utcHour);
-         }
-         return julianDateUTC;
-      }
-
-      /// <summary>
       /// Converts localtime into Julian time taking into account timezone offset and daylight saving.
       /// </summary>
       /// <param name="localTime"></param>
       /// <returns></returns>
-      public static double DateLocalToJulian(DateTime localTime)
+      public static double DateLocalToJulianUTC(DateTime localTime)
       {
          double julianDate;
-         double localTimeZoneOffset = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalHours;   // Taken from Util.GetTimeZoneOffset()
-         DateTime testTime = localTime.AddHours(localTimeZoneOffset).AddSeconds(Constants.UTIL_LOCAL2JULIAN_TIME_CORRECTION);     // Fix for daylight saving 0.2 seconds
          using (Util util = new Util())
          {
-            julianDate = util.DateLocalToJulian(testTime);
+            julianDate = util.DateLocalToJulian(localTime.ToUniversalTime());
          }
          return julianDate;
       }

@@ -1,4 +1,5 @@
-﻿using ASCOM.LunaticAstroEQ.Core.Model;
+﻿using ASCOM.LunaticAstroEQ.Core.Geometry;
+using ASCOM.LunaticAstroEQ.Core.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,5 +12,17 @@ namespace ASCOM.LunaticAstroEQ.Controller
    [ComVisible(false)]
    public class ControllerSettings : DataObjectBase
    {
+
+      /// <summary>
+      /// The start position of the mount
+      /// </summary>
+      public LatLongCoordinate ObservatoryLocation { get; set; } = new LatLongCoordinate();
+
+      public double ObservatoryElevation { get; set; }
+
+      /// <summary>
+      /// The last recorded AltAz of the mount
+      /// </summary>
+      public AltAzCoordinate LastKnownPosition { get; set; } = new AltAzCoordinate();
    }
 }

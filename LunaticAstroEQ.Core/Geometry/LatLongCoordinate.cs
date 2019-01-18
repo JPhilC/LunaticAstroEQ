@@ -9,106 +9,105 @@ using System.Threading.Tasks;
 namespace ASCOM.LunaticAstroEQ.Core.Geometry
 {
    /// <summary>
-   /// A structure to represent an Altitude Azimuth coordinate
+   /// A structure to represent an Latitude Longitude coordinate
    /// </summary>
-   public class AltAzCoordinate
+   public class LatLongCoordinate
    {
-      private Angle _Alt;
-      private Angle _Az;
-      public const double ALT_OFFSET = 180;  // Used to allow us to encode altitudes of when determing equivalent cartesean coordinates.
+      private Angle _Lat;
+      private Angle _Long;
+      public const double LAT_OFFSET = 180;  // Used to allow us to encode latitudes of when determing equivalent cartesean coordinates.
 
-      public Angle Altitude
+      public Angle Latitude
       {
          get
          {
-            return _Alt;
+            return _Lat;
          }
          private set
          {
-            if (_Alt == value) {
+            if (_Lat == value) {
                return;
             }
-            _Alt = value;
+            _Lat = value;
          }
       }
 
 
-      public Angle Azimuth
+      public Angle Longitude
       {
          get
          {
-            return _Az;
+            return _Long;
          }
          private set
          {
-            if (_Az == value)
+            if (_Long == value)
             {
                return;
             }
-            _Az = value;
          }
       }
 
       /// <summary>
       /// Returns the cartesean X component of the coordinate
-      /// Cos(Az)*Alt
+      /// Cos(Long)*Lat
       /// </summary>
       [JsonIgnore]
       public double X
       {
          get
          {
-            return Math.Cos(_Az.Radians) * (_Alt + ALT_OFFSET);
+            return Math.Cos(_Long.Radians) * (_Lat + LAT_OFFSET);
          }
       }
 
       /// <summary>
       /// Returns the cartesean Y component of the coordinate
-      /// Sin(Az)*Alt
+      /// Sin(Long)*Lat
       /// </summary>
       [JsonIgnore]
       public double Y
       {
          get
          {
-            return Math.Sin(_Az.Radians) * (_Alt + ALT_OFFSET);
+            return Math.Sin(_Long.Radians) * (_Lat + LAT_OFFSET);
          }
       }
 
-      public AltAzCoordinate()
+      public LatLongCoordinate()
       {
-         _Alt = new Angle(0.0);
-         _Az = new Angle(0.0);
+         _Lat = new Angle(0.0);
+         _Long = new Angle(0.0);
       }
 
-      public AltAzCoordinate(string altitude, string azimuth)
+      public LatLongCoordinate(string latitude, string longitude)
       {
 
-         _Alt = new Angle(altitude);
-         _Az = new Angle(azimuth);
+         _Lat = new Angle(latitude);
+         _Long = new Angle(longitude);
       }
-      public AltAzCoordinate(double altitude,double azimuth):this()
+      public LatLongCoordinate(double latitude,double longitude):this()
       {
-         if (azimuth < 0 || azimuth >= 360) {
-            throw new ArgumentOutOfRangeException("Azimuth must be >= 0 and < 360");
+         if (longitude < -180.0 || longitude > 180.0) {
+            throw new ArgumentOutOfRangeException("Longitude must be >= -360 and < 360");
          }
-         if (altitude < -90 || altitude > 90) {
-            throw new ArgumentOutOfRangeException("Altitude must be between -90 and 90.");
+         if (latitude < -90.0 || latitude > 90.0) {
+            throw new ArgumentOutOfRangeException("Latitude must be between -90 and 90.");
          }
-         _Alt.Value = altitude;
-         _Az.Value = azimuth;
+         _Lat.Value = latitude;
+         _Long.Value = longitude;
       }
 
-      public AltAzCoordinate(Angle altitude, Angle azimuth)
+      public LatLongCoordinate(Angle latitude, Angle longitude)
       {
-         if (azimuth.Value < 0 || azimuth.Value >= 360) {
-            throw new ArgumentOutOfRangeException("Azimuth must be >= 0 and < 360");
+         if (longitude.Value < -360.0 || longitude.Value >= 360) {
+            throw new ArgumentOutOfRangeException("Longitude must be >= 0 and < 360");
          }
-         if (altitude.Value < -90 || altitude.Value > 90) {
-            throw new ArgumentOutOfRangeException("Altitude must be between -90 and 90.");
+         if (latitude.Value < -90 || latitude.Value > 90) {
+            throw new ArgumentOutOfRangeException("Latitude must be between -90 and 90.");
          }
-         _Alt = altitude;
-         _Az = azimuth;
+         _Lat = latitude;
+         _Long = longitude;
       }
 
       /// <summary>
@@ -127,16 +126,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
       }
 
-
       /// <summary>
       /// Compares the two specified sets of Axis positions.
       /// </summary>
-      public static bool operator ==(AltAzCoordinate pos1, AltAzCoordinate pos2)
+      public static bool operator ==(LatLongCoordinate pos1, LatLongCoordinate pos2)
       {
-         return (pos1.Altitude.Value == pos2.Altitude.Value && pos1.Azimuth.Value == pos2.Azimuth.Value);
+         return (pos1.Latitude.Value == pos2.Latitude.Value && pos1.Longitude.Value == pos2.Longitude.Value);
       }
 
-      public static bool operator !=(AltAzCoordinate pos1, AltAzCoordinate pos2)
+      public static bool operator !=(LatLongCoordinate pos1, LatLongCoordinate pos2)
       {
          return !(pos1 == pos2);
       }
@@ -147,44 +145,44 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          {
             int hash = 17;
             // Suitable nullity checks etc, of course :)
-            hash = hash * 23 + _Az.GetHashCode();
-            hash = hash * 23 + _Alt.GetHashCode();
+            hash = hash * 23 + _Long.GetHashCode();
+            hash = hash * 23 + _Lat.GetHashCode();
             return hash;
          }
       }
 
       public override bool Equals(object obj)
       {
-         return (obj is AltAzCoordinate
-                 && this == (AltAzCoordinate)obj);
+         return (obj is LatLongCoordinate
+                 && this == (LatLongCoordinate)obj);
       }
-      public static AltAzCoordinate operator -(AltAzCoordinate pos1, AltAzCoordinate pos2)
+      public static LatLongCoordinate operator -(LatLongCoordinate pos1, LatLongCoordinate pos2)
       {
-         return new AltAzCoordinate(pos1.Altitude - pos2.Altitude, pos1.Azimuth - pos2.Azimuth);
+         return new LatLongCoordinate(pos1.Latitude - pos2.Latitude, pos1.Longitude - pos2.Longitude);
       }
 
-      public static AltAzCoordinate operator +(AltAzCoordinate pos1, AltAzCoordinate pos2)
+      public static LatLongCoordinate operator +(LatLongCoordinate pos1, LatLongCoordinate pos2)
       {
-         return new AltAzCoordinate(pos1.Altitude + pos2.Altitude, pos1.Azimuth + pos2.Azimuth);
+         return new LatLongCoordinate(pos1.Latitude + pos2.Latitude, pos1.Longitude + pos2.Longitude);
       }
 
       public override string ToString()
       {
-         return string.Format("Alt/Az = {0}/{1}", 
-            Altitude.ToString(AngularFormat.DegreesMinutesSeconds, false), 
-            Azimuth.ToString(AngularFormat.DegreesMinutesSeconds, false));
+         return string.Format("Lat/Long = {0}/{1}", 
+            Latitude.ToString(AngularFormat.DegreesMinutesSeconds, false), 
+            Longitude.ToString(AngularFormat.DegreesMinutesSeconds, false));
       }
 
       /// <summary>
-      /// Decodes an AzAlt Coordinate from it's cartesean equivalent
+      /// Decodes an LongLat Coordinate from it's cartesean equivalent
       /// Note: This method should ONLY be used to decode cartesean coordinates
-      /// that were originally generated from an AzAltCoordinate of from values
-      /// interpolated from those originally generated from AzAltCoordinates.
+      /// that were originally generated from an LongLatCoordinate of from values
+      /// interpolated from those originally generated from LongLatCoordinates.
       /// </summary>
       /// <param name="x"></param>
       /// <param name="y"></param>
       /// <returns></returns>
-      public static AltAzCoordinate FromCartesean(double x, double y)
+      public static LatLongCoordinate FromCartesean(double x, double y)
       {
          double az = 0.0;
          double alt = Math.Sqrt((x * x) + (y * y));
@@ -208,13 +206,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                az = -1 * (Math.PI / 2.0);
             }
          }
-         return new AltAzCoordinate((alt - ALT_OFFSET), AstroConvert.Range360(AstroConvert.RadToDeg(az)));
+         return new LatLongCoordinate((alt - LAT_OFFSET), AstroConvert.Range360(AstroConvert.RadToDeg(az)));
       }
 
       public CarteseanCoordinate ToCartesean()
       {
-         double radius = this.Altitude + ALT_OFFSET;
-         CarteseanCoordinate cartCoord = new CarteseanCoordinate(Math.Cos(this.Azimuth.Radians), Math.Sin(this.Azimuth.Radians), 1.0);
+         double radius = this.Latitude + LAT_OFFSET;
+         CarteseanCoordinate cartCoord = new CarteseanCoordinate(Math.Cos(this.Longitude.Radians), Math.Sin(this.Longitude.Radians), 1.0);
          return cartCoord;
       }
 
@@ -224,7 +222,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       /// <param name="toCoordinate"></param>
       /// <returns></returns>
-      public double DistanceTo(AltAzCoordinate to, double radius)
+      public double DistanceTo(LatLongCoordinate to, double radius)
       {
          /*
             Taken from: http://www.movable-type.co.uk/scripts/latlong.html
@@ -248,10 +246,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
             var d = R * c;
           */
-         double theta1 = this.Altitude.Radians;  // Equivalent to φ1
-         double theta2 = to.Altitude.Radians;    // Equivalent to φ2
+         double theta1 = this.Latitude.Radians;  // Equivalent to φ1
+         double theta2 = to.Latitude.Radians;    // Equivalent to φ2
          double deltaTheta = theta2 - theta1; // eqivalent to Δφ
-         double deltaGamma = to.Azimuth.Radians - this.Azimuth.Radians;    // equivalent to Δλ
+         double deltaGamma = to.Longitude.Radians - this.Longitude.Radians;    // equivalent to Δλ
          double a = Math.Pow(Math.Sin(deltaTheta / 2), 2) +
             Math.Cos(theta1) * Math.Cos(theta2) *
             Math.Pow(Math.Sin(deltaGamma), 2);
@@ -267,7 +265,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="to"></param>
       /// <param name="radius"></param>
       /// <returns></returns>
-      public double ApproxDistanceTo(AltAzCoordinate to, double radius)
+      public double ApproxDistanceTo(LatLongCoordinate to, double radius)
       {
          /*
              Taken from: http://www.movable-type.co.uk/scripts/latlong.html
@@ -279,10 +277,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
              var y = (φ2-φ1);
              var d = Math.sqrt(x*x + y*y) * R;         
          */
-         double theta1 = this.Altitude.Radians;  // Equivalent to φ1
-         double theta2 = to.Altitude.Radians;    // Equivalent to φ2
+         double theta1 = this.Latitude.Radians;  // Equivalent to φ1
+         double theta2 = to.Latitude.Radians;    // Equivalent to φ2
          double deltaTheta = theta2 - theta1; // eqivalent to Δφ
-         double deltaGamma = to.Azimuth.Radians - this.Azimuth.Radians;    // equivalent to Δλ
+         double deltaGamma = to.Longitude.Radians - this.Longitude.Radians;    // equivalent to Δλ
          double x = deltaGamma * Math.Cos((theta1 + theta2) / 2);
          double d = Math.Sqrt(Math.Pow(x, 2) + Math.Pow(deltaTheta, 2)) * radius;
          return d;
@@ -296,7 +294,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="to"></param>
       /// <param name="radius"></param>
       /// <returns></returns>
-      public double OrderingDistanceTo(AltAzCoordinate to)
+      public double OrderingDistanceTo(LatLongCoordinate to)
       {
          /*
              Taken from: http://www.movable-type.co.uk/scripts/latlong.html
@@ -308,10 +306,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
              var y = (φ2-φ1);
              var d = Math.sqrt(x*x + y*y) * R;         
          */
-         double theta1 = this.Altitude.Radians;  // Equivalent to φ1
-         double theta2 = to.Altitude.Radians;    // Equivalent to φ2
+         double theta1 = this.Latitude.Radians;  // Equivalent to φ1
+         double theta2 = to.Latitude.Radians;    // Equivalent to φ2
          double deltaTheta = theta2 - theta1; // eqivalent to Δφ
-         double deltaGamma = to.Azimuth.Radians - this.Azimuth.Radians;    // equivalent to Δλ
+         double deltaGamma = to.Longitude.Radians - this.Longitude.Radians;    // equivalent to Δλ
          double x = deltaGamma * Math.Cos((theta1 + theta2) / 2);
          double d = Math.Pow(x, 2) + Math.Pow(deltaTheta, 2);
          return d;

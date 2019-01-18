@@ -96,6 +96,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\Driver_CustomActions.cs" />
+    <Compile Include="Classes\Driver_Limits.cs" />
     <Compile Include="Classes\TelescopeSettings.cs" />
     <Compile Include="Classes\SettingsProvider.cs" />
     <Compile Include="Classes\Driver.cs" />

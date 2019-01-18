@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace ASCOM.LunaticAstroEQ.Core.Geometry
 {
@@ -523,6 +524,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       [Category("Data")]
       [DisplayName("Radians")]
       [Description("The value of the angle in radians.")]
+      [JsonIgnore]
       public double Radians
       {
          get
@@ -542,6 +544,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       [DefaultValue(0)]
       [DisplayName("Degrees")]
       [Description("")]
+      [JsonIgnore]
       public int Degrees
       {
          get
@@ -562,6 +565,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       [DefaultValue(0)]
       [DisplayName("Minutes")]
       [Description("")]
+      [JsonIgnore]
       public int Minutes
       {
          get
@@ -588,6 +592,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       [DefaultValue(0.0)]
       [DisplayName("Seconds")]
       [Description("")]
+      [JsonIgnore]
       public double Seconds
       {
          get
@@ -615,6 +620,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       [Browsable(false)]
       [DisplayName("Total Seconds")]
       [Description("The value of the Angle expressed in seconds.")]
+      [JsonIgnore]
       public double TotalSeconds
       {
          get
@@ -644,6 +650,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       [Browsable(false)]
       [Category("Data")]
       [Description("The absolute value of the angle.")]
+      [JsonIgnore]
       public Angle Abs
       {
          get

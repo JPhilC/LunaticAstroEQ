@@ -43,7 +43,8 @@ using System.Linq;
 using System.Reflection;
 using Core = ASCOM.LunaticAstroEQ.Core;
 using ASCOM.LunaticAstroEQ.Controller;
-
+using ASCOM.LunaticAstroEQ.Core;
+using ASCOM.LunaticAstroEQ.Core.Geometry;
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -81,16 +82,6 @@ namespace ASCOM.LunaticAstroEQ
       private AstroEQController _Controller;
 
       /// <summary>
-      /// Private variable to hold an ASCOM Utilities object
-      /// </summary>
-      private Util utilities;
-
-      /// <summary>
-      /// Private variable to hold an ASCOM AstroUtilities object to provide the Range method
-      /// </summary>
-      private AstroUtils astroUtilities;
-
-      /// <summary>
       /// Variable to hold the trace logger object (creates a diagnostic log file with information that you specify)
       /// </summary>
       internal static TraceLogger tl;
@@ -116,6 +107,12 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      /// <summary>
+      /// Private variable to hold an ASCOM Utilities object
+      /// </summary>
+      private AscomTools _AscomTools;
+
+      private MountCoordinate _CurrentPosition;
 
       /// <summary>
       /// Initializes a new instance of the <see cref="LunaticAstroEQ"/> class.
@@ -125,6 +122,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          driverID = Marshal.GenerateProgIdForType(this.GetType());
          driverDescription = GetDriverDescription();
+
 
          _Controller = AstroEQController.Instance;
 
@@ -136,8 +134,15 @@ namespace ASCOM.LunaticAstroEQ
          tl.LogMessage("Telescope", "Starting initialisation");
 
          IsConnected = false;
-         utilities = new Util(); //Initialise util object
-         astroUtilities = new AstroUtils(); // Initialise astro utilities object
+         _AscomTools = new AscomTools();
+
+         // Initialise the transform from the site details stored with the controller
+         _AscomTools.Transform.SiteLatitude = _Controller.ObservatoryLocation.Latitude.Value;
+         _AscomTools.Transform.SiteLongitude = _Controller.ObservatoryLocation.Longitude.Value;
+         _AscomTools.Transform.SiteElevation = _Controller.ObservatoryElevation;
+         _AscomTools.Transform.SiteTemperature = 15.0;
+
+         InitialiseMountCoordinate();
 
          tl.LogMessage("Telescope", "Completed initialisation");
       }
@@ -193,14 +198,49 @@ namespace ASCOM.LunaticAstroEQ
          get
          {
             tl.LogMessage("SupportedActions Get", "Returning empty arraylist");
-            return new ArrayList();
+            return new ArrayList(_SupportedActions);
          }
       }
 
+      /// <summary>
+      /// Invokes the specified device-specific action.
+      /// </summary>
+      /// <param name="ActionName">
+      /// A well known name agreed by interested parties that represents the action to be carried out. 
+      /// </param>
+      /// <param name="ActionParameters">List of required parameters or an <see cref="String.Empty">Empty String</see> if none are required.
+      /// </param>
+      /// <returns>A string response. The meaning of returned strings is set by the driver author.</returns>
+      /// <exception cref="ASCOM.MethodNotImplementedException">Throws this exception if no actions are suported.</exception>
+      /// <exception cref="ASCOM.ActionNotImplementedException">It is intended that the SupportedActions method will inform clients 
+      /// of driver capabilities, but the driver must still throw an ASCOM.ActionNotImplemented exception if it is asked to 
+      /// perform an action that it does not support.</exception>
+      /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
+      /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
+      /// <example>Suppose filter wheels start to appear with automatic wheel changers; new actions could 
+      /// be “FilterWheel:QueryWheels” and “FilterWheel:SelectWheel”. The former returning a 
+      /// formatted list of wheel names and the second taking a wheel name and making the change, returning appropriate 
+      /// values to indicate success or failure.
+      /// </example>
+      /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> 
+      /// This method is intended for use in all current and future device types and to avoid name clashes, management of action names 
+      /// is important from day 1. A two-part naming convention will be adopted - <b>DeviceType:UniqueActionName</b> where:
+      /// <list type="bullet">
+      /// <item><description>DeviceType is the same value as would be used by <see cref="ASCOM.Utilities.Chooser.DeviceType"/> e.g. Telescope, Camera, Switch etc.</description></item>
+      /// <item><description>UniqueActionName is a single word, or multiple words joined by underscore characters, that sensibly describes the action to be performed.</description></item>
+      /// </list>
+      /// <para>
+      /// It is recommended that UniqueActionNames should be a maximum of 16 characters for legibility.
+      /// Should the same function and UniqueActionName be supported by more than one type of device, the reserved DeviceType of 
+      /// “General” will be used. Action names will be case insensitive, so FilterWheel:SelectWheel, filterwheel:selectwheel 
+      /// and FILTERWHEEL:SELECTWHEEL will all refer to the same action.</para>
+      /// <para>The names of all supported actions must be returned in the <see cref="SupportedActions"/> property.</para>
+      /// </remarks>
       public string Action(string actionName, string actionParameters)
       {
-         LogMessage("", "Action {0}, parameters {1} not implemented", actionName, actionParameters);
-         throw new ASCOM.ActionNotImplementedException("Action " + actionName + " is not implemented by this driver");
+         CheckConnected("Action");
+         LogMessage("Action", string.Format("({0}, {1})", actionName, actionParameters));
+         return ProcessCustomAction(actionName, actionParameters);
       }
 
       public void CommandBlind(string command, bool raw)
@@ -213,24 +253,56 @@ namespace ASCOM.LunaticAstroEQ
          // DO NOT have both these sections!  One or the other
       }
 
+      /// <summary>
+      /// Transmits an arbitrary string to the device and waits for a boolean response.
+      /// Optionally, protocol framing characters may be added to the string before transmission.
+      /// </summary>
+      /// <param name="Command">The literal command string to be transmitted.</param>
+      /// <param name="Raw">
+      /// if set to <c>true</c> the string is transmitted 'as-is'.
+      /// If set to <c>false</c> then protocol framing characters may be added prior to transmission.
+      /// </param>
+      /// <returns>
+      /// Returns the interpreted boolean response received from the device.
+      /// </returns>
+      /// <exception cref="MethodNotImplementedException">If the method is not implemented</exception>
+      /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
+      /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
+      /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> </remarks>
       public bool CommandBool(string command, bool raw)
       {
-         CheckConnected("CommandBool");
-         string ret = CommandString(command, raw);
-         // TODO decode the return string and return true or false
-         // or
-         throw new ASCOM.MethodNotImplementedException("CommandBool");
-         // DO NOT have both these sections!  One or the other
+         if (command != "Lunatic:IsInitialised")
+         {
+            CheckConnected("CommandBool");
+         }
+         LogMessage("CommandBool", string.Format("({0}, {1})", command, raw));
+         return ProcessCommandBool(command, raw);
       }
 
+      /// <summary>
+      /// Transmits an arbitrary string to the device and waits for a string response.
+      /// Optionally, protocol framing characters may be added to the string before transmission.
+      /// </summary>
+      /// <param name="Command">The literal command string to be transmitted.</param>
+      /// <param name="Raw">
+      /// if set to <c>true</c> the string is transmitted 'as-is'.
+      /// If set to <c>false</c> then protocol framing characters may be added prior to transmission.
+      /// </param>
+      /// <returns>
+      /// Returns the string response received from the device.
+      /// </returns>
+      /// <exception cref="MethodNotImplementedException">If the method is not implemented</exception>
+      /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
+      /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
+      /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> </remarks>
       public string CommandString(string command, bool raw)
       {
-         CheckConnected("CommandString");
+         CheckConnected("CommandBlind");
+         LogMessage("CommandString", string.Format("({0}, {1})", command, raw));
          // it's a good idea to put all the low level communication with the device here,
          // then all communication calls this function
          // you need something to ensure that only one command is in progress at a time
-
-         throw new ASCOM.MethodNotImplementedException("CommandString");
+         return ProcessCommandString(command, raw);
       }
 
       public void Dispose()
@@ -239,10 +311,7 @@ namespace ASCOM.LunaticAstroEQ
          tl.Enabled = false;
          tl.Dispose();
          tl = null;
-         utilities.Dispose();
-         utilities = null;
-         astroUtilities.Dispose();
-         astroUtilities = null;
+         _AscomTools.Dispose();
       }
 
       public bool Connected
@@ -364,8 +433,13 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("Altitude", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("Altitude", false);
+            lock (_CurrentPosition)
+            {
+               RefreshMountCoordinate();
+               double altitude = _CurrentPosition.AltAzimuth.Altitude.Value;
+               tl.LogMessage("Altitude", "Get - " + _AscomTools.Util.DegreesToDMS(altitude, ":", ":"));
+               return altitude;
+            }
          }
       }
 
@@ -415,8 +489,13 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("Azimuth Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("Azimuth", false);
+            lock (_CurrentPosition)
+            {
+               RefreshMountCoordinate();
+               double azimuth = _CurrentPosition.AltAzimuth.Azimuth.Value;
+               tl.LogMessage("Azimuth", "Get - " + _AscomTools.Util.DegreesToDMS(azimuth, ":", ":"));
+               return azimuth;
+            }
          }
       }
 
@@ -580,9 +659,13 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            double declination = 0.0;
-            tl.LogMessage("Declination", "Get - " + utilities.DegreesToDMS(declination, ":", ":"));
-            return declination;
+            lock (_CurrentPosition)
+            {
+               RefreshMountCoordinate();
+               double declination = _CurrentPosition.Equatorial.Declination.Value;
+               tl.LogMessage("Declination", "Get - " + _AscomTools.Util.DegreesToDMS(declination, ":", ":"));
+               return declination;
+            }
          }
       }
 
@@ -705,9 +788,13 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            double rightAscension = 0.0;
-            tl.LogMessage("RightAscension", "Get - " + utilities.HoursToHMS(rightAscension));
-            return rightAscension;
+            lock (_CurrentPosition)
+            {
+               RefreshMountCoordinate();
+               double rightAscension = _CurrentPosition.Equatorial.RightAscension.Value;
+               tl.LogMessage("RightAscension", "Get - " + _AscomTools.Util.HoursToHMS(rightAscension));
+               return rightAscension;
+            }
          }
       }
 
@@ -750,25 +837,13 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            // Now using NOVAS 3.1
-            double siderealTime = 0.0;
-            using (var novas = new ASCOM.Astrometry.NOVAS.NOVAS31())
+            lock (_CurrentPosition)
             {
-               var jd = utilities.DateUTCToJulian(DateTime.UtcNow);
-               novas.SiderealTime(jd, 0, novas.DeltaT(jd),
-                   ASCOM.Astrometry.GstType.GreenwichApparentSiderealTime,
-                   ASCOM.Astrometry.Method.EquinoxBased,
-                   ASCOM.Astrometry.Accuracy.Reduced, ref siderealTime);
+               RefreshMountCoordinate();
+               double lst = _CurrentPosition.LocalApparentSiderialTime.Value;
+               tl.LogMessage("SiderealTime", "Get - " + _AscomTools.Util.HoursToHMS(lst));
+               return lst;
             }
-
-            // Allow for the longitude
-            siderealTime += SiteLongitude / 360.0 * 24.0;
-
-            // Reduce to the range 0 to 24 hours
-            siderealTime = astroUtilities.ConditionRA(siderealTime);
-
-            tl.LogMessage("SiderealTime", "Get - " + siderealTime.ToString());
-            return siderealTime;
          }
       }
 
@@ -776,21 +851,19 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            if (!Settings.SiteElevation.HasValue)
-            {
-               throw new ASCOM.ValueNotSetException("SiteElevation");
-            }
-            LogMessage("SiteElevation", "Get {0}", Settings.SiteElevation.Value);
-            return Settings.SiteElevation.Value;
+            LogMessage("SiteElevation", "Get {0}", _Controller.ObservatoryElevation);
+            return _Controller.ObservatoryElevation;
          }
          set
          {
             LogMessage("SiteElevation", "Set {0}", value);
-            if (Settings.SiteElevation.HasValue && Settings.SiteElevation.Value == value)
+            if (_Controller.ObservatoryElevation == value)
             {
                return;
             }
-            Settings.SiteElevation = value;
+            _AscomTools.Transform.SiteElevation = value;
+            _Controller.ObservatoryElevation = value;
+            _CurrentPosition.Refresh(_AscomTools, DateTime.Now);
          }
       }
 
@@ -798,45 +871,57 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            if (!Settings.SiteLatitude.HasValue)
-            {
-               throw new ASCOM.ValueNotSetException("SiteLatitude");
-            }
-            LogMessage("SiteLatitude", "Get {0}", Settings.SiteLatitude.Value);
-            return Settings.SiteLatitude.Value;
+            LogMessage("SiteLatitude", "Get {0}", _Controller.ObservatoryLocation.Latitude.Value);
+            return _Controller.ObservatoryLocation.Latitude.Value;
          }
          set
          {
-            LogMessage("SiteLatitud", "Set {0}", value);
-            if (Settings.SiteLatitude.HasValue && Settings.SiteLatitude.Value == value)
+            LogMessage("SiteLatitude", "Set {0}", value);
+            if (_Controller.ObservatoryLocation.Latitude.Value == value)
             {
                return;
             }
-            Settings.SiteLatitude = value;
-            Settings.StartAltitude = Settings.SiteLatitude.Value;
-            TelescopeSettingsProvider.Current.SaveSettings();
+            _AscomTools.Transform.SiteLatitude = value;
+            _Controller.ObservatoryLocation.Latitude.Value = value;
+            // See if the controller is at it's park position and if so set RA/Dec
+            _CurrentPosition.Refresh(_AscomTools, DateTime.Now);
          }
       }
+
 
       public double SiteLongitude
       {
          get
          {
-            if (!Settings.SiteLongitude.HasValue)
-            {
-               throw new ASCOM.ValueNotSetException("SiteLongitude");
-            }
-            LogMessage("SiteLongitude", "Get {0}", Settings.SiteLongitude.Value);
-            return Settings.SiteLongitude.Value;
+            LogMessage("SiteLongitude", "Get {0}", _Controller.ObservatoryLocation.Longitude.Value);
+            return _Controller.ObservatoryLocation.Longitude.Value;
          }
          set
          {
             LogMessage("SiteLongitude", "Set {0}", value);
-            if (Settings.SiteLongitude.HasValue && Settings.SiteLongitude.Value == value)
+            if (_Controller.ObservatoryLocation.Longitude.Value == value)
             {
                return;
             }
-            Settings.SiteLongitude = value;
+            _AscomTools.Transform.SiteLongitude = value;
+            _Controller.ObservatoryLocation.Longitude.Value = value;
+            _CurrentPosition.Refresh(_AscomTools, DateTime.Now);
+         }
+      }
+
+      private void InitialiseMountCoordinate()
+      {
+         DateTime now = DateTime.Now;
+         AltAzCoordinate altAzPosition = new AltAzCoordinate(SiteLatitude,0.0);
+        _CurrentPosition = new MountCoordinate(altAzPosition, _AscomTools, now);
+      }
+
+      private void RefreshMountCoordinate()
+      {
+         DateTime now = DateTime.Now;
+         if (now - _CurrentPosition.SyncTime > new TimeSpan(0, 0, 0, 0, 500))
+         {
+            _CurrentPosition.Refresh(_AscomTools, now);
          }
       }
 
@@ -894,8 +979,10 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
+            // TODO: Slewing
             tl.LogMessage("Slewing Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("Slewing", false);
+            // throw new ASCOM.PropertyNotImplementedException("Slewing", false);
+            return false;
          }
       }
 

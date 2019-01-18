@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
-   public struct AXISSTATUS
+   public struct AxisStatus
    {
       /// <summary>
       /// 4 different state

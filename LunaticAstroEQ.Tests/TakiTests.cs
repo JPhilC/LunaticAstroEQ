@@ -13,17 +13,17 @@ namespace LunaticAstroEQ.Tests
       [TestMethod]
       public void TakiExample5_4_4()
       {
-         using (Transform transform = new Transform())
+         using (AscomTools tools = new AscomTools())
          {
             Angle longitude = new Angle("-1°20'20.54\"");
-            transform.SiteLatitude = new Angle("52°40'6.38\"");
-            transform.SiteLongitude = longitude;
-            transform.SiteElevation = 175.5;
+            tools.Transform.SiteLatitude = new Angle("52°40'6.38\"");
+            tools.Transform.SiteLongitude = longitude;
+            tools.Transform.SiteElevation = 175.5;
             DateTime initialTime = new DateTime(2017, 03, 28, 21, 0, 0);
             DateTime observationTime = new DateTime(2017, 03, 28, 21, 27, 56);
-            MountCoordinate star1 = new MountCoordinate("0h7m54.0s", "29.038°", new AxisPosition(1.732239, 1.463808), transform, observationTime);
+            MountCoordinate star1 = new MountCoordinate("0h7m54.0s", "29.038°", new AxisPosition(1.732239, 1.463808), tools, observationTime);
             observationTime = new DateTime(2017, 03, 28, 21, 37, 02);
-            MountCoordinate star2 = new MountCoordinate("2h21m45.0s", "89.222°", new AxisPosition(5.427625, 0.611563), transform, observationTime);
+            MountCoordinate star2 = new MountCoordinate("2h21m45.0s", "89.222°", new AxisPosition(5.427625, 0.611563), tools, observationTime);
             TakiEQMountMapper taki = new TakiEQMountMapper(star1, star2, initialTime);
 
             EquatorialCoordinate bCet = new EquatorialCoordinate("0h43m07s", "-18.038°");
@@ -43,15 +43,15 @@ namespace LunaticAstroEQ.Tests
       [TestMethod]
       public void GetTheoreticalFromEquatorial()
       {
-         using (Transform transform = new Transform())
+         using (AscomTools tools = new AscomTools())
          {
             Angle longitude = new Angle("-1°20'20.54\"");
-            transform.SiteLatitude = new Angle("52°40'6.38\"");
-            transform.SiteLongitude = longitude;
-            transform.SiteElevation = 175.5;
-            MountCoordinate mirphac = new MountCoordinate("3h25m34.77s", "49°55'12.0\"", new AxisPosition(1.04551212078025, 0.882804566344625), transform, _localTime);
-            MountCoordinate almaak = new MountCoordinate("2h04m58.83s", "42°24'41.1\"", new AxisPosition(0.597795712351665, 0.817146830684098), transform, _localTime);
-            MountCoordinate ruchbah = new MountCoordinate("1h26m58.39s", "60°19'33.3\"", new AxisPosition(0.506260233480349, 1.09753088667021), transform, _localTime);
+            tools.Transform.SiteLatitude = new Angle("52°40'6.38\"");
+            tools.Transform.SiteLongitude = longitude;
+            tools.Transform.SiteElevation = 175.5;
+            MountCoordinate mirphac = new MountCoordinate("3h25m34.77s", "49°55'12.0\"", new AxisPosition(1.04551212078025, 0.882804566344625), tools, _localTime);
+            MountCoordinate almaak = new MountCoordinate("2h04m58.83s", "42°24'41.1\"", new AxisPosition(0.597795712351665, 0.817146830684098), tools, _localTime);
+            MountCoordinate ruchbah = new MountCoordinate("1h26m58.39s", "60°19'33.3\"", new AxisPosition(0.506260233480349, 1.09753088667021), tools, _localTime);
             TakiEQMountMapper taki = new TakiEQMountMapper(mirphac, almaak, ruchbah, _localTime);
             EquatorialCoordinate gPer = new EquatorialCoordinate("2h03m28.89s", "54°34'10.9\"");
             AxisPosition gPerExpected = new AxisPosition(0.649384407012042, 0.998796900509728);

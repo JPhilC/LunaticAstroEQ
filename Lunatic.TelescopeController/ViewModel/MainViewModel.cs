@@ -975,9 +975,12 @@ End Property
          if (Driver != null)
          {
             // Transfer location any other initialisation needed.
-            Driver.SiteElevation = Settings.CurrentSite.Elevation;
-            Driver.SiteLatitude = Settings.CurrentSite.Latitude;
-            Driver.SiteLongitude = Settings.CurrentSite.Longitude;
+            if (Settings.CurrentSite != null)
+            {
+               Driver.SiteElevation = Settings.CurrentSite.Elevation;
+               Driver.SiteLatitude = Settings.CurrentSite.Latitude;
+               Driver.SiteLongitude = Settings.CurrentSite.Longitude;
+            }
             if (DriverActionAvailable("Lunatic:SetSiteTemperature"))
             {
                Driver.Action("Lunatic:SetSiteTemperature", Settings.CurrentSite.Temperature.ToString());

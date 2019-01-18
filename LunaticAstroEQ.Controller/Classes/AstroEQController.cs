@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TA.Ascom.ReactiveCommunications;
+using ASCOM.LunaticAstroEQ.Core.Geometry;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
@@ -22,6 +23,48 @@ namespace ASCOM.LunaticAstroEQ.Controller
    [ComVisible(false)]
    public partial class AstroEQController
    {
+      #region Private member variables ...
+      // protected static SerialConnection mConnection = null;    // Now using serialPort
+      protected long MCVersion = 0;   // Motor controller version number
+
+      /// ************ Motion control related **********************
+      /// They are variables represent the mount's status, but not grantee always updated.
+      /// 1) The AxisPosition is updated with MCGetAxisPosition and MCSetAxisPosition
+      /// 2) The TargetPosition is updated with MCAxisSlewTo        
+      /// 3) The SlewingSpeed is updated with MCAxisSlew
+      /// 4) The AxesStatus is updated updated with MCGetAxisStatus, MCAxisSlewTo, MCAxisSlew
+      /// Notes:
+      /// 1. Positions may not represent the mount's position while it is slewing, or user manually update by hand
+
+      private double[] _AxisPosition = new double[2] { 0, 0 };        // The axis coordinate position of the bracket, in radians
+      private double[] _TargetPosition = new double[2] { 0, 0 };      // Target position in radians
+      private double[] _SlewingSpeed = new double[2] { 0, 0 };        // Operating speed in radians per second                
+      private AxisStatus[] _AxisStatus = new AxisStatus[2];           // The two-axis status of the carriage should be referenced by AxesStatus[AXIS1] and AxesStatus[AXIS2]
+
+      // special charactor for communication.
+      const char cStartChar_Out = ':';       // Leading charactor of a command 
+      const char cStartChar_In = '=';        // Leading charactor of a NORMAL response.
+      const char cErrChar = '!';             // Leading charactor of an ABNORMAL response.
+      const char cEndChar = (char)13;        // Tailing charactor of command and response.
+      const double MAX_SPEED = 500;          //?
+      const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE);
+
+      private char dir = '0'; // direction
+                              // Mount code: 0x00=EQ6, 0x01=HEQ5, 0x02=EQ5, 0x03=EQ3
+                              //             0x80=GT,  0x81=MF,   0x82=114GT
+                              //             0x90=DOB
+      private long MountCode;
+      private long[] StepTimerFreq = new long[2];        // Frequency of stepping timer.
+      private long[] PESteps = new long[2];
+      private long[] HighSpeedRatio = new long[2];
+      //private long[] StepPosition = new long[2];          // Never Used
+      private long[] BreakSteps = new long[2];           // Break steps from slewing to stop.
+      private long[] LowSpeedGotoMargin = new long[2];      // If slewing steps exceeds this LowSpeedGotoMargin, 
+                                                            // GOTO is in high speed slewing.
+
+      private bool InstantStop;              // Use InstantStop command for MCAxisStop
+      #endregion
+
       #region Singleton code ...
       private static AstroEQController _Instance = null;
 
@@ -48,20 +91,77 @@ namespace ASCOM.LunaticAstroEQ.Controller
          {
             if (_SettingsManager == null)
             {
-               _SettingsManager = new SettingsProvider();
+               _SettingsManager = new SettingsManager();
             }
             return _SettingsManager;
          }
       }
 
-      private ControllerSettings Settings
+      private ControllerSettings _Settings
       {
          get
          {
             return SettingsManager.Settings;
          }
       }
+
+
+      private void SaveSettings()
+      {
+         SettingsManager.SaveSettings();
+      }
+
       #endregion
+
+      /// <summary>
+      /// The observatory geo coordinates
+      /// </summary>
+      public LatLongCoordinate ObservatoryLocation
+      {
+         get
+         {
+            lock (_Settings)
+            {
+               return _Settings.ObservatoryLocation;
+            }
+         }
+         set
+         {
+            lock (_Settings)
+            {
+               if (value != _Settings.ObservatoryLocation)
+               {
+                  _Settings.ObservatoryLocation = value;
+                  SaveSettings();
+               }
+            }
+         }
+      }
+
+      /// <summary>
+      /// The observatory elevation (m)
+      /// </summary>
+      public double ObservatoryElevation
+      {
+         get
+         {
+            lock (_Settings)
+            {
+               return _Settings.ObservatoryElevation;
+            }
+         }
+         set
+         {
+            lock (_Settings)
+            {
+               if (value != _Settings.ObservatoryElevation)
+               {
+                  _Settings.ObservatoryElevation = value;
+                  SaveSettings();
+               }
+            }
+         }
+      }
 
       private object lockObject = new object();
 
@@ -94,14 +194,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
          MCVersion = 0;
 
-         Positions[0] = 0;
-         Positions[1] = 0;
-         TargetPositions[0] = 0;
-         TargetPositions[1] = 0;
-         SlewingSpeed[0] = 0;
-         SlewingSpeed[1] = 0;
-         AxesStatus[0] = new AXISSTATUS { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false };
-         AxesStatus[1] = new AXISSTATUS { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false };
+         //_AxisPosition[0] = 0;
+         //_AxisPosition[1] = 0;
+         _TargetPosition[0] = 0;
+         _TargetPosition[1] = 0;
+         _SlewingSpeed[0] = 0;
+         _SlewingSpeed[1] = 0;
+         _AxisStatus[0] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false };
+         _AxisStatus[1] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false };
 
       }
 
@@ -163,44 +263,6 @@ namespace ASCOM.LunaticAstroEQ.Controller
       #endregion
 
       #region Skywatcher_Open code ...
-      // protected static SerialConnection mConnection = null;    // Now using serialPort
-      protected long MCVersion = 0;   // 馬達控制器的版本號
-
-      /// ************ Motion control related **********************
-      /// They are variables represent the mount's status, but not grantee always updated.        
-      /// 1) The Positions are updated with MCGetAxisPosition and MCSetAxisPosition
-      /// 2) The TargetPositions are updated with MCAxisSlewTo        
-      /// 3) The SlewingSpeed are updated with MCAxisSlew
-      /// 4) The AxesStatus are updated updated with MCGetAxisStatus, MCAxisSlewTo, MCAxisSlew
-      /// Notes:
-      /// 1. Positions may not represent the mount's position while it is slewing, or user manually update by hand
-      public double[] Positions = new double[2] { 0, 0 };          // 托架的軸坐標位置，以弧度爲單位
-      public double[] TargetPositions = new double[2] { 0, 0 };   // 目標位置，以弧度爲單位
-      public double[] SlewingSpeed = new double[2] { 0, 0 };      // 以弧度/秒為單位的運行速度                
-      public AXISSTATUS[] AxesStatus = new AXISSTATUS[2];             // 托架的兩軸狀態，應通過AxesStatus[AXIS1]和AxesStatus[AXIS2]引用
-
-      // special charactor for communication.
-      const char cStartChar_Out = ':';    // Leading charactor of a command 
-      const char cStartChar_In = '=';        // Leading charactor of a NORMAL response.
-      const char cErrChar = '!';              // Leading charactor of an ABNORMAL response.
-      const char cEndChar = (char)13;         // Tailing charactor of command and response.
-      const double MAX_SPEED = 500;           //?
-      const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE);
-
-      private char dir = '0'; // direction
-                              // Mount code: 0x00=EQ6, 0x01=HEQ5, 0x02=EQ5, 0x03=EQ3
-                              //             0x80=GT,  0x81=MF,   0x82=114GT
-                              //             0x90=DOB
-      private long MountCode;
-      private long[] StepTimerFreq = new long[2];        // Frequency of stepping timer.
-      private long[] PESteps = new long[2];
-      private long[] HighSpeedRatio = new long[2];
-      //private long[] StepPosition = new long[2];          // Never Used
-      private long[] BreakSteps = new long[2];           // Break steps from slewing to stop.
-      private long[] LowSpeedGotoMargin = new long[2];      // If slewing steps exceeds this LowSpeedGotoMargin, 
-                                                            // GOTO is in high speed slewing.
-
-      private bool InstantStop;              // Use InstantStop command for MCAxisStop
 
       #region ASCOM serial comms stuff (hopefully can be removed once ReactiveStuff working)
 
@@ -496,8 +558,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
                   // Inquire Axis Position
                   System.Diagnostics.Debug.WriteLine("MCGetAxisPosition");
-                  Positions[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
-                  Positions[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
+                  _AxisPosition[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
+                  _AxisPosition[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
 
                   System.Diagnostics.Debug.WriteLine("InitializeMC");
                   InitializeMC();
@@ -575,8 +637,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
          // if (AxesStatus[Axis] & AXIS_FULL_STOPPED)				// It must be remove for the latest DC motor board.
          StartMotion(Axis);
 
-         AxesStatus[(int)Axis].SetSlewing(forward, highspeed);
-         SlewingSpeed[(int)Axis] = Speed;
+         _AxisStatus[(int)Axis].SetSlewing(forward, highspeed);
+         _SlewingSpeed[(int)Axis] = Speed;
       }
       public void MCAxisSlewTo(AXISID Axis, double TargetPosition)
       {
@@ -629,8 +691,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
          SetBreakPointIncrement(Axis, BreakSteps[(int)Axis]);
          StartMotion(Axis);
 
-         TargetPositions[(int)Axis] = TargetPosition;
-         AxesStatus[(int)Axis].SetSlewingTo(forward, highspeed);
+         _TargetPosition[(int)Axis] = TargetPosition;
+         _AxisStatus[(int)Axis].SetSlewingTo(forward, highspeed);
       }
       public void MCAxisStop(AXISID Axis)
       {
@@ -639,8 +701,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
          else
             TalkWithAxis(Axis, 'K', null);
 
-         AxesStatus[(int)Axis].SetFullStop();
+         _AxisStatus[(int)Axis].SetFullStop();
       }
+
+      /// <summary>
+      /// Sets an axis position
+      /// </summary>
+      /// <param name="Axis"></param>
+      /// <param name="NewValue">The current axis position in radians</param>
       public void MCSetAxisPosition(AXISID Axis, double NewValue)
       {
          long NewStepIndex = AngleToStep(Axis, NewValue);
@@ -649,19 +717,27 @@ namespace ASCOM.LunaticAstroEQ.Controller
          string szCmd = LongTo6BitHEX(NewStepIndex);
          TalkWithAxis(Axis, 'E', szCmd);
 
-         Positions[(int)Axis] = NewValue;
+         _AxisPosition[(int)Axis] = NewValue;
       }
+
+      /// <summary>
+      /// Returns the current axis position in radians
+      /// </summary>
+      /// <param name="Axis"></param>
+      /// <returns></returns>
       public double MCGetAxisPosition(AXISID Axis)
       {
          string response = TalkWithAxis(Axis, 'j', null);
 
          long iPosition = BCDstr2long(response);
          iPosition -= 0x00800000;
-         Positions[(int)Axis] = StepToAngle(Axis, iPosition);
+         _AxisPosition[(int)Axis] = StepToAngle(Axis, iPosition);
 
-         return Positions[(int)Axis];
+         return _AxisPosition[(int)Axis];
       }
-      public AXISSTATUS MCGetAxisStatus(AXISID Axis)
+
+
+      public AxisStatus MCGetAxisStatus(AXISID Axis)
       {
 
          var response = TalkWithAxis(Axis, 'f', null);
@@ -670,32 +746,32 @@ namespace ASCOM.LunaticAstroEQ.Controller
          {
             // Axis is running
             if ((response[1] & 0x01) != 0)
-               AxesStatus[(int)Axis].Slewing = true;     // Axis in slewing(AstroMisc speed) mode.
+               _AxisStatus[(int)Axis].Slewing = true;     // Axis in slewing(AstroMisc speed) mode.
             else
-               AxesStatus[(int)Axis].SlewingTo = true;      // Axis in SlewingTo mode.
+               _AxisStatus[(int)Axis].SlewingTo = true;      // Axis in SlewingTo mode.
          }
          else
          {
-            AxesStatus[(int)Axis].FullStop = true; // FullStop = 1;	// Axis is fully stop.
+            _AxisStatus[(int)Axis].FullStop = true; // FullStop = 1;	// Axis is fully stop.
          }
 
          if ((response[1] & 0x02) == 0)
-            AxesStatus[(int)Axis].SlewingForward = true; // Angle increase = 1;
+            _AxisStatus[(int)Axis].SlewingForward = true; // Angle increase = 1;
          else
-            AxesStatus[(int)Axis].SlewingForward = false;
+            _AxisStatus[(int)Axis].SlewingForward = false;
 
          if ((response[1] & 0x04) != 0)
-            AxesStatus[(int)Axis].HighSpeed = true; // HighSpeed running mode = 1;
+            _AxisStatus[(int)Axis].HighSpeed = true; // HighSpeed running mode = 1;
          else
-            AxesStatus[(int)Axis].HighSpeed = false;
+            _AxisStatus[(int)Axis].HighSpeed = false;
 
          if ((response[3] & 1) == 0)
-            AxesStatus[(int)Axis].NotInitialized = true; // MC is not initialized.
+            _AxisStatus[(int)Axis].NotInitialized = true; // MC is not initialized.
          else
-            AxesStatus[(int)Axis].NotInitialized = false;
+            _AxisStatus[(int)Axis].NotInitialized = false;
 
 
-         return AxesStatus[(int)Axis];
+         return _AxisStatus[(int)Axis];
       }
 
       public void MCSetSwitch(bool OnOff)
@@ -771,18 +847,19 @@ namespace ASCOM.LunaticAstroEQ.Controller
          {
             if ((axesstatus.SlewingTo) ||                               // GOTO in action
                  (axesstatus.HighSpeed) ||                              // Currently high speed slewing
-                 (Math.Abs(speed) >= LOW_SPEED_MARGIN) ||                                    // Will be high speed slewing
-                 ((axesstatus.SlewingForward) && (speed < 0)) ||              // Different direction
-                 (!(axesstatus.SlewingForward) && (speed > 0))                // Different direction
+                 (Math.Abs(speed) >= LOW_SPEED_MARGIN) ||               // Will be high speed slewing
+                 ((axesstatus.SlewingForward) && (speed < 0)) ||        // Different direction
+                 (!(axesstatus.SlewingForward) && (speed > 0))          // Different direction
                 )
             {
                // We need to stop the motor first to change Motion Mode, etc.
                MCAxisStop(Axis);
             }
             else
+            {
                // Other situatuion, there is no need to set motion mode.
                return;
-
+            }
 
 
             // Wait until the axis stop
@@ -793,8 +870,9 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
                // Return if the axis has stopped.
                if (axesstatus.FullStop)
+               {
                   break;
-
+               }
                Thread.Sleep(100);
 
                // If the axis is asked to stop.
@@ -824,14 +902,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
 
       // Convert the arc angle to "step"
-      protected double[] FactorRadToStep = new double[] { 0, 0 };             // Multiply the value of the radians by the factor to get the position value of the motor board (24 digits will discard the highest byte)
+      protected double[] FactorRadToStep = new double[] { 0, 0 };     // Multiply the value of the radians by the factor to get the position value of the motor board (24 digits will discard the highest byte)
       protected long AngleToStep(AXISID Axis, double AngleInRad)
       {
          return (long)(AngleInRad * FactorRadToStep[(int)Axis]);
       }
 
       // Convert "step" to a radian angle
-      protected double[] FactorStepToRad = new double[] { 0, 0 };                 // Multiply the position value of the motor board (after the symbol problem needs to be processed) by the coefficient to get the radians value.
+      protected double[] FactorStepToRad = new double[] { 0, 0 };    // Multiply the position value of the motor board (after the symbol problem needs to be processed) by the coefficient to get the radians value.
       protected double StepToAngle(AXISID Axis, long Steps)
       {
          return Steps * FactorStepToRad[(int)Axis];
