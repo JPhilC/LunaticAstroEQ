@@ -121,8 +121,9 @@ namespace ASCOM.LunaticAstroEQ
       /// </summary>
       private AscomTools _AscomTools;
 
+      private MountCoordinate _CelestialPolePosition;
       private MountCoordinate _CurrentPosition;
-
+      
       /// <summary>
       /// Initializes a new instance of the <see cref="LunaticAstroEQ"/> class.
       /// Must be public for COM registration.
@@ -776,10 +777,38 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      public void MoveAxis(TelescopeAxes Axis, double Rate)
+      public void MoveAxis(TelescopeAxes axis, double rate)
       {
-         tl.LogMessage("MoveAxis", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("MoveAxis");
+         bool isRASlewing = false;
+         bool isDecSlewing = false;
+         lock (_Controller)
+         {
+            System.Diagnostics.Debug.WriteLine(String.Format("MoveAxis({0}, {1})", axis, rate));
+            if (AtPark)
+            {
+               throw new ASCOM.ParkedException("Method MoveAxis");
+            }
+            if (rate > AstroEQController.MAX_SLEW_SPEED)
+            {
+               throw new ASCOM.InvalidValueException("Method MoveAxis() rate exceed maximum allowed.");
+            }
+            LogMessage("MoveAxis", "({0}, {1})", axis, rate);
+
+            switch (axis)
+            {
+               case TelescopeAxes.axisPrimary:
+                  isRASlewing = (rate > 0);
+                  _Controller.MCAxisSlew((AXISID)AxisId.Axis1_RA, rate);
+                  break;
+               case TelescopeAxes.axisSecondary:
+                  isDecSlewing = (rate > 0);
+                  _Controller.MCAxisSlew((AXISID)AxisId.Axis2_DEC, rate);
+                  break;
+               default:
+                  throw new ASCOM.InvalidValueException("Tertiary axis is not supported by MoveAxis command");
+            }
+            _IsMoveAxisSlewing = (isRASlewing || isDecSlewing);
+         }
       }
 
       public void Park()
@@ -939,7 +968,9 @@ namespace ASCOM.LunaticAstroEQ
       {
          DateTime now = DateTime.Now;
          AltAzCoordinate altAzPosition = new AltAzCoordinate(SiteLatitude,0.0);
-         AxisPosition axisPosition = new AxisPosition(0.0, 0.0);
+         AxisPosition axisPosition = new AxisPosition(_Controller.MCGetAxisPosition(AXISID.AXIS1)
+                                    , _Controller.MCGetAxisPosition(AXISID.AXIS2));
+         _CelestialPolePosition = new MountCoordinate(altAzPosition, axisPosition, _AscomTools, now);
          _CurrentPosition = new MountCoordinate(altAzPosition, axisPosition, _AscomTools, now);
       }
 
@@ -948,7 +979,12 @@ namespace ASCOM.LunaticAstroEQ
          DateTime now = DateTime.Now;
          if (now - _CurrentPosition.SyncTime > new TimeSpan(0, 0, 0, 0, 500))
          {
-            _CurrentPosition.Refresh(_AscomTools, now);
+            _CelestialPolePosition.Refresh(_AscomTools, now);     // This will update the RA hour angle
+            AxisPosition axisPosition = new AxisPosition(_Controller.MCGetAxisPosition(AXISID.AXIS1)
+                                       , _Controller.MCGetAxisPosition(AXISID.AXIS2));
+            AxisPosition delta = axisPosition - _CelestialPolePosition.ObservedAxes;
+            EquatorialCoordinate newPosition = _CelestialPolePosition.Equatorial + delta;
+            _CurrentPosition = new MountCoordinate(newPosition, axisPosition, _AscomTools, now);
          }
       }
 
@@ -1002,14 +1038,33 @@ namespace ASCOM.LunaticAstroEQ
          throw new ASCOM.MethodNotImplementedException("SlewToTargetAsync");
       }
 
+      bool _IsSlewing;
+      bool _IsMoveAxisSlewing;
+
       public bool Slewing
       {
          get
          {
-            // TODO: Slewing
-            tl.LogMessage("Slewing Get", "Not implemented");
-            // throw new ASCOM.PropertyNotImplementedException("Slewing", false);
-            return false;
+            bool isSlewing = false;
+            switch (Settings.ParkStatus)
+            {
+               case ParkStatus.Unparked:
+                  isSlewing = _IsSlewing;
+                  if (!isSlewing)
+                  {
+                     isSlewing = _IsMoveAxisSlewing;
+                  }
+                  break;
+               case ParkStatus.Parked:
+               case ParkStatus.Unparking:
+                  isSlewing = false;
+                  break;
+               case ParkStatus.Parking:
+                  isSlewing = true;
+                  break;
+            }
+            LogMessage("Slewing", "Get - {0}", isSlewing);
+            return isSlewing;
          }
       }
 

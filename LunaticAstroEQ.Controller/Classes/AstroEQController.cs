@@ -46,8 +46,13 @@ namespace ASCOM.LunaticAstroEQ.Controller
       const char cStartChar_In = '=';        // Leading charactor of a NORMAL response.
       const char cErrChar = '!';             // Leading charactor of an ABNORMAL response.
       const char cEndChar = (char)13;        // Tailing charactor of command and response.
-      const double MAX_SPEED = 500;          //?
-      const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE);
+      public const double MAX_SLEW_SPEED = (800 * Constants.SIDEREALRATE);          //?
+      public const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE);
+      /// <summary>
+      /// Maximum error allowed when comparing Axis positions in radians (roughly 0.5 seconds)
+      /// </summary>
+      private const double AXIS_ERROR_TOLERANCE = 3.5E-5;
+
 
       private char dir = '0'; // direction
                               // Mount code: 0x00=EQ6, 0x01=HEQ5, 0x02=EQ5, 0x03=EQ3
@@ -589,57 +594,58 @@ namespace ASCOM.LunaticAstroEQ.Controller
          return result;
       }
 
-      public void MCAxisSlew(AXISID Axis, double Speed)
+      public void MCAxisSlew(AXISID axis, double speed)
       {
          // Limit maximum speed
-         if (Speed > MAX_SPEED)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
-            Speed = MAX_SPEED;
-         else if (Speed < -MAX_SPEED)
-            Speed = -MAX_SPEED;
+         if (speed > MAX_SLEW_SPEED)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
+            speed = MAX_SLEW_SPEED;
+         else if (speed < -MAX_SLEW_SPEED)
+            speed = -MAX_SLEW_SPEED;
 
-         double InternalSpeed = Speed;
+         double internalSpeed = speed;
          bool forward = false, highspeed = false;
 
          // InternalSpeed lower than 1/1000 of sidereal rate?
-         if (Math.Abs(InternalSpeed) <= Constants.SIDEREALRATE / 1000.0)
+         if (Math.Abs(internalSpeed) <= Constants.SIDEREALRATE / 1000.0)
          {
-            MCAxisStop(Axis);
+            MCAxisStop(axis);
             return;
          }
 
          // Stop motor and set motion mode if necessary.
-         PrepareForSlewing(Axis, InternalSpeed);
+         PrepareForSlewing(axis, internalSpeed);
 
-         if (InternalSpeed > 0.0)
+         if (internalSpeed > 0.0)
             forward = true;
          else
          {
-            InternalSpeed = -InternalSpeed;
+            internalSpeed = -internalSpeed;
             forward = false;
          }
 
          // TODO: ask the details
 
          // Calculate and set step period. 
-         if (InternalSpeed > LOW_SPEED_MARGIN)
+         if (internalSpeed > LOW_SPEED_MARGIN)
          {                 // High speed adjustment
-            InternalSpeed = InternalSpeed / (double)HighSpeedRatio[(int)Axis];
+            internalSpeed = internalSpeed / (double)HighSpeedRatio[(int)axis];
             highspeed = true;
          }
-         InternalSpeed = 1 / InternalSpeed;                    // For using function RadSpeedToInt(), change to unit Senonds/Rad.
-         long SpeedInt = RadSpeedToInt(Axis, InternalSpeed);
+         internalSpeed = 1 / internalSpeed;                    // For using function RadSpeedToInt(), change to unit Senonds/Rad.
+         long SpeedInt = RadSpeedToInt(axis, internalSpeed);
          if ((MCVersion == 0x010600) || (MCVersion == 0x010601))  // For special MC version.
             SpeedInt -= 3;
          if (SpeedInt < 6) SpeedInt = 6;
-         SetStepPeriod(Axis, SpeedInt);
+         SetStepPeriod(axis, SpeedInt);
 
          // Start motion
          // if (AxesStatus[Axis] & AXIS_FULL_STOPPED)				// It must be remove for the latest DC motor board.
-         StartMotion(Axis);
+         StartMotion(axis);
 
-         _AxisStatus[(int)Axis].SetSlewing(forward, highspeed);
-         _SlewingSpeed[(int)Axis] = Speed;
+         _AxisStatus[(int)axis].SetSlewing(forward, highspeed);
+         _SlewingSpeed[(int)axis] = speed;
       }
+
       public void MCAxisSlewTo(AXISID Axis, double TargetPosition)
       {
          // Get current position of the axis.
