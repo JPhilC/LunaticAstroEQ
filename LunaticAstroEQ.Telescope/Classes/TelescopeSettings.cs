@@ -30,6 +30,8 @@ namespace ASCOM.LunaticAstroEQ
       public AxisPosition AxisParkPosition { get; set; }
       public double[] CustomTrackingRate { get; set; } = new double[2];
 
+      public AscomCompliance AscomCompliance { get; set; }
+
       public TelescopeSettings()
       {
          SetDefaults();
@@ -43,6 +45,7 @@ namespace ASCOM.LunaticAstroEQ
          Timeout = TimeOutOption.TO2000;
          Retry = RetryOption.Once;
          CustomTrackingRate = new double[] { 0.0D, 0.0D};
+         AscomCompliance = new AscomCompliance();
 
       }
    }

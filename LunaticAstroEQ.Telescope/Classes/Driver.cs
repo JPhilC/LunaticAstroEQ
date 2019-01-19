@@ -99,6 +99,15 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private HemisphereOption Hemisphere
+      {
+         get
+         {
+            return (SiteLatitude >= 0.0 ? HemisphereOption.Northern : HemisphereOption.Southern);
+         }
+
+      }
+
       internal TelescopeSettings Settings
       {
          get
@@ -474,7 +483,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("AtPark", "Get - " + false.ToString());
+            bool atPark = (Settings.ParkStatus == ParkStatus.Parked);
+            LogMessage("AtPark", "Get - {0}", atPark);
             return false;
          }
       }
@@ -823,8 +833,24 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("SideOfPier Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SideOfPier", false);
+            PierSide value = PierSide.pierUnknown;
+            switch (Settings.AscomCompliance.SideOfPier)
+            {
+               case SideOfPierOption.Pointing:
+                  value = SOP_Pointing(_CurrentPosition.ObservedAxes.DecAxis.Radians);
+                  break;
+               case SideOfPierOption.Physical:
+                  value = SOP_Physical(_CurrentPosition.Equatorial.RightAscension);
+                  break;
+               case SideOfPierOption.None:
+                  value = PierSide.pierUnknown;
+                  break;
+               case SideOfPierOption.V124g:
+                  value = SOP_Dec(_CurrentPosition.ObservedAxes.DecAxis.Radians);
+                  break;
+            }
+            tl.LogMessage("SideOfPier", "Get - " + value.ToString());
+            return value;
          }
          set
          {
@@ -913,7 +939,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          DateTime now = DateTime.Now;
          AltAzCoordinate altAzPosition = new AltAzCoordinate(SiteLatitude,0.0);
-        _CurrentPosition = new MountCoordinate(altAzPosition, _AscomTools, now);
+         AxisPosition axisPosition = new AxisPosition(0.0, 0.0);
+         _CurrentPosition = new MountCoordinate(altAzPosition, axisPosition, _AscomTools, now);
       }
 
       private void RefreshMountCoordinate()

@@ -98,8 +98,7 @@ namespace ASCOM.LunaticAstroEQ
                result = ((int)Settings.ParkStatus).ToString();
                break;
             case "Lunatic:GetAxisPositions":
-               throw new NotImplementedException();
-               // result = Settings.CurrentMountPosition.ObservedAxes.ToDegreesString();
+               result = _CurrentPosition.ObservedAxes.ToDegreesString();
                break;
             default:
                throw new ASCOM.DriverException(string.Format("CommandString command is not recognised '{0}'.", command));

@@ -1056,22 +1056,22 @@ End Property
                // See if the SiteLongitude throws an error if so they need to be initialised
             }
             Driver.Connected = true;
-            if (!initialiseNeeded)
-            {
-               // It may be that it isn't a Lunatic driver so test if SiteLongitude is initialised
-               try
-               {
-                  double testLongitude = Driver.SiteLongitude;
-               }
-               catch (ASCOM.InvalidOperationException)
-               {
-                  initialiseNeeded = true;
-               }
-            }
-            if (initialiseNeeded)
-            {
-               UpdateDriverSiteDetails();
-            }
+            //if (!initialiseNeeded)
+            //{
+            //   // It may be that it isn't a Lunatic driver so test if SiteLongitude is initialised
+            //   try
+            //   {
+            //      double testLongitude = Driver.SiteLongitude;
+            //   }
+            //   catch (ASCOM.InvalidOperationException)
+            //   {
+            //      initialiseNeeded = true;
+            //   }
+            //}
+            //if (initialiseNeeded)
+            //{
+            //   UpdateDriverSiteDetails();
+            //}
             _ProcessingDisplayTimerTick = false;
             _DisplayTimer.Start();
             StatusMessage = "Connected to " + DriverName + ".";

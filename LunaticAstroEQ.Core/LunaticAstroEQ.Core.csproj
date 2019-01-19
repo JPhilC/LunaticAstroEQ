@@ -76,6 +76,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\AscomCompliance.cs" />
     <Compile Include="Classes\AscomTools.cs" />
     <Compile Include="Classes\AstroConvert.cs" />
     <Compile Include="Classes\Constants.cs" />
