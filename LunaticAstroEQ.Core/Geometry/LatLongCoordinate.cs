@@ -206,7 +206,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                az = -1 * (Math.PI / 2.0);
             }
          }
-         return new LatLongCoordinate((alt - LAT_OFFSET), AstroConvert.Range360(AstroConvert.RadToDeg(az)));
+         return new LatLongCoordinate((alt - LAT_OFFSET), AstroConvert.RangeLatitude(AstroConvert.RadToDeg(az)));
       }
 
       public CarteseanCoordinate ToCartesean()

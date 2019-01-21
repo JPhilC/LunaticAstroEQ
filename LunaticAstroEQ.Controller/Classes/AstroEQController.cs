@@ -46,8 +46,10 @@ namespace ASCOM.LunaticAstroEQ.Controller
       const char cStartChar_In = '=';        // Leading charactor of a NORMAL response.
       const char cErrChar = '!';             // Leading charactor of an ABNORMAL response.
       const char cEndChar = (char)13;        // Tailing charactor of command and response.
-      public const double MAX_SLEW_SPEED = (800 * Constants.SIDEREALRATE);          //?
-      public const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE);
+      public const double MAX_SLEW_SPEED_RADIANS = (800 * Constants.SIDEREALRATE_RADIANS);          //?   Radians
+      public const double MAX_SLEW_SPEED_DEGREES = (800 * Constants.SIDEREALRATE_DEGREES);
+
+      public const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE_RADIANS);
       /// <summary>
       /// Maximum error allowed when comparing Axis positions in radians (roughly 0.5 seconds)
       /// </summary>
@@ -413,7 +415,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <returns>The response string from mount</returns>
       private String TalkWithAxis(AXISID axis, char cmd, string cmdDataStr)
       {
-         System.Diagnostics.Debug.WriteLine(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
+         //System.Diagnostics.Debug.WriteLine(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
          string response = string.Empty;
 
          const int BufferSize = 20;
@@ -429,7 +431,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          sb.Append(cEndChar);    // CR Character            
 
          string cmdString = sb.ToString();
-         System.Diagnostics.Debug.WriteLine($" - > Command: {cmdString}");
+         //System.Diagnostics.Debug.WriteLine($" - > Command: {cmdString}");
          //string.Format("{0}{1}{2}{3}{4}",
          //cStartChar_Out,
          //command,
@@ -486,7 +488,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          //   else
          //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS2);
          //}
-         System.Diagnostics.Debug.WriteLine($" -> Response: {response} (0x{response:X})");
+         //System.Diagnostics.Debug.WriteLine($" -> Response: {response} (0x{response:X})");
          return response;
       }
 
@@ -570,8 +572,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   InitializeMC();
 
                   // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
-                  LowSpeedGotoMargin[(int)AXISID.AXIS1] = (long)(640 * Constants.SIDEREALRATE * FactorRadToStep[(int)AXISID.AXIS1]);
-                  LowSpeedGotoMargin[(int)AXISID.AXIS2] = (long)(640 * Constants.SIDEREALRATE * FactorRadToStep[(int)AXISID.AXIS2]);
+                  LowSpeedGotoMargin[(int)AXISID.AXIS1] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AXISID.AXIS1]);
+                  LowSpeedGotoMargin[(int)AXISID.AXIS2] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AXISID.AXIS2]);
 
                   // Default break steps
                   BreakSteps[(int)AXISID.AXIS1] = 3500;
@@ -597,16 +599,16 @@ namespace ASCOM.LunaticAstroEQ.Controller
       public void MCAxisSlew(AXISID axis, double speed)
       {
          // Limit maximum speed
-         if (speed > MAX_SLEW_SPEED)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
-            speed = MAX_SLEW_SPEED;
-         else if (speed < -MAX_SLEW_SPEED)
-            speed = -MAX_SLEW_SPEED;
+         if (speed > MAX_SLEW_SPEED_RADIANS)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
+            speed = MAX_SLEW_SPEED_RADIANS;
+         else if (speed < -MAX_SLEW_SPEED_RADIANS)
+            speed = -MAX_SLEW_SPEED_RADIANS;
 
          double internalSpeed = speed;
          bool forward = false, highspeed = false;
 
          // InternalSpeed lower than 1/1000 of sidereal rate?
-         if (Math.Abs(internalSpeed) <= Constants.SIDEREALRATE / 1000.0)
+         if (Math.Abs(internalSpeed) <= Constants.SIDEREALRATE_RADIANS / 1000.0)
          {
             MCAxisStop(axis);
             return;

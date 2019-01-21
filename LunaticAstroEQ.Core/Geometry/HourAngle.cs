@@ -508,61 +508,75 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public static HourAngle operator +(HourAngle hour1, HourAngle hour2)
       {
+         HourAngle result = new HourAngle(0.0);
+         result.Format = hour1.Format;
          if (hour1.Format == HourAngleFormat.DecimalHours) {
-            hour1.Value += hour2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
+            result.Value = hour1.Value + hour2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
          }
          else {
             double seconds = hour1.TotalSeconds + hour2.TotalSeconds;
-            hour1 = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
 
-         return hour1;
+         return result ;
       }
 
       public static HourAngle operator -(HourAngle hour1, HourAngle hour2)
       {
+         HourAngle result = new HourAngle(0.0);
+         result.Format = hour1.Format;
          if (hour1.Format == HourAngleFormat.DecimalHours) {
-            hour1.Value -= hour2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
+            result.Value = hour1.Value - hour2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
          }
          else {
             double seconds = hour1.TotalSeconds - hour2.TotalSeconds;
-            hour1 = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
 
-         return hour1;
+         return result;
       }
 
       public static HourAngle operator *(HourAngle hour, double factor)
       {
+         HourAngle result = new HourAngle(0.0);
+         result.Format = hour.Format;
          if (hour.Format == HourAngleFormat.DecimalHours) {
-            hour.Value *= factor;  /* Use Value property to ensure HMS properties are also updated properly */
+            result.Value = hour.Value * factor;  /* Use Value property to ensure HMS properties are also updated properly */
          }
          else {
             double seconds = hour.TotalSeconds * factor;
-            hour = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
 
-         return hour;
+         return result;
       }
 
       public static HourAngle operator /(HourAngle hour, double factor)
       {
+         HourAngle result = new HourAngle(0.0);
+         result.Format = hour.Format;
          if (hour.Format == HourAngleFormat.DecimalHours) {
-            hour.Value /= factor;     /* Use Value property to ensure DMS properties are also updated properly */
+            result.Value = hour.Value / factor;     /* Use Value property to ensure DMS properties are also updated properly */
          }
          else {
             double seconds = hour.TotalSeconds / factor;
-            hour = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
 
-         return hour;
+         return result;
       }
 
       public static double operator /(HourAngle hour1, HourAngle hour2)
       {
-         return (hour2.Format == HourAngleFormat.DecimalHours
-                     ? (double)(hour1.Value / hour2.Value)
-                     : hour1.TotalSeconds / hour2.TotalSeconds);
+         HourAngle result = new HourAngle(0.0);
+         result.Format = hour2.Format;
+         if (hour2.Format == HourAngleFormat.DecimalHours) {
+            result.Value = (double)(hour1.Value / hour2.Value);
+               }
+         else {
+            result = FromSeconds(hour1.TotalSeconds / hour2.TotalSeconds);
+         }
+         return result;
       }
 
       public override int GetHashCode()

@@ -112,6 +112,7 @@
     <Compile Include="MountCoordinateTests.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="UnitTest2.cs" />
+    <Compile Include="RangeTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LunaticAstroEQ.Controller\LunaticAstroEQ.Controller.csproj">

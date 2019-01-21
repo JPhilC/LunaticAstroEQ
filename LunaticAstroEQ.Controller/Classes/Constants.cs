@@ -7,7 +7,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
 {
    public static class Constants
    {
-      public const double SIDEREALRATE = 2 * Math.PI / 86164.09065;
+      public const double SIDEREALRATE_RADIANS = 2 * Math.PI / 86164.09065;
+      public const double SIDEREALRATE_DEGREES = 360.0 / 86164.09065;
 
       #region Mount constants ...
       public const int MOUNT_SUCCESS = 0;           // Success (or connected for the first time);

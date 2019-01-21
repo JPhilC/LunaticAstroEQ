@@ -66,57 +66,53 @@ namespace ASCOM.LunaticAstroEQ.Core
       public static double RadToSec(double Rad) { return (Rad * Constants.RAD_SEC); }
       public static double Range2Pi(double rad)
       {
-         while (rad < 0.0) {
+         rad = rad % Constants.TWO_PI;
+         while (rad < 0.0)
+         {
             rad = rad + Constants.TWO_PI;
-         }
-         while (rad >= Constants.TWO_PI) {
-            rad = rad - Constants.TWO_PI;
          }
          return rad;
       }
 
-      public static double Range24(double vha)
+      public static double RangeAzimuth(double vdeg)
       {
-         while (vha < 0.0) {
-            vha = vha + 24.0;
-         }
-         while (vha >= 24) {
-            vha = vha - 24.0;
-         }
-         return vha;
-      }
-
-      public static double Range360(double vdeg)
-      {
-
-         while (vdeg < 0) {
+         vdeg = vdeg % 360;
+         while (vdeg < 0)
+         {
             vdeg = vdeg + 360.0;
          }
-         while (vdeg >= 360.0) {
-            vdeg = vdeg - 360.0;
-         }
          return vdeg;
       }
 
-      public static double Range90(double vdeg)
+      public static double RangeLatitude(double latitude)
       {
-
-         while (vdeg < -90.0) {
-            vdeg = vdeg + 360;
+         latitude = (latitude % 360.0);
+         double result = latitude;
+         if (latitude > 180.0)
+         {
+            result = latitude - 360.0;
          }
-         while (vdeg >= 360.0) {
-            vdeg = vdeg - 90;
+         else
+         {
+            if (latitude <= -180.0)
+            {
+               result = latitude + 360.0;
+            }
          }
-         return vdeg;
+         return result;
       }
 
-      public static double RangeHA(double ha)
-      {
 
-         while (ha < -12.0) {
+      public static double RangeRA(double ha)
+      {
+         ha = ha % 24.0;
+
+         while (ha < 0.0)
+         {
             ha = ha + 24.0;
          }
-         while (ha >= 12.0) {
+         while (ha > 24.0)
+         {
             ha = ha - 24.0;
          }
          return ha;
@@ -133,36 +129,32 @@ namespace ASCOM.LunaticAstroEQ.Core
       public static double RangeDEC(double degrees)
       {
 
+         degrees = (degrees % 360.0);
+         double signFactor = degrees < 0 ? -1.0 : 1.0;
+         degrees = degrees * signFactor;
          double result = degrees;
-         if (degrees >= 270.0 && degrees <= 360.0) {
+         if (degrees >= 270.0 && degrees <= 360.0)
+         {
             result = degrees - 360.0;
          }
-         else {
-            if (degrees >= 180.0 && degrees < 270.0) {
+         else
+         {
+            if (degrees >= 180.0 && degrees < 270.0)
+            {
                result = 180.0 - degrees;
             }
-            else {
-               if (degrees >= 90.0 && degrees < 180.0) {
+            else
+            {
+               if (degrees >= 90.0 && degrees < 180.0)
+               {
                   result = 180.0 - degrees;
                }
             }
          }
-         return result;
+         return result * signFactor;
       }
 
-      /// <summary>
-      /// Ensure the value lies between zero and the ceiling.
-      /// </summary>
-      /// <param name="value"></param>
-      /// <param name="ceiling"></param>
-      /// <returns></returns>
-      public static double Range(double value, double ceiling)
-      {
-         double rangedValue = value;
-         rangedValue -= value * Math.Floor(value / ceiling);
-         return rangedValue;
-      }
-
+     
       #endregion
 
       #region Sidereal time ...
@@ -184,7 +176,8 @@ namespace ASCOM.LunaticAstroEQ.Core
 
          // alternative using NOVAS 3.1
          double siderealTime = 0.0;
-         using (var novas = new ASCOM.Astrometry.NOVAS.NOVAS31()) {
+         using (var novas = new ASCOM.Astrometry.NOVAS.NOVAS31())
+         {
             var jd = localTime.ToUniversalTime().ToOADate() + 2415018.5;      // Taken from ASCOM.Util.DateUTCToJulian
             novas.SiderealTime(jd, 0, novas.DeltaT(jd),
                 ASCOM.Astrometry.GstType.GreenwichApparentSiderealTime,
@@ -214,195 +207,221 @@ namespace ASCOM.LunaticAstroEQ.Core
          }
          return julianDate;
       }
-      #endregion  
+      #endregion
 
       #region Axis positions (radians) ...
 
-      /// <summary>
-      /// Returns an hour value for a given axis position in Radians
-      /// </summary>
-      /// <param name="zeroPosition">Axis position for zero hours in Radians</param>
-      /// <param name="valuePosition">Axis position for value in Radians</param>
-      /// <param name="hemisphere">Which hemisphere are you in.</param>
-      /// <returns></returns>
-      public static double AxisHours(double zeroPosition, double valuePosition, HemisphereOption hemisphere)   // Get_EncoderHours
-      {
-         // Compute in Hours the encoder value based on 0 position value (RAOffset0)
-         // and Total 360 degree rotation microstep count (Tot_Enc
+      ///// <summary>
+      ///// Returns an hour value for a given axis position in Radians
+      ///// </summary>
+      ///// <param name="zeroPosition">Axis position for zero hours in Radians</param>
+      ///// <param name="valuePosition">Axis position for value in Radians</param>
+      ///// <param name="hemisphere">Which hemisphere are you in.</param>
+      ///// <returns></returns>
+      //public static double AxisHours(double zeroPosition, double valuePosition, HemisphereOption hemisphere)   // Get_EncoderHours
+      //{
+      //   // Compute in Hours the encoder value based on 0 position value (RAOffset0)
+      //   // and Total 360 degree rotation microstep count (Tot_Enc
 
-         double hours;
-         if (valuePosition > zeroPosition) {
-            hours = 24 - (((valuePosition - zeroPosition) / Constants.TWO_PI) * 24.0);
-         }
-         else {
-            hours = ((zeroPosition - valuePosition) / Constants.TWO_PI) * 24;
-         }
-         if (hemisphere == HemisphereOption.Northern) {
-            hours = Range24(hours);
-         }
-         else {
-            hours = Range24(24.0 - hours);
-         }
-         return hours;
-      }
+      //   double hours;
+      //   if (valuePosition > zeroPosition)
+      //   {
+      //      hours = 24 - (((valuePosition - zeroPosition) / Constants.TWO_PI) * 24.0);
+      //   }
+      //   else
+      //   {
+      //      hours = ((zeroPosition - valuePosition) / Constants.TWO_PI) * 24;
+      //   }
+      //   if (hemisphere == HemisphereOption.Northern)
+      //   {
+      //      hours = Range24(hours);
+      //   }
+      //   else
+      //   {
+      //      hours = Range24(24.0 - hours);
+      //   }
+      //   return hours;
+      //}
 
-      public static double AxisPositionFromHours(double zeroPosition, double hourValue, HemisphereOption hemisphere) //Get_EncoderfromHours
-      {
-         double hours = Range24(hourValue - 6.0);
-         double axisPosition;
-         if (hemisphere == HemisphereOption.Northern) {
-            if (hours < 12.0) {
-               axisPosition = zeroPosition - ((hours / 24.0) * Constants.TWO_PI);
-            }
-            else {
-               axisPosition = (((24.0 - hours) / 24.0) * Constants.TWO_PI) + zeroPosition;
-            }
-         }
-         else {
-            if (hours < 12) {
-               axisPosition = ((hours / 24.0) * Constants.TWO_PI) + zeroPosition;
-            }
-            else {
-               axisPosition = zeroPosition - (((24.0 - hours) / 24.0) * Constants.TWO_PI);
-            }
-         }
-         return axisPosition;
-      }
+      //public static double AxisPositionFromHours(double zeroPosition, double hourValue, HemisphereOption hemisphere) //Get_EncoderfromHours
+      //{
+      //   double hours = Range24(hourValue - 6.0);
+      //   double axisPosition;
+      //   if (hemisphere == HemisphereOption.Northern)
+      //   {
+      //      if (hours < 12.0)
+      //      {
+      //         axisPosition = zeroPosition - ((hours / 24.0) * Constants.TWO_PI);
+      //      }
+      //      else
+      //      {
+      //         axisPosition = (((24.0 - hours) / 24.0) * Constants.TWO_PI) + zeroPosition;
+      //      }
+      //   }
+      //   else
+      //   {
+      //      if (hours < 12)
+      //      {
+      //         axisPosition = ((hours / 24.0) * Constants.TWO_PI) + zeroPosition;
+      //      }
+      //      else
+      //      {
+      //         axisPosition = zeroPosition - (((24.0 - hours) / 24.0) * Constants.TWO_PI);
+      //      }
+      //   }
+      //   return axisPosition;
+      //}
 
 
-      /// <summary>
-      /// Returns the Axis Position in Radians for a given value in degrees.
-      /// </summary>
-      /// <param name="zeroPosition"></param>
-      /// <param name="degreesValue"></param>
-      /// <param name="pier"></param>
-      /// <param name="hemisphere"></param>
-      /// <returns></returns>
-      public static double AxisPositionFromDegrees(double zeroPosition, double degreesValue, int pier, HemisphereOption hemisphere)  //  Get_EncoderfromDegrees
-      {
-         double axisPosition;
-         if (hemisphere == HemisphereOption.Southern) {
-            degreesValue = 360.0 - degreesValue;
-         }
-         if (degreesValue > 180.0 && pier == 0) {
-            axisPosition = zeroPosition - DegToRad(360.0 - degreesValue);
-         }
-         else {
-            axisPosition = DegToRad(degreesValue) + zeroPosition;
-         }
-         return axisPosition;
-      }
+      ///// <summary>
+      ///// Returns the Axis Position in Radians for a given value in degrees.
+      ///// </summary>
+      ///// <param name="zeroPosition"></param>
+      ///// <param name="degreesValue"></param>
+      ///// <param name="pier"></param>
+      ///// <param name="hemisphere"></param>
+      ///// <returns></returns>
+      //public static double AxisPositionFromDegrees(double zeroPosition, double degreesValue, int pier, HemisphereOption hemisphere)  //  Get_EncoderfromDegrees
+      //{
+      //   double axisPosition;
+      //   if (hemisphere == HemisphereOption.Southern)
+      //   {
+      //      degreesValue = 360.0 - degreesValue;
+      //   }
+      //   if (degreesValue > 180.0 && pier == 0)
+      //   {
+      //      axisPosition = zeroPosition - DegToRad(360.0 - degreesValue);
+      //   }
+      //   else
+      //   {
+      //      axisPosition = DegToRad(degreesValue) + zeroPosition;
+      //   }
+      //   return axisPosition;
+      //}
 
-      /// <summary>
-      /// Returns a degrees value for a given axis position
-      /// </summary>
-      /// <param name="zeroPosition">Axis positon for zero degrees in radians.</param>
-      /// <param name="valuePosition">Axis position for value in radians</param>
-      /// <param name="hemisphere">Northern or Southern hemisphere</param>
-      /// <returns></returns>
-      public static double AxisDegrees(double zeroPosition, double valuePosition, HemisphereOption hemisphere)     // Get_EncoderDegrees
-      {
-         double degrees;
-         if (valuePosition > zeroPosition) {
-            degrees = RadToDeg(valuePosition - zeroPosition);
-         }
-         else {
-            degrees = 360.0 - RadToDeg(zeroPosition - valuePosition);
-         }
-         if (hemisphere == HemisphereOption.Northern) {
-            degrees = Range360(degrees);
-         }
-         else {
-            degrees = Range360(360.0 - degrees);
-         }
-         return degrees;
-      }
+      ///// <summary>
+      ///// Returns a degrees value for a given axis position
+      ///// </summary>
+      ///// <param name="zeroPosition">Axis positon for zero degrees in radians.</param>
+      ///// <param name="valuePosition">Axis position for value in radians</param>
+      ///// <param name="hemisphere">Northern or Southern hemisphere</param>
+      ///// <returns></returns>
+      //public static double AxisDegrees(double zeroPosition, double valuePosition, HemisphereOption hemisphere)     // Get_EncoderDegrees
+      //{
+      //   double degrees;
+      //   if (valuePosition > zeroPosition)
+      //   {
+      //      degrees = RadToDeg(valuePosition - zeroPosition);
+      //   }
+      //   else
+      //   {
+      //      degrees = 360.0 - RadToDeg(zeroPosition - valuePosition);
+      //   }
+      //   if (hemisphere == HemisphereOption.Northern)
+      //   {
+      //      degrees = Range360(degrees);
+      //   }
+      //   else
+      //   {
+      //      degrees = Range360(360.0 - degrees);
+      //   }
+      //   return degrees;
+      //}
 
-      public static double RAAxisPositionFromRA(double raHours, double decDegrees, double longitude, double zeroPosition, HemisphereOption hemisphere) // Get_RAEncoderfromRA
-      {
-         double hourAngle = raHours - AstroConvert.LocalApparentSiderealTime(longitude);     // Not sure how this is derived from H = LST - ɑ
-         if (hemisphere == HemisphereOption.Northern) {
-            if (decDegrees > 90 && decDegrees <= 270) {
-               hourAngle -= 12.0;
-            }
-         }
-         else {
-            if (decDegrees > 90 && decDegrees <= 270) {
-               hourAngle += 12.0;
-            }
-         }
-         hourAngle = Range24(hourAngle);
-         return AxisPositionFromHours(zeroPosition, hourAngle, hemisphere);
-      }
+      //public static double RAAxisPositionFromRA(double raHours, double decDegrees, double longitude, double zeroPosition, HemisphereOption hemisphere) // Get_RAEncoderfromRA
+      //{
+      //   double hourAngle = raHours - AstroConvert.LocalApparentSiderealTime(longitude);     // Not sure how this is derived from H = LST - ɑ
+      //   if (hemisphere == HemisphereOption.Northern)
+      //   {
+      //      if (decDegrees > 90 && decDegrees <= 270)
+      //      {
+      //         hourAngle -= 12.0;
+      //      }
+      //   }
+      //   else
+      //   {
+      //      if (decDegrees > 90 && decDegrees <= 270)
+      //      {
+      //         hourAngle += 12.0;
+      //      }
+      //   }
+      //   hourAngle = Range24(hourAngle);
+      //   return AxisPositionFromHours(zeroPosition, hourAngle, hemisphere);
+      //}
 
-      public static double DECAxisPositionFromDEC(double decDegrees, int pier, double zeroPosition, HemisphereOption hemisphere)  // Get_DECEncoderfromDEC
-      {
-         if (pier == 1) {
-            decDegrees = 180.0 - decDegrees;
-         }
-         return AxisPositionFromDegrees(zeroPosition, decDegrees, pier, hemisphere);
-      }
+      //public static double DECAxisPositionFromDEC(double decDegrees, int pier, double zeroPosition, HemisphereOption hemisphere)  // Get_DECEncoderfromDEC
+      //{
+      //   if (pier == 1)
+      //   {
+      //      decDegrees = 180.0 - decDegrees;
+      //   }
+      //   return AxisPositionFromDegrees(zeroPosition, decDegrees, pier, hemisphere);
+      //}
 
-      public static double RAAxisPositionFromAltAz(double altDegrees, double azDegrees, double longDegrees, double latDegrees, double zeroPosition, HemisphereOption hemisphere) // Get_RAEncoderfromAltAz
-      {
-         throw new NotImplementedException();
-         /*
-            Public Function Get_RAEncoderfromAltAz(Alt_in_deg As Double, Az_in_deg As Double, pLongitude As Double, pLatitude As Double, encOffset0 As Double, Tot_enc As Double, hmspr As Long) As Long
+      //public static double RAAxisPositionFromAltAz(double altDegrees, double azDegrees, double longDegrees, double latDegrees, double zeroPosition, HemisphereOption hemisphere) // Get_RAEncoderfromAltAz
+      //{
+      //   throw new NotImplementedException();
+      //   /*
+      //      Public Function Get_RAEncoderfromAltAz(Alt_in_deg As Double, Az_in_deg As Double, pLongitude As Double, pLatitude As Double, encOffset0 As Double, Tot_enc As Double, hmspr As Long) As Long
 
-            Dim i As Double
-            Dim ttha As Double
-            Dim ttdec As Double
+      //      Dim i As Double
+      //      Dim ttha As Double
+      //      Dim ttdec As Double
 
-                aa_hadec (pLatitude * DEG_RAD), (Alt_in_deg * DEG_RAD), ((360# - Az_in_deg) * DEG_RAD), ttha, ttdec
-                i = (ttha * RAD_HRS)
-                i = Range24(i)
-                Get_RAEncoderfromAltAz = Get_EncoderfromHours(encOffset0, i, Tot_enc, hmspr)
-   
-            End Function
-          */
-      }
+      //          aa_hadec (pLatitude * DEG_RAD), (Alt_in_deg * DEG_RAD), ((360# - Az_in_deg) * DEG_RAD), ttha, ttdec
+      //          i = (ttha * RAD_HRS)
+      //          i = Range24(i)
+      //          Get_RAEncoderfromAltAz = Get_EncoderfromHours(encOffset0, i, Tot_enc, hmspr)
 
-      public static double DECAxisPositionFromAltAz(double altDegrees, double azDegrees, double longDegrees, double latDegrees, double zeroPosition, int pier, HemisphereOption hemisphere) // Get_DECEncoderfromAltAz
-      {
-         throw new NotImplementedException();
-         /*
-            Public Function Get_DECEncoderfromAltAz(Alt_in_deg As Double, Az_in_deg As Double, pLongitude As Double, pLatitude As Double, encOffset0 As Double, Tot_enc As Double, Pier As Double, hmspr As Long) As Long
+      //      End Function
+      //    */
+      //}
 
-            Dim i As Double
-            Dim ttha As Double
-            Dim ttdec As Double
+      //public static double DECAxisPositionFromAltAz(double altDegrees, double azDegrees, double longDegrees, double latDegrees, double zeroPosition, int pier, HemisphereOption hemisphere) // Get_DECEncoderfromAltAz
+      //{
+      //   throw new NotImplementedException();
+      //   /*
+      //      Public Function Get_DECEncoderfromAltAz(Alt_in_deg As Double, Az_in_deg As Double, pLongitude As Double, pLatitude As Double, encOffset0 As Double, Tot_enc As Double, Pier As Double, hmspr As Long) As Long
 
-                aa_hadec (pLatitude * DEG_RAD), (Alt_in_deg * DEG_RAD), ((360# - Az_in_deg) * DEG_RAD), ttha, ttdec
-                i = ttdec * RAD_DEG ' tDec was in Radians
-                If Pier = 1 Then i = 180 - i
-                Get_DECEncoderfromAltAz = Get_EncoderfromDegrees(encOffset0, i, Tot_enc, Pier, hmspr)
-   
-            End Function
-          */
-      }
+      //      Dim i As Double
+      //      Dim ttha As Double
+      //      Dim ttdec As Double
+
+      //          aa_hadec (pLatitude * DEG_RAD), (Alt_in_deg * DEG_RAD), ((360# - Az_in_deg) * DEG_RAD), ttha, ttdec
+      //          i = ttdec * RAD_DEG ' tDec was in Radians
+      //          If Pier = 1 Then i = 180 - i
+      //          Get_DECEncoderfromAltAz = Get_EncoderfromDegrees(encOffset0, i, Tot_enc, Pier, hmspr)
+
+      //      End Function
+      //    */
+      //}
       #endregion
 
       #region Axis positions (encoder steps) ...
-      public static double GetEncoderHours(int encoderZeroPos, int encoderValue, int stepsPer360, HemisphereOption hemisphere)
-      {
-         double result = 0.0;
-         // Compute in Hours the encoder value based on 0 position value (RAOffset0)
-         // and Total 360 degree rotation microstep count (Tot_Enc
-         if (encoderValue > encoderZeroPos) {
-            result = ((encoderValue - encoderZeroPos) / stepsPer360) * 24.0;
-            result = 24.0 - result;
-         }
-         else {
-            result = ((encoderZeroPos - encoderValue) / stepsPer360) * 24.0;
-         }
-         if (hemisphere == HemisphereOption.Northern) {
-            result = AstroConvert.Range24(result + 6.0);
-         }
-         else {
-            result = AstroConvert.Range24((24.0 - result) + 6.0);
-         }
-         return result;
-      }
+      //public static double GetEncoderHours(int encoderZeroPos, int encoderValue, int stepsPer360, HemisphereOption hemisphere)
+      //{
+      //   double result = 0.0;
+      //   // Compute in Hours the encoder value based on 0 position value (RAOffset0)
+      //   // and Total 360 degree rotation microstep count (Tot_Enc
+      //   if (encoderValue > encoderZeroPos)
+      //   {
+      //      result = ((encoderValue - encoderZeroPos) / stepsPer360) * 24.0;
+      //      result = 24.0 - result;
+      //   }
+      //   else
+      //   {
+      //      result = ((encoderZeroPos - encoderValue) / stepsPer360) * 24.0;
+      //   }
+      //   if (hemisphere == HemisphereOption.Northern)
+      //   {
+      //      result = AstroConvert.Range24(result + 6.0);
+      //   }
+      //   else
+      //   {
+      //      result = AstroConvert.Range24((24.0 - result) + 6.0);
+      //   }
+      //   return result;
+      //}
 
 
       //Public Function Get_EncoderfromHours(encOffset0 As Double, hourval As Double, Tot_enc As Double, hmspr As Long) As Long
@@ -437,29 +456,33 @@ namespace ASCOM.LunaticAstroEQ.Core
       //End Function
 
 
-      public static double GetEncoderDegrees(int encoderZeroPos, int encoderValue, int stepsPer360, HemisphereOption hemisphere)
-      {
-         double result = 0.0;
+      //public static double GetEncoderDegrees(int encoderZeroPos, int encoderValue, int stepsPer360, HemisphereOption hemisphere)
+      //{
+      //   double result = 0.0;
 
-         //    Compute in Hours the encoder value based on 0 position value (EncOffset0)
-         //    and Total 360 degree rotation microstep count (Tot_Enc
+      //   //    Compute in Hours the encoder value based on 0 position value (EncOffset0)
+      //   //    and Total 360 degree rotation microstep count (Tot_Enc
 
-         if (encoderValue > encoderZeroPos) {
-            result = ((encoderValue - encoderZeroPos) / stepsPer360) * 360.0;
-         }
-         else {
-            result = ((encoderZeroPos - encoderValue) / stepsPer360) * 360.0;
-            result = 360.0 - result;
-         }
+      //   if (encoderValue > encoderZeroPos)
+      //   {
+      //      result = ((encoderValue - encoderZeroPos) / stepsPer360) * 360.0;
+      //   }
+      //   else
+      //   {
+      //      result = ((encoderZeroPos - encoderValue) / stepsPer360) * 360.0;
+      //      result = 360.0 - result;
+      //   }
 
-         if (hemisphere == HemisphereOption.Northern) {
-            result = AstroConvert.Range360(result);
-         }
-         else {
-            result = AstroConvert.Range360(360.0 - result);
-         }
-         return result;
-      }
+      //   if (hemisphere == HemisphereOption.Northern)
+      //   {
+      //      result = AstroConvert.Range360(result);
+      //   }
+      //   else
+      //   {
+      //      result = AstroConvert.Range360(360.0 - result);
+      //   }
+      //   return result;
+      //}
       #endregion
 
       #region AA-HADEC ...
@@ -467,57 +490,58 @@ namespace ASCOM.LunaticAstroEQ.Core
       static double sinLatitude = 0.0;
       static double cosLatitude = 0.0;
 
-      /* given geographical latitude (n+, radians), lt, altitude (up+, radians),
-       * alt, and azimuth (angle round to the east from north+, radians),
-       * return hour angle (radians), ha, and declination (radians), dec.
-       */
-      public static void AltAzToHaDec(double latitude, double altitude, double azimuth, ref double hourAngle, ref double declination)
-      {
-         aaha_aux(latitude, azimuth, altitude, ref hourAngle, ref declination);
-         if (hourAngle > Math.PI)
-            hourAngle -= 2 * Math.PI;
-      }
+      ///* given geographical latitude (n+, radians), lt, altitude (up+, radians),
+      // * alt, and azimuth (angle round to the east from north+, radians),
+      // * return hour angle (radians), ha, and declination (radians), dec.
+      // */
+      //public static void AltAzToHaDec(double latitude, double altitude, double azimuth, ref double hourAngle, ref double declination)
+      //{
+      //   aaha_aux(latitude, azimuth, altitude, ref hourAngle, ref declination);
+      //   if (hourAngle > Math.PI)
+      //      hourAngle -= 2 * Math.PI;
+      //}
 
 
-      public static EquatorialCoordinate GetEquatorial(AltAzCoordinate altAz, Angle latitude, Angle longitude, DateTime localTime)
-      {
-         double hourAngle = 0.0;
-         double declination = 0.0;
-         aaha_aux(latitude.Radians, altAz.Azimuth.Radians, altAz.Altitude.Radians, ref hourAngle, ref declination);
-         if (hourAngle > Math.PI)
-            hourAngle -= 2 * Math.PI;
+      //public static EquatorialCoordinate GetEquatorial(AltAzCoordinate altAz, Angle latitude, Angle longitude, DateTime localTime)
+      //{
+      //   double hourAngle = 0.0;
+      //   double declination = 0.0;
+      //   aaha_aux(latitude.Radians, altAz.Azimuth.Radians, altAz.Altitude.Radians, ref hourAngle, ref declination);
+      //   if (hourAngle > Math.PI)
+      //      hourAngle -= 2 * Math.PI;
 
-         // LHA = LST - Ra
-         double lst = AstroConvert.LocalApparentSiderealTime(longitude.Value, localTime);
-         double rightAscension = lst - hourAngle;
-         return new EquatorialCoordinate(new HourAngle(rightAscension, true), new Angle(declination, true));
-      }
+      //   // LHA = LST - Ra
+      //   double lst = AstroConvert.LocalApparentSiderealTime(longitude.Value, localTime);
+      //   double rightAscension = lst - hourAngle;
+      //   return new EquatorialCoordinate(new HourAngle(rightAscension, true), new Angle(declination, true));
+      //}
 
 
-      /* given geographical (n+, radians), lt, hour angle (radians), ha, and
-       * declination (radians), dec, return altitude (up+, radians), alt, and
-       * azimuth (angle round to the east from north+, radians),
-      */
-      public static void HaDecToAltAz(double latitude, double hourAngle, double declination, ref double altitude, ref double azimuth)
-      {
-         aaha_aux(latitude, hourAngle, declination, ref azimuth, ref altitude);
-      }
+      ///* given geographical (n+, radians), lt, hour angle (radians), ha, and
+      // * declination (radians), dec, return altitude (up+, radians), alt, and
+      // * azimuth (angle round to the east from north+, radians),
+      //*/
+      //public static void HaDecToAltAz(double latitude, double hourAngle, double declination, ref double altitude, ref double azimuth)
+      //{
+      //   aaha_aux(latitude, hourAngle, declination, ref azimuth, ref altitude);
+      //}
 
       public static AltAzCoordinate GetAltAz(EquatorialCoordinate equatorial, Angle latitude)
       {
          double alt = 0.0;
          double az = 0.0;
-         aaha_aux(latitude.Radians, equatorial.RightAscension.Radians, equatorial.Declination.Radians, ref alt, ref az);
+         Aaha_Aux(latitude.Radians, equatorial.RightAscension.Radians, equatorial.Declination.Radians, ref alt, ref az);
          return new AltAzCoordinate(new Angle(alt, true), new Angle(az, true));
       }
 
-      static void aaha_aux(double latitude, double x, double y, ref double p, ref double q)
+      static void Aaha_Aux(double latitude, double x, double y, ref double p, ref double q)
       {
          lastLatitide = double.MinValue;
          double cap = 0.0;
          double B = 0.0;
 
-         if (latitude != lastLatitide) {
+         if (latitude != lastLatitide)
+         {
             sinLatitude = Math.Sin(latitude);
             cosLatitude = Math.Cos(latitude);
             lastLatitide = latitude;
@@ -552,25 +576,29 @@ namespace ASCOM.LunaticAstroEQ.Core
          double B;
 
          ca = cb * cc + sb * sc * cA;
-         if (ca > 1.0) {
+         if (ca > 1.0)
+         {
             ca = 1.0;
          }
-         if (ca < -1.0) {
+         if (ca < -1.0)
+         {
             ca = -1.0;
          }
          cap = ca;
 
-         if (sc < 1e-7) {
+         if (sc < 1e-7)
+         {
             B = cc < 0 ? A : Math.PI - A;
          }
-         else {
+         else
+         {
             sA = Math.Sin(A);
             y = sA * sb * sc;
             x = cb - ca * cc;
             B = Math.Atan2(y, x);
          }
 
-         Bp = AstroConvert.Range(B, 2 * Math.PI);
+         Bp = AstroConvert.Range2Pi(B);
       }
       #endregion
 

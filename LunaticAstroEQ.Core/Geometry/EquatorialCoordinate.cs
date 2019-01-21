@@ -39,19 +39,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public EquatorialCoordinate(double rightAscension, double declination):this()   // , double longitude, DateTime observedTime)
       {
-         if (rightAscension < 0 || rightAscension > 24.0) { throw new ArgumentOutOfRangeException("Right Ascension must be between 0 and 24."); }
-         if (declination < -90 || declination > 90) { throw new ArgumentOutOfRangeException("Declination must be between -90 and 90."); }
-         _RA.Value = rightAscension;
-         _Dec.Value = declination;
+         _RA.Value = AstroConvert.RangeRA(rightAscension);
+         _Dec.Value = AstroConvert.RangeDEC(declination);
       }
 
 
-      public EquatorialCoordinate(HourAngle rightAscension, Angle declination)    // , Angle longitude, DateTime observedTime)
+      public EquatorialCoordinate(HourAngle rightAscension, Angle declination):this()   // , Angle longitude, DateTime observedTime)
       {
-         if (rightAscension.Value < 0 || rightAscension.Value > 24.0) { throw new ArgumentOutOfRangeException("Right Ascension must be between 0 and 24."); }
-         if (declination.Value < -90 || declination.Value > 90) { throw new ArgumentOutOfRangeException("Declination must be between -90 and 90."); }
-         _RA = rightAscension;
-         _Dec = declination;
+         _RA.Value = AstroConvert.RangeRA(rightAscension.Value);
+         _Dec = AstroConvert.RangeDEC(declination.Value);
       }
 
       #region Operator overloads ...
@@ -118,6 +114,14 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          return cartCoord;
       }
 
+      public AxisPosition GetRelativeAxisPositionOf(EquatorialCoordinate target)
+      {
+         double newRa = target.RightAscension.Radians - this.RightAscension.Radians;
+         double newDec = target.Declination.Radians - this.Declination.Radians;
+         System.Diagnostics.Debug.WriteLine($"New Dec = {Angle.RadiansToDegrees(newDec)} degrees");
+         AxisPosition targetAxisPosition = new AxisPosition(newRa, newDec);
+         return targetAxisPosition;
+      }
 
    }
 

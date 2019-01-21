@@ -62,7 +62,7 @@ namespace ASCOM.LunaticAstroEQ
                break;
 
             case "Lunatic:SetSiteTemperature":
-               _AscomTools.Transform.SiteTemperature = Convert.ToDouble(values[0]);
+               _AscomToolsCurrentPosition.Transform.SiteTemperature = Convert.ToDouble(values[0]);
                break;
 
             default:

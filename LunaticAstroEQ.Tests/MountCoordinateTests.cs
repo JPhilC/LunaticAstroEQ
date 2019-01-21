@@ -24,11 +24,8 @@ namespace LunaticAstroEQ.Tests
             tools.Transform.SiteLatitude = new Angle("52°40'6.38\"");
             tools.Transform.SiteLongitude = longitude;
             tools.Transform.SiteElevation = 175.0;
-            MountCoordinate deneb = new MountCoordinate("+20h42m5.66s", "+45°21'03.8\"")
-            {
-               AltAzimuth = new AltAzCoordinate("+52°39'10.5\"", "+77°33'0.8\"")
-            };
-            AltAzCoordinate suggestedAltAz = deneb.GetAltAzimuth(tools, _localTime);
+            MountCoordinate deneb = new MountCoordinate("+20h42m5.66s", "+45°21'03.8\"", new AltAzCoordinate("+52°39'10.5\"", "+77°33'0.8\""));
+            AltAzCoordinate suggestedAltAz = deneb.UpdateAltAzimuth(tools, _localTime);
 
             System.Diagnostics.Debug.WriteLine(string.Format("{0} (Suggested), Expecting {1}",
                suggestedAltAz,

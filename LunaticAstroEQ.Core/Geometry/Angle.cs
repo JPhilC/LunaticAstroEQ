@@ -763,74 +763,90 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public static Angle operator +(Angle angle1, Angle angle2)
       {
+         Angle result = new Angle(0.0);
+         result.Format = angle1.Format;
          if (angle1.Format == AngularFormat.DecimalDegrees
              || angle1.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            angle1.Value += angle2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
+            result.Value = new Angle(angle1.Value + angle2.Value);
          }
          else
          {
             double seconds = angle1.TotalSeconds + angle2.TotalSeconds;
-            angle1 = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
-
-         return angle1;
+         result.Format = angle1.Format;
+         return result;
       }
 
       public static Angle operator -(Angle angle1, Angle angle2)
       {
+         Angle result = new Angle(0.0);
+         result.Format = angle1.Format;
          if (angle1.Format == AngularFormat.DecimalDegrees
              || angle1.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            angle1.Value -= angle2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
+            result.Value = angle1.Value - angle2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
          }
          else
          {
             double seconds = angle1.TotalSeconds - angle2.TotalSeconds;
-            angle1 = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
 
-         return angle1;
+         return result;
       }
 
       public static Angle operator *(Angle angle, double factor)
       {
+         Angle result = new Angle(0.0);
+         result.Format = angle.Format;
          if (angle.Format == AngularFormat.DecimalDegrees
              || angle.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            angle.Value *= factor;  /* Use Value property to ensure DMS properties are also updated properly */
+            result.Value = angle.Value * factor;  /* Use Value property to ensure DMS properties are also updated properly */
          }
          else
          {
             double seconds = angle.TotalSeconds * factor;
-            angle = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
 
-         return angle;
+         return result;
       }
 
       public static Angle operator /(Angle angle, double factor)
       {
+         Angle result = new Angle(0.0);
+         result.Format = angle.Format;
          if (angle.Format == AngularFormat.DecimalDegrees
              || angle.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            angle.Value /= factor;     /* Use Value property to ensure DMS properties are also updated properly */
+            result.Value = angle.Value / factor;     /* Use Value property to ensure DMS properties are also updated properly */
          }
          else
          {
             double seconds = angle.TotalSeconds / factor;
-            angle = FromSeconds(seconds);
+            result = FromSeconds(seconds);
          }
 
-         return angle;
+         return result;
       }
 
       public static double operator /(Angle angle1, Angle angle2)
       {
-         return (angle2.Format == AngularFormat.DecimalDegrees
-                 || angle2.Format == AngularFormat.DecimalDegreesWestEast
-                     ? (double)(angle1.Value / angle2.Value)
-                     : angle1.TotalSeconds / angle2.TotalSeconds);
+         Angle result = new Angle(0.0);
+         result.Format = angle2.Format;
+         if (angle2.Format == AngularFormat.DecimalDegrees
+                 || angle2.Format == AngularFormat.DecimalDegreesWestEast)
+         {
+            result.Value = (double)(angle1.Value / angle2.Value);
+         }
+         else
+         {
+            result = FromSeconds(angle1.TotalSeconds / angle2.TotalSeconds);
+         }
+         return result;
       }
 
       public override int GetHashCode()
@@ -1223,15 +1239,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       private void MatchDmsSigns(double value)
       {
-            /* If the value is zero, no sign can be inferred */
-            if (value > 0.0)
-            {
-               SetDmsToPositive();
-            }
-            else if (value < 0.0)
-            {
-               SetDmsToNegative();
-            }
+         /* If the value is zero, no sign can be inferred */
+         if (value > 0.0)
+         {
+            SetDmsToPositive();
+         }
+         else if (value < 0.0)
+         {
+            SetDmsToNegative();
+         }
       }
 
       private void SetDmsToPositive()

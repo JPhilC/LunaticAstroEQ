@@ -58,7 +58,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          {
             return _AltAzimuth;
          }
-         set
+         private set
          {
             _AltAzimuth = value;
          }
@@ -118,6 +118,18 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
       /// <summary>
+      /// Initialise a mount coordinate with Ra/Dec strings 
+      /// </summary>
+      /// <param name="ra">A right ascension string</param>
+      /// <param name="dec">declination string</param>
+      /// <param name="localTime">The local time of the observation</param>
+      public MountCoordinate(string ra, string dec, AltAzCoordinate altAz) : this(new EquatorialCoordinate(ra, dec))
+      {
+         _MasterCoordinate = MasterCoordinateEnum.Equatorial;
+         AltAzimuth = altAz;
+      }
+
+      /// <summary>
       /// Simple initialisation with an equatorial coordinate
       /// </summary>
       private MountCoordinate(EquatorialCoordinate equatorial) 
@@ -148,7 +160,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public MountCoordinate(EquatorialCoordinate equatorial, AscomTools tools, DateTime localTime):this(equatorial)
       {
-         _AltAzimuth = this.GetAltAzimuth(tools, localTime);
+        this.UpdateAltAzimuth(tools, localTime);
       }
 
       /// <summary>
@@ -159,8 +171,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="localTime">The local time of the observation</param>
       public MountCoordinate(string ra, string dec, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(new EquatorialCoordinate(ra, dec))
       {
-         _Equatorial = new EquatorialCoordinate(ra, dec);
-         _AltAzimuth = this.GetAltAzimuth(tools, currentTime);
+         Equatorial = new EquatorialCoordinate(ra, dec);
+         this.UpdateAltAzimuth(tools, currentTime);
          _AxesPosition = axisPosition;
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
       }
@@ -171,7 +183,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public MountCoordinate(EquatorialCoordinate equatorial, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(equatorial)
       {
-         _AltAzimuth = this.GetAltAzimuth(tools, currentTime);
+         this.UpdateAltAzimuth(tools, currentTime);
          _AxesPosition = axisPosition;
 
       }
@@ -189,12 +201,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public MountCoordinate(AltAzCoordinate altAz, AscomTools tools, DateTime localTime) : this(altAz)
       {
-         _Equatorial = this.GetEquatorial(tools, localTime);
+         this.UpdateEquatorial(tools, localTime);
       }
 
       public MountCoordinate(AltAzCoordinate altAz, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(altAz)
       {
-         _Equatorial = this.GetEquatorial(tools, currentTime);
+         this.UpdateEquatorial(tools, currentTime);
          _AxesPosition = axisPosition;
       }
 
@@ -220,14 +232,14 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       /// <param name="transform"></param>
       /// <returns></returns>
-      public AltAzCoordinate GetAltAzimuth(AscomTools tools, DateTime currentTime)
+      public AltAzCoordinate UpdateAltAzimuth(AscomTools tools, DateTime currentTime)
       {
          _SyncTime = currentTime;
          _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
          tools.Transform.JulianDateTT = tools.Util.DateLocalToJulian(currentTime);
          tools.Transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
-         _AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
-         return _AltAzimuth;
+         AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
+         return AltAzimuth;
       }
 
       /// <summary>
@@ -236,7 +248,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       /// <param name="transform"></param>
       /// <returns></returns>
-      public EquatorialCoordinate GetEquatorial(AscomTools tools, DateTime currentTime)
+      public EquatorialCoordinate UpdateEquatorial(AscomTools tools, DateTime currentTime)
       {
          _SyncTime = currentTime;
          _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
@@ -258,13 +270,17 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             // Update the AltAzimuth
             tools.Transform.SetTopocentric(_Equatorial.RightAscension.Value, _Equatorial.Declination.Value);
             //tools.Transform.Refresh();
-            _AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
+            this.AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
          }
          else
          {
             // Update the Equatorial
             tools.Transform.SetAzimuthElevation(_AltAzimuth.Azimuth.Value, _AltAzimuth.Altitude.Value);
-            _Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, tools.Transform.DECTopocentric);
+            if (tools.Transform.DECTopocentric < 89.00)
+            {
+               System.Diagnostics.Debugger.Break();
+            }
+            this.Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, tools.Transform.DECTopocentric);
          }
       }
 
@@ -272,7 +288,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          _Equatorial = equatorial;
          _AxesPosition = axisPosition;
-         _AltAzimuth = this.GetAltAzimuth(tools, currentTime);
+         this.UpdateAltAzimuth(tools, currentTime);
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
 
       }
@@ -281,7 +297,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          _AltAzimuth = altAz;
          _AxesPosition = axisPosition;
-         _Equatorial = this.GetEquatorial(tools, currentTime);
+         this.UpdateEquatorial(tools, currentTime);
          _MasterCoordinate = MasterCoordinateEnum.AltAzimuth;
       }
 

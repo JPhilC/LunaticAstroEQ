@@ -34,7 +34,7 @@ namespace ASCOM.LunaticAstroEQ
       /// <returns></returns>
       private PierSide SOP_Physical(double hourAngle)
       {
-         double ha = AstroConvert.RangeHA(hourAngle);
+         double ha = AstroConvert.RangeRA(hourAngle);
          if (Settings.AscomCompliance.SwapPhysicalSideOfPier)
          {
             return (ha >= 0 ? PierSide.pierWest : PierSide.pierEast);
