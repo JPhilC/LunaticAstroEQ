@@ -111,8 +111,12 @@
     <Compile Include="TakiTests.cs" />
     <Compile Include="MountCoordinateTests.cs" />
     <Compile Include="UnitTest1.cs" />
-    <Compile Include="UnitTest2.cs" />
+    <Compile Include="AscomUtilityTests.cs" />
     <Compile Include="RangeTests.cs" />
+    <Compile Include="AngleTests.cs" />
+    <Compile Include="AxisPositionTests.cs" />
+    <Compile Include="EquatorialCoordinateTests.cs" />
+    <Compile Include="SlewTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LunaticAstroEQ.Controller\LunaticAstroEQ.Controller.csproj">

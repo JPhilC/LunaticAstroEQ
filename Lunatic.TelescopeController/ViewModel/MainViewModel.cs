@@ -10,6 +10,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
+using System.Resources;
+using System.Speech.Synthesis;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
@@ -26,6 +29,9 @@ namespace Lunatic.TelescopeController.ViewModel
 
       #region Properties ....
       private bool LunaticDriver = false;
+
+      SpeechSynthesizer _Synth;
+
 
       #region Settings ...
       ISettingsProvider<TelescopeControlSettings> _SettingsProvider;
@@ -68,30 +74,6 @@ namespace Lunatic.TelescopeController.ViewModel
       #endregion
 
       #region Telescope driver selection etc ...
-#if INSTANTIATE_DIRECT
-      private ASCOM.DeviceInterface.ITelescopeV3 _Driver;
-      private ASCOM.DeviceInterface.ITelescopeV3 Driver
-      {
-         get
-         {
-            return _Driver;
-         }
-         set
-         {
-            if (ReferenceEquals(_Driver, value)) {
-               return;
-            }
-            if (_Driver != null) {
-               _Driver.Dispose();
-            }
-            _Driver = value;
-            if (_Driver != null) {
-               SetSupportedActions(_Driver.SupportedActions);
-            }
-         }
-      }
-
-#else
       private ASCOM.DeviceInterface.ITelescopeV3 _Driver;
 
       private ASCOM.DeviceInterface.ITelescopeV3 Driver
@@ -118,7 +100,6 @@ namespace Lunatic.TelescopeController.ViewModel
 
          }
       }
-#endif
 
       private List<string> DriverSupportedActions = null;
 
@@ -239,14 +220,6 @@ namespace Lunatic.TelescopeController.ViewModel
          }
       }
 
-      public string DriverName
-      {
-         get
-         {
-            return (_Driver != null ? _Driver.Description : "Telescope driver not selected.");
-         }
-      }
-
       private string _DriverId;
       public string DriverId
       {
@@ -256,10 +229,21 @@ namespace Lunatic.TelescopeController.ViewModel
          }
          set
          {
-            if (Set<string>(ref _DriverId, value))
-            {
-               OnDriverChanged();
-            }
+            Set<string>(ref _DriverId, value);
+            OnDriverChanged();
+         }
+      }
+
+      private string _DriverName;
+      public string DriverName
+      {
+         get
+         {
+            return _DriverName;
+         }
+         set
+         {
+            Set(ref _DriverName, value);
          }
       }
 
@@ -268,7 +252,7 @@ namespace Lunatic.TelescopeController.ViewModel
       {
          get
          {
-            return (DriverSelected ? "Setup " + DriverName + "..." : "Setup");
+            return (String.IsNullOrWhiteSpace(DriverName) ? "Setup" : "Setup " + DriverName + "...");
          }
       }
 
@@ -276,14 +260,14 @@ namespace Lunatic.TelescopeController.ViewModel
       {
          get
          {
-            return (DriverSelected ? "Disconnect from " + DriverName : "Disconnect");
+            return (String.IsNullOrWhiteSpace(DriverName) ? "Disconnect" : "Disconnect from " + DriverName);
          }
       }
       public string ConnectMenuHeader
       {
          get
          {
-            return (DriverSelected ? "Connect to " + DriverName : "Connect ...");
+            return (String.IsNullOrWhiteSpace(DriverName) ? "Connect ..." : "Connect to " + DriverName);
          }
       }
 
@@ -320,6 +304,7 @@ namespace Lunatic.TelescopeController.ViewModel
          if (saveSettings)
          {
             _Settings.DriverId = DriverId;
+            _Settings.DriverName = DriverName;
             _SettingsProvider.SaveSettings();
          }
          RaisePropertyChanged("DriverName");
@@ -327,7 +312,7 @@ namespace Lunatic.TelescopeController.ViewModel
          RaisePropertyChanged("SetupMenuHeader");
          RaisePropertyChanged("DisconnectMenuHeader");
          RaisePropertyChanged("ConnectMenuHeader");
-         StatusMessage = (DriverSelected ? DriverName + " selected." : "Telescope driver not selected");
+         StatusMessage = (DriverSelected ? DriverName + " selected." : (String.IsNullOrEmpty(StatusMessage) ? "Telescope driver not selected" : StatusMessage));  // Keeps error displayed if failed to connect.
       }
 
       #endregion
@@ -700,19 +685,25 @@ End Property
          else
          {
             // Code runs "for real"
-
+            
 
             _SettingsProvider = settingsProvider;
             _Settings = settingsProvider.Settings;
             PopSettings();
+            if (Settings.VoiceGender != VoiceGender.NotSet)
+            {
+               _Synth = new SpeechSynthesizer();
+               _Synth.SetOutputToDefaultAudioDevice();
+               _Synth.SelectVoiceByHints(Settings.VoiceGender, Settings.VoiceAge);
+            }
 
             // Get current temperature via call to OpenWeatherAPI
             RefreshTemperature();
 
-            _AxisPosition = new AxisPosition(0.0, 0.0);
             _DisplayTimer = new DispatcherTimer();
             _DisplayTimer.Interval = TimeSpan.FromMilliseconds(500);
             _DisplayTimer.Tick += new EventHandler(this.DisplayTimer_Tick);
+
          }
 
       }
@@ -730,11 +721,13 @@ End Property
       {
          if (_Settings.CurrentSite != null && IsWeatherAPIAvailable)
          {
-            ThreadPool.QueueUserWorkItem(async callback => {
+            ThreadPool.QueueUserWorkItem(async callback =>
+            {
                double temp = await WeatherService.GetCurrentTemperature(
                   _Settings.CurrentSite.Latitude,
                   _Settings.CurrentSite.Longitude);
-               DispatcherHelper.CheckBeginInvokeOnUI(() => {
+               DispatcherHelper.CheckBeginInvokeOnUI(() =>
+               {
                   if (!double.IsNaN(temp))
                   {
                      _Settings.CurrentSite.Temperature = temp;
@@ -826,27 +819,34 @@ End Property
       #region Settings ...
       private void PopSettings()
       {
-         _DriverId = _Settings.DriverId;
          _DisplayMode = _Settings.DisplayMode;
 
          _Settings.Sites.PropertyChanged += Sites_PropertyChanged;
-#if INSTANTIATE_DIRECT
-         _Driver = new Telescope();
-#else
          // Better try to instantiate the driver as well if we have a driver ID
-         if (!string.IsNullOrWhiteSpace(_DriverId))
+         if (!string.IsNullOrWhiteSpace(Settings.DriverId))
          {
             try
             {
-               _Driver = new ASCOM.DriverAccess.Telescope(_DriverId);
+               Driver = new ASCOM.DriverAccess.Telescope(Settings.DriverId);
+               if (Driver != null)
+               {
+                  DriverName = Settings.DriverName;
+                  DriverId = Settings.DriverId;
+               }
+               else
+               {
+                  DriverName = string.Empty;
+                  DriverId = string.Empty;
+               }
             }
             catch (Exception)
             {
-               _DriverId = string.Empty;
+               DriverName = string.Empty;
+               DriverId = string.Empty;
                _StatusMessage = "Failed select previous telescope driver";
             }
          }
-#endif
+         //#endif
          // TODO: Replace the following to determine it from the driver
          CurrentTrackingMode = TrackingMode.Stop;
       }
@@ -899,7 +899,8 @@ End Property
          get
          {
             return _DisplayModeCommand
-               ?? (_DisplayModeCommand = new RelayCommand<DisplayMode>((mode) => {
+               ?? (_DisplayModeCommand = new RelayCommand<DisplayMode>((mode) =>
+               {
                   DisplayMode = mode;
                }));
          }
@@ -917,7 +918,8 @@ End Property
          {
             return _AddSiteCommand
                 ?? (_AddSiteCommand = new RelayCommand<SiteCollection>(
-                                      (collection) => {
+                                      (collection) =>
+                                      {
                                          collection.Add(new Site(Guid.NewGuid()) { SiteName = "<Site name>" });
                                       }
 
@@ -937,7 +939,8 @@ End Property
          {
             return _RemoveSiteCommand
                 ?? (_RemoveSiteCommand = new RelayCommand<Site>(
-                                      (site) => {
+                                      (site) =>
+                                      {
                                          Sites.Remove(site);
                                       }
 
@@ -956,7 +959,8 @@ End Property
          {
             return _GetSiteCoordinateCommand
                 ?? (_GetSiteCoordinateCommand = new RelayCommand<Site>(
-                                      (site) => {
+                                      (site) =>
+                                      {
                                          MapViewModel vm = new MapViewModel(site);
                                          MapWindow map = new MapWindow(vm);
                                          var result = map.ShowDialog();
@@ -998,16 +1002,27 @@ End Property
          get
          {
             return _ChooseCommand
-               ?? (_ChooseCommand = new RelayCommand(() => {
+               ?? (_ChooseCommand = new RelayCommand(() =>
+               {
 #if INSTANTIATE_DIRECT
                   Driver = new Telescope();
 
 #else
                   string driverId = ASCOM.DriverAccess.Telescope.Choose(DriverId);
-                  if (driverId != null)
+                  if (!string.IsNullOrEmpty(driverId))
                   {
                      Driver = new ASCOM.DriverAccess.Telescope(driverId);
-                     DriverId = driverId; // Triggers a refresh of menu options etc
+                     DriverName = Driver.Description;
+                     DriverId = driverId; // Triggers a refresh of menu options etc so must happen AFTER updating the driver name.
+                  }
+                  else
+                  {
+                     if (Driver != null)
+                     {
+                     }
+                     Driver = null;
+                     DriverName = string.Empty;
+                     DriverId = string.Empty;
                   }
 #endif
                   RaiseCanExecuteChanged();
@@ -1022,7 +1037,8 @@ End Property
          get
          {
             return _ConnectCommand
-               ?? (_ConnectCommand = new RelayCommand(() => {
+               ?? (_ConnectCommand = new RelayCommand(() =>
+               {
                   if (IsConnected)
                   {
                      Disconnect();
@@ -1089,7 +1105,7 @@ End Property
          if (Driver != null)
          {
             Driver.Connected = false;
-            Driver = null;
+            // Driver = null;
          }
          LunaticDriver = false;
          StatusMessage = "Not connected.";
@@ -1102,7 +1118,8 @@ End Property
          get
          {
             return _SetupCommand
-               ?? (_SetupCommand = new RelayCommand(() => {
+               ?? (_SetupCommand = new RelayCommand(() =>
+               {
                   Driver.SetupDialog();
                }, () => { return Driver != null; }));
          }
@@ -1118,7 +1135,8 @@ End Property
          get
          {
             return _StartSlewCommand
-               ?? (_StartSlewCommand = new RelayCommand<SlewButton>((button) => {
+               ?? (_StartSlewCommand = new RelayCommand<SlewButton>((button) =>
+               {
                   double rate;      // 10 x Sidereal;
                   switch (button)
                   {
@@ -1127,7 +1145,12 @@ End Property
                         rate = Settings.SlewRatePreset.DecRate * Constants.SIDEREAL_RATE_DEGREES;
                         if (button == SlewButton.South)
                         {
+                           Announce("slewing south");
                            rate = -rate;
+                        }
+                        else
+                        {
+                           Announce("slewing north");
                         }
                         if (Settings.ReverseDec)
                         {
@@ -1138,9 +1161,14 @@ End Property
                      case SlewButton.East:
                      case SlewButton.West:
                         rate = Settings.SlewRatePreset.RARate * Constants.SIDEREAL_RATE_DEGREES;
-                        if (button == SlewButton.East)
+                        if (button == SlewButton.West)
                         {
+                           Announce("slewing west");
                            rate = -rate;
+                        }
+                        else
+                        {
+                           Announce("slewing east");
                         }
                         if (Settings.ReverseRA)
                         {
@@ -1162,7 +1190,8 @@ End Property
          get
          {
             return _StopSlewCommand
-               ?? (_StopSlewCommand = new RelayCommand<SlewButton>((button) => {
+               ?? (_StopSlewCommand = new RelayCommand<SlewButton>((button) =>
+               {
                   switch (button)
                   {
                      case SlewButton.Stop:
@@ -1195,7 +1224,8 @@ End Property
          get
          {
             return _ShowGotoWindowCommand
-               ?? (_ShowGotoWindowCommand = new RelayCommand(() => {
+               ?? (_ShowGotoWindowCommand = new RelayCommand(() =>
+               {
                   if (gotoWindow == null)
                   {
                      gotoWindow = new GotoWindow(this);
@@ -1222,7 +1252,8 @@ End Property
          get
          {
             return _GotoCommand
-               ?? (_GotoCommand = new RelayCommand(() => {
+               ?? (_GotoCommand = new RelayCommand(() =>
+               {
                   StatusMessage = GotoTargetCoordinate.ToString();
                }));
             //, () => { return (IsConnected && !IsParked); }
@@ -1240,7 +1271,8 @@ End Property
          get
          {
             return _StartTrackingCommand
-               ?? (_StartTrackingCommand = new RelayCommand<TrackingMode>((trackingMode) => {
+               ?? (_StartTrackingCommand = new RelayCommand<TrackingMode>((trackingMode) =>
+               {
                   switch (trackingMode)
                   {
                      case TrackingMode.Stop:
@@ -1307,13 +1339,16 @@ End Property
          get
          {
             return _ParkCommand
-               ?? (_ParkCommand = new RelayCommand(() => {
+               ?? (_ParkCommand = new RelayCommand(() =>
+               {
                   if (IsParked)
                   {
+                     Announce("Unparking");
                      Driver.Unpark();
                   }
                   else
                   {
+                     Announce("Unparking");
                      Driver.Park();
                   }
                   RaisePropertyChanged("IsParked");
@@ -1338,6 +1373,15 @@ End Property
          GotoCommand.RaiseCanExecuteChanged();
       }
 
+
+      private void Announce(string message)
+      {
+         if (_Synth != null)
+         {
+            _Synth.SpeakAsync(message);
+         }
+      }
+
       #region IDisposable ...
       public void Dispose()
       {
@@ -1352,6 +1396,10 @@ End Property
             if (_Driver != null)
             {
                _Driver.Dispose();
+            }
+            if (_Synth != null)
+            {
+               _Synth.Dispose();
             }
          }
       }

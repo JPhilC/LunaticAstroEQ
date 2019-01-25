@@ -23,10 +23,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          {
             return _Lat;
          }
-         private set
+         set
          {
-            if (_Lat == value) {
-               return;
+            if (value < -90.0 || value > 90.0)
+            {
+               throw new ArgumentOutOfRangeException("Latitude must be between -90 and 90.");
             }
             _Lat = value;
          }
@@ -39,12 +40,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          {
             return _Long;
          }
-         private set
+         set
          {
-            if (_Long == value)
+            if (value < -180.0 || value > 180.0)
             {
-               return;
+               throw new ArgumentOutOfRangeException("Longitude must be >= -180 and < 180");
             }
+            _Long = value;
          }
       }
 
@@ -83,27 +85,31 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       public LatLongCoordinate(string latitude, string longitude)
       {
 
-         _Lat = new Angle(latitude);
-         _Long = new Angle(longitude);
+         _Lat = latitude;
+         _Long = longitude;
       }
-      public LatLongCoordinate(double latitude,double longitude):this()
+      public LatLongCoordinate(double latitude, double longitude) : this()
       {
-         if (longitude < -180.0 || longitude > 180.0) {
-            throw new ArgumentOutOfRangeException("Longitude must be >= -360 and < 360");
+         if (longitude < -180.0 || longitude > 180.0)
+         {
+            throw new ArgumentOutOfRangeException("Longitude must be >= -180 and < 180");
          }
-         if (latitude < -90.0 || latitude > 90.0) {
+         if (latitude < -90.0 || latitude > 90.0)
+         {
             throw new ArgumentOutOfRangeException("Latitude must be between -90 and 90.");
          }
-         _Lat.Value = latitude;
-         _Long.Value = longitude;
+         _Lat = latitude;
+         _Long = longitude;
       }
 
       public LatLongCoordinate(Angle latitude, Angle longitude)
       {
-         if (longitude.Value < -360.0 || longitude.Value >= 360) {
+         if (longitude.Value < -360.0 || longitude.Value >= 360)
+         {
             throw new ArgumentOutOfRangeException("Longitude must be >= 0 and < 360");
          }
-         if (latitude.Value < -90 || latitude.Value > 90) {
+         if (latitude.Value < -90 || latitude.Value > 90)
+         {
             throw new ArgumentOutOfRangeException("Latitude must be between -90 and 90.");
          }
          _Lat = latitude;
@@ -119,7 +125,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          get
          {
-            if (index < 0 || index > 1) {
+            if (index < 0 || index > 1)
+            {
                throw new ArgumentOutOfRangeException();
             }
             return (index == 0 ? X : Y);
@@ -131,7 +138,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public static bool operator ==(LatLongCoordinate pos1, LatLongCoordinate pos2)
       {
-         return (pos1.Latitude.Value == pos2.Latitude.Value && pos1.Longitude.Value == pos2.Longitude.Value);
+         return (pos1.Latitude == pos2.Latitude && pos1.Longitude == pos2.Longitude);
       }
 
       public static bool operator !=(LatLongCoordinate pos1, LatLongCoordinate pos2)
@@ -168,8 +175,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public override string ToString()
       {
-         return string.Format("Lat/Long = {0}/{1}", 
-            Latitude.ToString(AngularFormat.DegreesMinutesSeconds, false), 
+         return string.Format("Lat/Long = {0}/{1}",
+            Latitude.ToString(AngularFormat.DegreesMinutesSeconds, false),
             Longitude.ToString(AngularFormat.DegreesMinutesSeconds, false));
       }
 
@@ -186,23 +193,30 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          double az = 0.0;
          double alt = Math.Sqrt((x * x) + (y * y));
-         if (x > 0) {
+         if (x > 0)
+         {
             az = Math.Atan(y / x);
          }
 
-         if (x < 0) {
-            if (y >= 0) {
+         if (x < 0)
+         {
+            if (y >= 0)
+            {
                az = Math.Atan(y / x) + Math.PI;
             }
-            else {
+            else
+            {
                az = Math.Atan(y / x) - Math.PI;
             }
          }
-         if (x == 0) {
-            if (y > 0) {
+         if (x == 0)
+         {
+            if (y > 0)
+            {
                az = Math.PI / 2.0;
             }
-            else {
+            else
+            {
                az = -1 * (Math.PI / 2.0);
             }
          }

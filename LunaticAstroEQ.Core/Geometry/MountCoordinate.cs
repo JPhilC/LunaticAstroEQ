@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ASCOM.DeviceInterface;
+using System;
 
 namespace ASCOM.LunaticAstroEQ.Core.Geometry
 {
@@ -107,6 +108,31 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
       /// <summary>
+      /// Returns the pointing side of Pier as required by ASCOM
+      /// </summary>
+      public PierSide PointingSideOfPier
+      {
+         get
+         {
+            if (AltAzimuth != null)
+            {
+               if (AltAzimuth.Azimuth > 180.0)
+               {
+                  return PierSide.pierEast;
+               }
+               else
+               {
+                  return PierSide.pierWest;
+               }
+            }
+            else
+            {
+               return PierSide.pierUnknown;
+            }
+         }
+      }
+
+      /// <summary>
       /// Initialise a mount coordinate with Ra/Dec strings 
       /// </summary>
       /// <param name="ra">A right ascension string</param>
@@ -171,9 +197,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="localTime">The local time of the observation</param>
       public MountCoordinate(string ra, string dec, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(new EquatorialCoordinate(ra, dec))
       {
+         _AxesPosition = axisPosition;
          Equatorial = new EquatorialCoordinate(ra, dec);
          this.UpdateAltAzimuth(tools, currentTime);
-         _AxesPosition = axisPosition;
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
       }
 
@@ -183,8 +209,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public MountCoordinate(EquatorialCoordinate equatorial, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(equatorial)
       {
-         this.UpdateAltAzimuth(tools, currentTime);
          _AxesPosition = axisPosition;
+         this.UpdateAltAzimuth(tools, currentTime);
 
       }
 
@@ -204,10 +230,20 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          this.UpdateEquatorial(tools, localTime);
       }
 
+
+      /// <summary>
+      ///  Use to initialise a mount coordinate to an AltAz with an option force 0-360 value for the declination.
+      ///  Used when initialising the Celestial pole coordinate.
+      /// </summary>
+      /// <param name="altAz"></param>
+      /// <param name="axisPosition"></param>
+      /// <param name="tools"></param>
+      /// <param name="currentTime"></param>
+      /// <param name="forcedDecValue"></param>
       public MountCoordinate(AltAzCoordinate altAz, AxisPosition axisPosition, AscomTools tools, DateTime currentTime) : this(altAz)
       {
-         this.UpdateEquatorial(tools, currentTime);
          _AxesPosition = axisPosition;
+         this.UpdateEquatorial(tools, currentTime);
       }
 
 
@@ -254,7 +290,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
          tools.Transform.JulianDateTT = tools.Util.DateLocalToJulian(currentTime);
          tools.Transform.SetAzimuthElevation(_AltAzimuth.Azimuth, _AltAzimuth.Altitude);
-         _Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, tools.Transform.DECTopocentric);
+         double ra = tools.Transform.RATopocentric;
+         double declination = tools.Transform.DECTopocentric;
+         double decAxisValue = AstroConvert.DecTo360(declination, tools.Transform.SiteLatitude, ObservedAxes.RAAxis, _AltAzimuth.Altitude, _AltAzimuth.Azimuth);
+         _Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, decAxisValue);
          return _Equatorial;
       }
 
@@ -276,11 +315,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          {
             // Update the Equatorial
             tools.Transform.SetAzimuthElevation(_AltAzimuth.Azimuth.Value, _AltAzimuth.Altitude.Value);
-            if (tools.Transform.DECTopocentric < 89.00)
-            {
-               System.Diagnostics.Debugger.Break();
-            }
-            this.Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, tools.Transform.DECTopocentric);
+            double declination = tools.Transform.DECTopocentric;
+            double decAxisValue = AstroConvert.DecTo360(declination, tools.Transform.SiteLatitude, ObservedAxes.RAAxis, _AltAzimuth.Altitude, _AltAzimuth.Azimuth);
+            this.Equatorial = new EquatorialCoordinate(tools.Transform.RATopocentric, decAxisValue);
          }
       }
 
@@ -301,6 +338,17 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          _MasterCoordinate = MasterCoordinateEnum.AltAzimuth;
       }
 
+
+      public double[] GetSlewAnglesTo(EquatorialCoordinate target)
+      {
+         double[] slewAngles = new double[] { 0.0D, 0.0D };
+         double[] deltaAxis = this.Equatorial.GetAxisOffsetTo(target);
+         // Get the desired final axis position
+         AxisPosition finalAxisPosition = this.ObservedAxes.RotateBy(deltaAxis);
+         // Get the SAFE (through the pole) angles to slew.
+         slewAngles = this.ObservedAxes.GetSlewAnglesTo(finalAxisPosition);
+         return slewAngles;
+      }
 
    }
 

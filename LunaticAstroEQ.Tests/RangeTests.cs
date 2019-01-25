@@ -9,32 +9,22 @@ namespace LunaticAstroEQ.Tests
    {
 
       [DataTestMethod]
-      [DataRow(85.0, 85.0)]
-      [DataRow(95.0, 85.0)]
-      [DataRow(180.0, 0.0)]
-      [DataRow(185.0, -5.0)]
-      [DataRow(270.0, -90.0)]
-      [DataRow(275.0, -85.0)]
-      [DataRow(360.0, 0.0)]
-      [DataRow(365.0, 5.0)]
-      [DataRow(445.0, 85.0)]
-      [DataRow(455.0, 85.0)]
-      [DataRow(545.0, -5.0)]
-      [DataRow(635.0, -85.0)]
-      [DataRow(725.0, 5.0)]
-      [DataRow(-85.0, -85.0)]
-      [DataRow(-95.0, -85.0)]
-      [DataRow(-180.0, 0.0)]
-      [DataRow(-185.0, 5.0)]
-      [DataRow(-270.0, 90.0)]
-      [DataRow(-275.0, 85.0)]
-      [DataRow(-360.0, 0.0)]
-      [DataRow(-365.0, -5.0)]
-      [DataRow(-445.0, -85.0)]
-      [DataRow(-455.0, -85.0)]
-      [DataRow(-545.0, 5.0)]
-      [DataRow(-635.0, 85.0)]
-      [DataRow(-725.0, -5.0)]
+      [DataRow(85.0, 5.0)]
+      [DataRow(95.0, -5.0)]
+      [DataRow(180.0, -90.0)]
+      [DataRow(185.0, -85.0)]
+      [DataRow(270.0, 0.0)]
+      [DataRow(275.0, 5.0)]
+      [DataRow(360.0, 90.0)]
+      [DataRow(365.0, 85.0)]
+      [DataRow(-85.0, 5.0)]
+      [DataRow(-95.0, -5.0)]
+      [DataRow(-180.0, -90.0)]
+      [DataRow(-185.0, -85.0)]
+      [DataRow(-270.0, 0.0)]
+      [DataRow(-275.0, 5.0)]
+      [DataRow(-360.0, 90.0)]
+      [DataRow(-365.0, 85.0)]
       public void TestRangeDec(double value, double expected)
       {
          Assert.AreEqual(expected, AstroConvert.RangeDEC(value));
@@ -128,6 +118,45 @@ namespace LunaticAstroEQ.Tests
       {
          Assert.AreEqual(expected, AstroConvert.RangeLatitude(value));
       }
+
+      [DataTestMethod]
+      [DataRow(0.0, 0.0)]
+      [DataRow(30.0, 330.0)]
+      [DataRow(90.0, 270.0)]
+      [DataRow(120.0, 240.0)]
+      [DataRow(150.0, 210.0)]
+      [DataRow(180.0, 180.0)]
+      [DataRow(-30.0, -330.0)]
+      [DataRow(-90.0, -270.0)]
+      [DataRow(-120.0, -240.0)]
+      [DataRow(-150.0, -210.0)]
+      [DataRow(-180.0, -180.0)]
+      public void TestFlipDecAxisDegrees(double value, double expected)
+      {
+         Assert.AreEqual(expected, AstroConvert.FlipDecAxisDegrees(value));
+      }
+
+      [DataTestMethod]
+      [DataRow(0.0, 180.0)]
+      [DataRow(10.0, -170.0)]
+      [DataRow(90.0, -90.0)]
+      [DataRow(135.0, -45.0)]
+      [DataRow(180.0, 0.0)]
+      [DataRow(225.0, 45.0)]
+      [DataRow(270.0, 90.0)]
+      [DataRow(315, 135.0)]
+      [DataRow(-10.0, 170.0)]
+      [DataRow(-90.0, 90.0)]
+      [DataRow(-135.0, 45.0)]
+      [DataRow(-180.0, 0.0)]
+      [DataRow(-225.0, -45.0)]
+      [DataRow(-270.0, -90.0)]
+      [DataRow(-315.0, -135.0)]
+      public void TestFlipRAAxisDegrees(double value, double expected)
+      {
+         Assert.AreEqual(expected, AstroConvert.FlipRAAxisDegrees(value));
+      }
+
 
    }
 }

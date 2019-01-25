@@ -11,10 +11,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
    /// </summary>
    public class EquatorialCoordinate
    {
+      // Equality tolerances for RA and DEC
+      private const double DefaultDegreesDelta = 0.000001D;
       private HourAngle _RA;
-      private Angle _Dec;
-      //private DateTime _ObservedWhen;
-      //private Angle _Longitude;
+      private Angle _DeclinationAxis;
 
       public HourAngle RightAscension
       {
@@ -23,31 +23,48 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             return _RA;
          }
       }
+
+      /// <summary>
+      /// Note the declination is held in the range 0-360.
+      /// </summary>
       public Angle Declination
       {
          get
          {
-            return _Dec;
+            return new Angle(AstroConvert.RangeDEC(_DeclinationAxis));
+         }
+      }
+
+
+      /// <summary>
+      /// Declination axis position.
+      /// </summary>
+      public Angle DeclinationAxis
+      {
+         get
+         {
+            return _DeclinationAxis;
          }
       }
 
       public EquatorialCoordinate()   // , double longitude, DateTime observedTime)
       {
          _RA = new HourAngle(0.0);
-         _Dec = new Angle(0.0);
+         _DeclinationAxis = new Angle(0.0);
       }
 
-      public EquatorialCoordinate(double rightAscension, double declination):this()   // , double longitude, DateTime observedTime)
+      public EquatorialCoordinate(double rightAscension, double declinationAxis) 
       {
-         _RA.Value = AstroConvert.RangeRA(rightAscension);
-         _Dec.Value = AstroConvert.RangeDEC(declination);
+         _RA = new HourAngle(rightAscension);
+         _DeclinationAxis = new Angle(Angle.Range360(declinationAxis));
       }
 
 
-      public EquatorialCoordinate(HourAngle rightAscension, Angle declination):this()   // , Angle longitude, DateTime observedTime)
+
+      public EquatorialCoordinate(HourAngle rightAscension, Angle declinationAxis):this()   // , Angle longitude, DateTime observedTime)
       {
-         _RA.Value = AstroConvert.RangeRA(rightAscension.Value);
-         _Dec = AstroConvert.RangeDEC(declination.Value);
+         _RA.Value = new HourAngle(AstroConvert.RangeRA(rightAscension));
+         _DeclinationAxis = new Angle(Angle.Range360(declinationAxis));
       }
 
       #region Operator overloads ...
@@ -56,7 +73,20 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public static bool operator ==(EquatorialCoordinate pos1, EquatorialCoordinate pos2)
       {
-         return (pos1.RightAscension.Value == pos2.RightAscension.Value && pos1.Declination.Value == pos2.Declination.Value);
+         if (System.Object.ReferenceEquals(pos2, pos1))
+         {
+            return true;
+         }
+
+         // If one is null, but not both, return false.
+         if (((object)pos1 == null) || ((object)pos2 == null))
+         {
+            return false;
+         }
+         double deltaRA = Math.Abs(pos2.RightAscension.Value - pos1.RightAscension.Value);
+         double deltaDec = Math.Abs(pos2.DeclinationAxis.Value - pos1.DeclinationAxis.Value);
+
+         return ( deltaRA< DefaultDegreesDelta && deltaDec < DefaultDegreesDelta);
       }
 
       public static bool operator !=(EquatorialCoordinate pos1, EquatorialCoordinate pos2)
@@ -71,7 +101,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             int hash = 17;
             // Suitable nullity checks etc, of course :)
             hash = hash * 23 + _RA.GetHashCode();
-            hash = hash * 23 + _Dec.GetHashCode();
+            hash = hash * 23 + _DeclinationAxis.GetHashCode();
             return hash;
          }
       }
@@ -84,18 +114,18 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public static EquatorialCoordinate operator -(EquatorialCoordinate pos1, EquatorialCoordinate pos2)
       {
-         return new EquatorialCoordinate(pos1.RightAscension - pos2.RightAscension, pos1.Declination - pos2.Declination);
+         return new EquatorialCoordinate(pos1.RightAscension - pos2.RightAscension, pos1.DeclinationAxis - pos2.DeclinationAxis);
       }
 
       public static EquatorialCoordinate operator +(EquatorialCoordinate pos1, EquatorialCoordinate pos2)
       {
-         return new EquatorialCoordinate(pos1.RightAscension + pos2.RightAscension, pos1.Declination + pos2.Declination);
+         return new EquatorialCoordinate(pos1.RightAscension + pos2.RightAscension, pos1.DeclinationAxis + pos2.DeclinationAxis);
       }
 
 
       public override string ToString()
       {
-         return string.Format("{0}/{1}", _RA, _Dec);
+         return string.Format("{0}/{1}", RightAscension, Declination);
       }
       #endregion
 
@@ -109,18 +139,29 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             cartCoord = polar.ToCartesean();
          }
          else {
-            cartCoord = new CarteseanCoordinate(this.RightAscension.Radians, this.Declination.Radians, 1.0);
+            cartCoord = new CarteseanCoordinate(this.RightAscension.Radians, this.DeclinationAxis.Radians, 1.0);
          }
          return cartCoord;
       }
 
-      public AxisPosition GetRelativeAxisPositionOf(EquatorialCoordinate target)
+      public double[] GetAxisOffsetTo(EquatorialCoordinate target)
       {
-         double newRa = target.RightAscension.Radians - this.RightAscension.Radians;
-         double newDec = target.Declination.Radians - this.Declination.Radians;
-         System.Diagnostics.Debug.WriteLine($"New Dec = {Angle.RadiansToDegrees(newDec)} degrees");
-         AxisPosition targetAxisPosition = new AxisPosition(newRa, newDec);
-         return targetAxisPosition;
+         double deltaRa = HourAngle.HoursToDegrees(target.RightAscension) - HourAngle.HoursToDegrees(this.RightAscension);
+         double deltaDec = target.DeclinationAxis - this.DeclinationAxis;
+         return new double[]{ deltaRa, deltaDec};
+      }
+
+      /// <summary>
+      /// Return an new equatorual coordinate with the RA and Dec eqivalent to moving the 
+      /// current axes by amounts in a double array element 0 = RA, 1 = dec.
+      /// </summary>
+      /// <param name="delta">Slew distance in degrees</param>
+      /// <returns></returns>
+      public EquatorialCoordinate SlewBy(double[] delta)
+      {
+         double deltaRa = HourAngle.DegreesToHours(delta[0]);
+         double newRa = HourAngle.Range24(RightAscension.Value + deltaRa);
+         return new EquatorialCoordinate(newRa, DeclinationAxis.Value + delta[1]);
       }
 
    }

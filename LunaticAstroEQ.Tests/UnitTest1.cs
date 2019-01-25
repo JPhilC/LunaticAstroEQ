@@ -128,7 +128,7 @@ namespace LunaticAstroEQ.Tests
       int Retry = 1;
       double TimeOut = 2;
 
-      string ConnectionString = "COM3:9600,None,8,One,NoDTR,NoRTS";
+      string ConnectionString = "COM6:9600,None,8,One,NoDTR,NoRTS";
       const char cStartChar_Out = ':';    // Leading charactor of a command 
       const char cStartChar_In = '=';
       const char cErrChar = '!';              // Leading charactor of an ABNORMAL response.

@@ -42,6 +42,23 @@ namespace ASCOM.LunaticAstroEQ
       // Public access to shared resources
       //
 
+      #region Singleton code ...
+      private static AstroEQController _Controller = null;
+
+      public static AstroEQController Controller
+      {
+         get
+         {
+            if (_Controller == null)
+            {
+               _Controller = new AstroEQController();
+            }
+            return _Controller;
+         }
+      }
+
+      #endregion
+
       #region single serial port connector
       //
       // this region shows a way that a single serial port could be connected to by multiple 

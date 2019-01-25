@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Speech.Synthesis;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -369,8 +370,13 @@ namespace Lunatic.TelescopeController
       #region Properties ...
 
       public string DriverId { get; set; }
+      public string DriverName { get; set; }
 
       public DisplayMode DisplayMode { get; set; }
+
+      public VoiceGender VoiceGender { get; set; }
+
+      public VoiceAge VoiceAge { get; set; }
 
       private SiteCollection _Sites;
       public SiteCollection Sites
@@ -504,11 +510,15 @@ namespace Lunatic.TelescopeController
       public TelescopeControlSettings()
       {
          this.DriverId = string.Empty;
+         this.DriverName = string.Empty;
          this.DisplayMode = DisplayMode.MountPosition;
          this.ParkPositions = new ObservableCollection<ParkPosition>();
          this.UNParkPositions = new ObservableCollection<ParkPosition>();
          this.Sites = new SiteCollection();
          this.SlewRatePresets = new ObservableCollection<SlewRatePreset>();
+
+         this.VoiceGender = VoiceGender.Female;
+         this.VoiceAge = VoiceAge.Teen;
       }
 
       [OnDeserialized]

@@ -29,7 +29,6 @@ namespace ASCOM.LunaticAstroEQ.Core
       public const double TWO_PI =        6.28318530718;  // 2 * Math.PI;
       public const double HALF_PI =       1.5707963268;  // Math.PI / 2;
       public const double ONEANDHALF_PI = 4.7123889804;  // Math.PI / 2;
-      public const string OrganisationName = "LunaticSoftware";
       /// <summary>
       /// Sidereal rate in Radians
       /// </summary>

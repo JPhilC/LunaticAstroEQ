@@ -25,7 +25,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          private set
          {
-            if (_Alt == value) {
+            if (_Alt == value)
+            {
                return;
             }
             _Alt = value;
@@ -87,12 +88,14 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          _Alt = new Angle(altitude);
          _Az = new Angle(azimuth);
       }
-      public AltAzCoordinate(double altitude,double azimuth):this()
+      public AltAzCoordinate(double altitude, double azimuth) : this()
       {
-         if (azimuth < 0 || azimuth >= 360) {
+         if (azimuth < 0 || azimuth >= 360)
+         {
             throw new ArgumentOutOfRangeException("Azimuth must be >= 0 and < 360");
          }
-         if (altitude < -90 || altitude > 90) {
+         if (altitude < -90 || altitude > 90)
+         {
             throw new ArgumentOutOfRangeException("Altitude must be between -90 and 90.");
          }
          _Alt.Value = altitude;
@@ -101,10 +104,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public AltAzCoordinate(Angle altitude, Angle azimuth)
       {
-         if (azimuth.Value < 0 || azimuth.Value >= 360) {
+         if (azimuth.Value < 0 || azimuth.Value >= 360)
+         {
             throw new ArgumentOutOfRangeException("Azimuth must be >= 0 and < 360");
          }
-         if (altitude.Value < -90 || altitude.Value > 90) {
+         if (altitude.Value < -90 || altitude.Value > 90)
+         {
             throw new ArgumentOutOfRangeException("Altitude must be between -90 and 90.");
          }
          _Alt = altitude;
@@ -120,7 +125,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          get
          {
-            if (index < 0 || index > 1) {
+            if (index < 0 || index > 1)
+            {
                throw new ArgumentOutOfRangeException();
             }
             return (index == 0 ? X : Y);
@@ -133,6 +139,17 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public static bool operator ==(AltAzCoordinate pos1, AltAzCoordinate pos2)
       {
+         if (System.Object.ReferenceEquals(pos2, pos1))
+         {
+            return true;
+         }
+
+         // If one is null, but not both, return false.
+         if (((object)pos1 == null) || ((object)pos2 == null))
+         {
+            return false;
+         }
+
          return (pos1.Altitude.Value == pos2.Altitude.Value && pos1.Azimuth.Value == pos2.Azimuth.Value);
       }
 
@@ -170,8 +187,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public override string ToString()
       {
-         return string.Format("Alt/Az = {0}/{1}", 
-            Altitude.ToString(AngularFormat.DegreesMinutesSeconds, false), 
+         return string.Format("Alt/Az = {0}/{1}",
+            Altitude.ToString(AngularFormat.DegreesMinutesSeconds, false),
             Azimuth.ToString(AngularFormat.DegreesMinutesSeconds, false));
       }
 
@@ -188,23 +205,30 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          double az = 0.0;
          double alt = Math.Sqrt((x * x) + (y * y));
-         if (x > 0) {
+         if (x > 0)
+         {
             az = Math.Atan(y / x);
          }
 
-         if (x < 0) {
-            if (y >= 0) {
+         if (x < 0)
+         {
+            if (y >= 0)
+            {
                az = Math.Atan(y / x) + Math.PI;
             }
-            else {
+            else
+            {
                az = Math.Atan(y / x) - Math.PI;
             }
          }
-         if (x == 0) {
-            if (y > 0) {
+         if (x == 0)
+         {
+            if (y > 0)
+            {
                az = Math.PI / 2.0;
             }
-            else {
+            else
+            {
                az = -1 * (Math.PI / 2.0);
             }
          }
