@@ -168,7 +168,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public override string ToString()
       {
-         return string.Format("RAAxis = {0}°, DecAxis = {1}°", _RAAxis.Value, _DecAxis.Value);
+         return string.Format("RAAxis = {0}°, DecAxis = {1}°", Math.Round(_RAAxis.Value, 2), Math.Round(_DecAxis.Value, 2));
       }
       public string ToDegreesString()
       {
@@ -222,7 +222,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public AxisPosition RotateBy(double[] delta)
       {
-         return new AxisPosition(this.RAAxis.Value + delta[0], this.DecAxis.Value+delta[1]);
+         return new AxisPosition(Angle.Range360(this.RAAxis.Value + delta[0]), Angle.Range360(this.DecAxis.Value+delta[1]));
       }
    }
 }

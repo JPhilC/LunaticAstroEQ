@@ -133,12 +133,32 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
       /// <summary>
+      /// Returns which side of the pier the Dec axis would be pointing if
+      /// if the RA axis were at the 12-o-clock
+      /// </summary>
+      public PierSide PhysicalSideOfPier
+      {
+         get
+         {
+            if (Equatorial != null)
+            {
+               return GetPhysicalSideOfPier(ObservedAxes[0]);
+            }
+            else
+            {
+               return PierSide.pierUnknown;
+            }
+         }
+      }
+
+
+      /// <summary>
       /// Initialise a mount coordinate with Ra/Dec strings 
       /// </summary>
       /// <param name="ra">A right ascension string</param>
       /// <param name="dec">declination string</param>
       /// <param name="localTime">The local time of the observation</param>
-      public MountCoordinate(string ra, string dec):this(new EquatorialCoordinate(ra, dec))
+      public MountCoordinate(string ra, string dec) : this(new EquatorialCoordinate(ra, dec))
       {
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
       }
@@ -158,7 +178,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <summary>
       /// Simple initialisation with an equatorial coordinate
       /// </summary>
-      private MountCoordinate(EquatorialCoordinate equatorial) 
+      private MountCoordinate(EquatorialCoordinate equatorial)
       {
          _Equatorial = equatorial;
          _MasterCoordinate = MasterCoordinateEnum.Equatorial;
@@ -184,9 +204,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// Initialisation with an equatorial coordinate, a transform instance and the local time
       /// which then means that the AltAzimunth at the time is available.
       /// </summary>
-      public MountCoordinate(EquatorialCoordinate equatorial, AscomTools tools, DateTime localTime):this(equatorial)
+      public MountCoordinate(EquatorialCoordinate equatorial, AscomTools tools, DateTime localTime) : this(equatorial)
       {
-        this.UpdateAltAzimuth(tools, localTime);
+         this.UpdateAltAzimuth(tools, localTime);
       }
 
       /// <summary>
@@ -258,7 +278,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          tools.Transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
          //tools.Transform.Refresh();
-         AltAzCoordinate coord = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
+         AltAzCoordinate coord = new AltAzCoordinate(tools.Transform.ElevationTopocentric, AstroConvert.RangeAzimuth(tools.Transform.AzimuthTopocentric));
          return coord;
       }
 
@@ -274,7 +294,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
          tools.Transform.JulianDateTT = tools.Util.DateLocalToJulian(currentTime);
          tools.Transform.SetTopocentric(_Equatorial.RightAscension, _Equatorial.Declination);
-         AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
+         AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, AstroConvert.RangeAzimuth(tools.Transform.AzimuthTopocentric));
          return AltAzimuth;
       }
 
@@ -348,6 +368,40 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          // Get the SAFE (through the pole) angles to slew.
          slewAngles = this.ObservedAxes.GetSlewAnglesTo(finalAxisPosition);
          return slewAngles;
+      }
+
+      public void MoveToAxisPosition(AxisPosition axisPosition, AscomTools tools, DateTime currentTime)
+      {
+         double[] delta = ObservedAxes.GetDeltaTo(axisPosition);
+         if (_MasterCoordinate == MasterCoordinateEnum.Equatorial)
+         {
+            //// Work out if the RA needs to change as DEC passes through the pole
+            AxisPosition nextPosition = this.ObservedAxes.RotateBy(delta);
+            _SyncTime = currentTime;
+            _LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, currentTime));
+            double newRA = _LocalApparentSiderialTime + 12.0 + HourAngle.DegreesToHours(nextPosition[0]);
+            _Equatorial = new EquatorialCoordinate(HourAngle.Range24(newRA), _Equatorial.DeclinationAxis.Value + delta[1]);
+            _AxesPosition = nextPosition;
+            tools.Transform.SetTopocentric(_Equatorial.RightAscension.Value, _Equatorial.Declination.Value);
+            //tools.Transform.Refresh();
+            this.AltAzimuth = new AltAzCoordinate(tools.Transform.ElevationTopocentric, tools.Transform.AzimuthTopocentric);
+         }
+         else
+         {
+            throw new NotImplementedException();
+         }
+      }
+
+
+            /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="RaAxisPosition">DEC axis position in degrees</param>
+      /// <returns></returns>
+      private PierSide GetPhysicalSideOfPier(double raAxisPosition)
+      {
+         // Fudge to work around proble caused by un-initised doubles
+         return (raAxisPosition >= 0.0 && raAxisPosition <= 180.0) ? PierSide.pierEast : PierSide.pierWest;
       }
 
    }

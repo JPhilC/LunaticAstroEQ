@@ -164,6 +164,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          return new EquatorialCoordinate(newRa, DeclinationAxis.Value + delta[1]);
       }
 
+      public void FlipRA()
+      {
+         _RA = new HourAngle(HourAngle.Range24(this.RightAscension + 12.0));
+      }
    }
 
 }

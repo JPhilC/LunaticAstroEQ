@@ -730,7 +730,9 @@ namespace ASCOM.LunaticAstroEQ
             {
                RefreshCurrentPosition();
                double declination = _CurrentPosition.Equatorial.Declination;
-               LogMessage("Declination", "Get - {0}",  _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
+               LogMessage("Declination", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
+               // System.Diagnostics.Debug.WriteLine($"Declination Get - {_AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":")}");
+
                return declination;
             }
          }
@@ -893,6 +895,7 @@ namespace ASCOM.LunaticAstroEQ
                RefreshCurrentPosition();
                double rightAscension = _CurrentPosition.Equatorial.RightAscension.Value;
                LogMessage("RightAscension", "Get - {0}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension));
+               // System.Diagnostics.Debug.WriteLine($"RightAscension Get - {_AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension)}");
                return rightAscension;
             }
          }
@@ -1050,30 +1053,19 @@ namespace ASCOM.LunaticAstroEQ
          lock (Controller)
          {
             axisPosition = Controller.MCGetAxisPositions();
+            // System.Diagnostics.Debug.WriteLine($"Controller axis position: {axisPosition.ToString()}");
          }
-         // Refresh the Celestial pole position to update the RA and observed time.
-         _CelestialPolePosition.Refresh(_AscomToolsCelestialPole, now);
-         // Get the axis positions from the controller/hardware.
-         string alert = (Math.Abs(axisPosition[0]) > 90.0 && Math.Abs(axisPosition[0]) < 270.0) ? "!!! ALERT !!! " : "";
-         // Calculate change in axis angle
-         double[] delta = _CelestialPolePosition.ObservedAxes.GetDeltaTo(axisPosition);
 
-         // Determine RA/Dec by adding the difference to the current celestial pole RA/Dec
-         EquatorialCoordinate newPosition = _CelestialPolePosition.Equatorial.SlewBy(delta);
-         _CurrentPosition = new MountCoordinate(newPosition, axisPosition, _AscomToolsCurrentPosition, now);
-         if ((now - _lastMessage) > TimeSpan.FromSeconds(1))
-         {
-            System.Diagnostics.Debug.WriteLine("");
-            System.Diagnostics.Debug.WriteLine($"{alert}Axis positions: {axisPosition.ToDegreesString()}");
-            System.Diagnostics.Debug.WriteLine($"{alert}EQ Sky position: {_CurrentPosition.Equatorial}");
-            System.Diagnostics.Debug.WriteLine($"{alert}AltAz Sky position: {_CurrentPosition.AltAzimuth}");
-            _lastMessage = now;
-         }
-         // Check if slew finished
-         if (_IsSlewing && (axisPosition == _TargetPosition.ObservedAxes))
-         {
-            _IsSlewing = false;
-         }
+
+         _CurrentPosition.MoveToAxisPosition(axisPosition, _AscomToolsCurrentPosition, now);
+
+         // _CurrentPosition = new MountCoordinate(newPosition, axisPosition, _AscomToolsCurrentPosition, now);
+         System.Diagnostics.Debug.WriteLine($"RA: {_AscomToolsCurrentPosition.Util.HoursToHMS(_CurrentPosition.Equatorial.RightAscension.Value)} / Dec: {_AscomToolsCurrentPosition.Util.DegreesToDMS(_CurrentPosition.Equatorial.Declination, ":", ":")} Axis: {_CurrentPosition.ObservedAxes.ToString()}");
+         //// Check if slew finished
+         //if (_IsSlewing && (axisPosition == _TargetPosition.ObservedAxes))
+         //{
+         //   _IsSlewing = false;
+         //}
       }
 
 
@@ -1108,15 +1100,32 @@ namespace ASCOM.LunaticAstroEQ
          lock (Controller)
          {
             LogMessage("SlewToCoordinates", "RA:{0}/Dec:{1}", _AscomToolsCurrentPosition.Util.HoursToHMS(RightAscension, "h", "m", "s"), _AscomToolsCurrentPosition.Util.DegreesToDMS(Declination, ":", ":"));
+            //DateTime currentTime = DateTime.Now;
+            //// Build the target position
+            //_AscomToolsTargetPosition.Transform.JulianDateTT = _AscomToolsTargetPosition.Util.DateLocalToJulian(currentTime);
+            //// Update the AltAzimuth
+            //_AscomToolsTargetPosition.Transform.SetTopocentric(RightAscension, Declination);
+            ////tools.Transform.Refresh();
+            //this.AltAzimuth = new AltAzCoordinate(_AscomToolsTargetPosition.Transform.ElevationTopocentric, _AscomToolsTargetPosition.Transform.AzimuthTopocentric);
+
+
+            RefreshCurrentPosition();
+            System.Diagnostics.Debug.WriteLine("");
+            System.Diagnostics.Debug.WriteLine($"Currently At RA:{_AscomToolsCurrentPosition.Util.HoursToHMS(_CurrentPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsCurrentPosition.Util.DegreesToDMS(_CurrentPosition.Equatorial.Declination, ":", ":")}");
+
+            System.Diagnostics.Debug.WriteLine($"Slewing to   RA:{_AscomToolsCurrentPosition.Util.HoursToHMS(RightAscension, "h", "m", "s")}/Dec:{_AscomToolsCurrentPosition.Util.DegreesToDMS(Declination, ":", ":")}");
 
             DateTime now = DateTime.Now;
+
+            System.Diagnostics.Debug.WriteLine("");
+            System.Diagnostics.Debug.WriteLine($"Current axis position: {_CurrentPosition.ObservedAxes.ToString()}");
+
             _AscomToolsCurrentPosition.Transform.JulianDateTT = _AscomToolsCurrentPosition.Util.DateLocalToJulian(now);
             _AscomToolsCurrentPosition.Transform.SetTopocentric(RightAscension, Declination);
             AltAzCoordinate altAzPosition = new AltAzCoordinate(_AscomToolsCurrentPosition.Transform.ElevationTopocentric, _AscomToolsCurrentPosition.Transform.AzimuthTopocentric);
             MountCoordinate target = new MountCoordinate(altAzPosition, _CurrentPosition.ObservedAxes, _AscomToolsCelestialPole, now);
             double[] axisDelta = _CurrentPosition.Equatorial.GetAxisOffsetTo(target.Equatorial);
 
-            RefreshCurrentPosition();
 
             System.Diagnostics.Debug.WriteLine($"Axis change = {axisDelta[0]}/{axisDelta[1]}");
 
@@ -1129,15 +1138,22 @@ namespace ASCOM.LunaticAstroEQ
                targetAxisPosition = targetAxisPosition.Flip();
                System.Diagnostics.Debug.WriteLine($"Revised axis position: {targetAxisPosition.ToDegreesString()}");
             }
+            System.Diagnostics.Debug.WriteLine($"Target axis position: {targetAxisPosition.ToDegreesString()}");
 
             axisDelta = _CurrentPosition.ObservedAxes.GetSlewAnglesTo(targetAxisPosition);
+            Angle deltRa = new Angle(axisDelta[0]);
+            Angle deltaDec = new Angle(axisDelta[1]);
+
+            System.Diagnostics.Debug.WriteLine($"Slewing through : {deltRa}/{deltaDec}");
+
             _TargetPosition = new MountCoordinate(target.Equatorial, targetAxisPosition, _AscomToolsTargetPosition, _CelestialPolePosition.SyncTime);
 
-            Controller.MCAxisSlewBy(new Angle[] { new Angle(axisDelta[0]), new Angle(axisDelta[1]) });
+            Controller.MCAxisSlewBy(new Angle[] { deltRa, deltaDec });
             //Controller.MCAxisSlewTo(AXISID.AXIS1, targetAxisPosition[0]);    // Target position in radians
             //Controller.MCAxisSlewTo(AXISID.AXIS2, targetAxisPosition[1]);    // Target position in radians
-         }
+            System.Diagnostics.Debug.WriteLine("");
 
+         }
       }
 
       public void SlewToCoordinatesAsync(double RightAscension, double Declination)
@@ -1224,11 +1240,12 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("TargetRightAscension Get", "Not implemented");
+            LogMessage("TargetRightAscension", " - Get {0}", "Not implemented");
             throw new ASCOM.PropertyNotImplementedException("TargetRightAscension", false);
          }
          set
          {
+            LogMessage("TargetRightAscension", " - Set {0} Not implemented", value);
             tl.LogMessage("TargetRightAscension Set", "Not implemented");
             throw new ASCOM.PropertyNotImplementedException("TargetRightAscension", true);
          }
@@ -1334,7 +1351,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          var msg = string.Format(message, args);
          tl.LogMessage(identifier, msg);
-         System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
+         // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
       }
       #endregion
    }
