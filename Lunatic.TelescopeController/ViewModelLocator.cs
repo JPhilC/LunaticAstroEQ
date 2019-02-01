@@ -3,6 +3,8 @@ using GalaSoft.MvvmLight.Ioc;
 using ASCOM.LunaticAstroEQ.Core;
 using Microsoft.Practices.ServiceLocation;
 using System;
+using System.Resources;
+using System.Reflection;
 
 namespace Lunatic.TelescopeController.ViewModel
 {
@@ -12,6 +14,21 @@ namespace Lunatic.TelescopeController.ViewModel
    /// </summary>
    public class ViewModelLocator
    {
+
+      private ResourceManager _Announcements = null;
+
+      public ResourceManager Announcements
+      {
+         get
+         {
+            if (_Announcements == null)
+            {
+               _Announcements = new ResourceManager("Announcements", Assembly.GetExecutingAssembly());
+            }
+            return _Announcements;
+         }
+      }
+
       /// <summary>
       /// Initializes a new instance of the ViewModelLocator class.
       /// </summary>
@@ -32,6 +49,8 @@ namespace Lunatic.TelescopeController.ViewModel
 
          SimpleIoc.Default.Register<MainViewModel>();
       }
+
+
 
       public MainViewModel Main
       {
