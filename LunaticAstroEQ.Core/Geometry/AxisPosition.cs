@@ -10,7 +10,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
    /// <summary>
    /// A structure to represent telecope mount axis positions
    /// </summary>
-   public class AxisPosition
+   public struct AxisPosition
    {
       private Angle _RAAxis;
       private Angle _DecAxis;
@@ -19,14 +19,14 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          get
          {
-            return _RAAxis;
+            return Angle.Range360(_RAAxis);
          }
       }
       public Angle DecAxis
       {
          get
          {
-            return _DecAxis;
+            return Angle.Range360(_DecAxis);
          }
       }
 
@@ -38,11 +38,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
       }
 
-      public AxisPosition()
-      {
-         _RAAxis = new Angle(0.0);
-         _DecAxis = new Angle(0.0);
-      }
 
       /// <summary>
       /// Initialise the Axis positions
@@ -51,47 +46,74 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="decPosition">Dec Axis position in degrees</param>
       public AxisPosition(string raPosition, string decPosition)
       {
-         _RAAxis = new Angle(raPosition);
-         _DecAxis = new Angle(decPosition);
+         _RAAxis = Angle.Range360(new Angle(raPosition).Value);
+         _DecAxis = Angle.Range360(new Angle(decPosition).Value);
       }
-      public AxisPosition(double raRadians, double decRadians):this()
+
+
+      /// <summary>
+      /// Create a new axis position
+      /// </summary>
+      /// <param name="ra">RA axis angle in degrees</param>
+      /// <param name="dec">Dec axis angle in degrees</param>
+      public AxisPosition(double ra, double dec, bool radians = false)
       {
-         _RAAxis.Radians = raRadians ;
-         _DecAxis.Radians = decRadians ;
+         if (radians)
+         {
+            _RAAxis = Angle.Range360(Angle.RadiansToDegrees(ra));
+            _DecAxis = Angle.Range360(Angle.RadiansToDegrees(dec));
+         }
+         else
+         {
+            _RAAxis = Angle.Range360(ra);
+            _DecAxis = Angle.Range360(dec);
+         }
       }
 
 
-      public AxisPosition(string axisPositions):this()
+      public AxisPosition(string axisPositions)
       {
          string[] positions = axisPositions.Split(',');
-         try {
-            _RAAxis.Value = double.Parse(positions[0]);
-            _DecAxis.Value = double.Parse(positions[1]);
+         try
+         {
+            _RAAxis = Angle.Range360(double.Parse(positions[0]));
+            _DecAxis = Angle.Range360(double.Parse(positions[1]));
          }
-         catch  {
+         catch
+         {
             throw new ArgumentException("Badly formed axis position string");
          }
       }
 
+
+      /// <summary>
+      /// The axis position in degrees
+      /// </summary>
+      /// <param name="index"></param>
+      /// <returns></returns>
       public double this[int index]
       {
          get
          {
-            if (index < 0 || index > 1) {
+            if (index < 0 || index > 1)
+            {
                throw new ArgumentOutOfRangeException();
             }
-            return (index == 0 ? _RAAxis.Radians : _DecAxis.Radians);
+            return (index == 0 ? _RAAxis.Value : _DecAxis.Value);
          }
          set
          {
-            if (index < 0 || index > 1) {
+            if (index < 0 || index > 1)
+            {
                throw new ArgumentOutOfRangeException();
             }
-            if (index == 0) {
-               _RAAxis.Radians = value;
+            if (index == 0)
+            {
+               _RAAxis = value;
             }
-            else {
-               _DecAxis.Radians = value;
+            else
+            {
+               _DecAxis = value;
             }
          }
       }
@@ -101,7 +123,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public static bool operator ==(AxisPosition pos1, AxisPosition pos2)
       {
-         return (pos1.RAAxis.Radians == pos2.RAAxis.Radians && pos1.DecAxis.Radians == pos2.DecAxis.Radians);
+         return (pos1.RAAxis == pos2.RAAxis && pos1.DecAxis == pos2.DecAxis);
       }
 
       public static bool operator !=(AxisPosition pos1, AxisPosition pos2)
@@ -111,12 +133,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public static AxisPosition operator -(AxisPosition pos1, AxisPosition pos2)
       {
-         return new AxisPosition(pos1.RAAxis.Radians - pos2.RAAxis.Radians, pos1.DecAxis.Radians - pos2.DecAxis.Radians);
+         return new AxisPosition(pos1.RAAxis.Value - pos2.RAAxis.Value, pos1.DecAxis.Value - pos2.DecAxis.Value);
       }
 
       public static AxisPosition operator +(AxisPosition pos1, AxisPosition pos2)
       {
-         return new AxisPosition(pos1.RAAxis.Radians + pos2.RAAxis.Radians, pos1.DecAxis.Radians + pos2.DecAxis.Radians);
+         return new AxisPosition(pos1.RAAxis.Value + pos2.RAAxis.Value, pos1.DecAxis.Value + pos2.DecAxis.Value);
       }
 
       public override int GetHashCode()
@@ -138,15 +160,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
 
-      public bool Equals(AxisPosition obj, double toleranceRadians)
+      public bool Equals(AxisPosition obj, double toleranceDegrees)
       {
-         return ((Math.Abs(obj.RAAxis.Radians - this.RAAxis.Radians) < toleranceRadians)
-            && (Math.Abs(obj.DecAxis.Radians - this.DecAxis.Radians) < toleranceRadians));
+         return ((Math.Abs(obj.RAAxis.Value - this.RAAxis.Value) < toleranceDegrees)
+            && (Math.Abs(obj.DecAxis.Value - this.DecAxis.Value) < toleranceDegrees));
       }
 
       public override string ToString()
       {
-         return string.Format("RAAxis = {0} Radians, DecAxis = {1} Radians", _RAAxis.Radians, _DecAxis.Radians);
+         return string.Format("RAAxis = {0}°, DecAxis = {1}°", Math.Round(_RAAxis.Value, 2), Math.Round(_DecAxis.Value, 2));
       }
       public string ToDegreesString()
       {
@@ -157,6 +179,50 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          return string.Format("{0},{1}", _RAAxis.Radians, _DecAxis.Radians);
       }
 
-   }
+      /// <summary>
+      /// Flip and axis position as would happen on a telescope doing a meridian flip.
+      /// </summary>
+      /// <returns></returns>
+      public AxisPosition Flip()
+      {
+         return new AxisPosition(this.RAAxis + 180.0, (this.DecAxis * -1).Range360());
+      }
 
+      public Angle[] GetSlewAnglesTo(AxisPosition targetPosition)
+      {
+         double[] slewAngle = new double[2];
+         for (int i = 0; i < 2; i++)
+         {
+            if (this[i] >= 0.0 && this[i] <= 180.0 && targetPosition[i] > 180.0 && targetPosition[i] <= 360.0)
+            {
+               slewAngle[i] = -1 * (this[i] + 360.0 - targetPosition[i]);
+            }
+            else if (this[i] > 180.0 && this[i] <= 360.0 && targetPosition[i] >= 0.0 && targetPosition[i] <= 180.0)
+            {
+               slewAngle[i] = 360.0 - this[i] + targetPosition[i];
+            }
+            else
+            {
+               slewAngle[i] = targetPosition[i] - this[i];
+            }
+         }
+         return new Angle[] { new Angle(slewAngle[0]), new Angle(slewAngle[1])};
+      }
+
+
+      public double[] GetDeltaTo(AxisPosition targetPosition)
+      {
+         double[] delta = new double[2];
+         for (int i = 0; i < 2; i++)
+         {
+            delta[i] = targetPosition[i] - this[i];
+         }
+         return delta;
+      }
+
+      public AxisPosition RotateBy(Angle[] delta)
+      {
+         return new AxisPosition(Angle.Range360(this.RAAxis.Value + delta[0].Value), Angle.Range360(this.DecAxis.Value+delta[1].Value));
+      }
+   }
 }

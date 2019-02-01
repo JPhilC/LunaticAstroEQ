@@ -39,15 +39,23 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public EquatorialCoordinate(double rightAscension, double declination):this()   // , double longitude, DateTime observedTime)
       {
+         if (declination > 90.0 || declination < -90.0)
+         {
+            throw new ArgumentOutOfRangeException("Declination");
+         }
          _RA.Value = AstroConvert.RangeRA(rightAscension);
-         _Dec.Value = AstroConvert.RangeDEC(declination);
+         _Dec.Value = declination;
       }
 
 
       public EquatorialCoordinate(HourAngle rightAscension, Angle declination):this()   // , Angle longitude, DateTime observedTime)
       {
+         if (declination > 90.0 || declination < -90.0)
+         {
+            throw new ArgumentOutOfRangeException("Declination");
+         }
          _RA.Value = AstroConvert.RangeRA(rightAscension.Value);
-         _Dec = AstroConvert.RangeDEC(declination.Value);
+         _Dec = declination.Value;
       }
 
       #region Operator overloads ...
@@ -114,14 +122,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          return cartCoord;
       }
 
-      public AxisPosition GetRelativeAxisPositionOf(EquatorialCoordinate target)
-      {
-         double newRa = target.RightAscension.Radians - this.RightAscension.Radians;
-         double newDec = target.Declination.Radians - this.Declination.Radians;
-         System.Diagnostics.Debug.WriteLine($"New Dec = {Angle.RadiansToDegrees(newDec)} degrees");
-         AxisPosition targetAxisPosition = new AxisPosition(newRa, newDec);
-         return targetAxisPosition;
-      }
 
    }
 

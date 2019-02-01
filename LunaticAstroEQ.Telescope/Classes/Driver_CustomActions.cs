@@ -77,7 +77,7 @@ namespace ASCOM.LunaticAstroEQ
          switch (command)
          {
             case "Lunatic:IsInitialised":
-               result = _Controller.IsConnected;
+               result = Controller.IsConnected;
                break;
             case "Lunatic:SetLimitsActive":
                CheckLimitsActive = raw;

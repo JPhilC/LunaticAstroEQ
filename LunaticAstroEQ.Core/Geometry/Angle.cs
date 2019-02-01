@@ -4,7 +4,6 @@
  * http://www.aerosoftdev.com/
  * 
  */
-using GalaSoft.MvvmLight;
 using ASCOM.LunaticAstroEQ.Core.Properties;
 using System;
 using System.ComponentModel;
@@ -52,10 +51,14 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
    }
 
    /// <summary>
-   /// Represents an angle in degrees.
+   /// Represents a compass angle in degrees.
    /// </summary>
-   public class Angle
-      : ObservableObject, IComparable
+#if !__MOBILE__
+   //[Serializable]
+   //[TypeConverter(typeof(AngleTypeConverter))]
+#endif
+   public struct Angle
+      : IComparable
    {
       /* Just a helper enum used when parsing strings */
       [Flags]
@@ -90,7 +93,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       //private const string Dbl_0to99 = @"0?\d?\d(?:\.\d+)?";
       //private const string Dbl_100to179 = @"1[0-7]\d(?:\.\d+)?";
 
-      private const double DefaultDegreesDelta = 0.00000000001;    /* In decimal degrees */
+      private const double DefaultDegreesDelta = 0.000001D;    /* In decimal degrees */
       public const string DegreesSymbol = "\u00B0";
       private const int NumberDecimalDigitsForCompactSeconds = 4;    /* 'Compact' format for DMS uses a standard no of decimal places */
 
@@ -205,7 +208,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
       /// <summary>
-      /// Gets or sets the number of double places to display for double degrees (and degrees/double minutes) in calls to <see cref="Angle.ToString"/>.
+      /// Gets or sets the number of decimal places to display for decimal degrees (and degrees/decimal minutes) in calls to <see cref="Angle.ToString"/>.
       /// </summary>
       public static int NumberDecimalDigitsForDegrees
       {
@@ -220,7 +223,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
       /// <summary>
-      /// Gets or sets the number of double places to display for the seconds in calls to <see cref="Angle.ToString"/>.
+      /// Gets or sets the number of decimal places to display for the seconds in calls to <see cref="Angle.ToString"/>.
       /// </summary>
       public static int NumberDecimalDigitsForSeconds
       {
@@ -238,7 +241,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          if (radians)
          {
-            _Value = (double)Angle.RadiansToDegrees(angle);
+            _Value = Angle.RadiansToDegrees(angle);
          }
          else
          {
@@ -267,7 +270,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          {
             _Format = AngularFormat.DegreesDecimalMinutes;
             _Minutes = (int)Truncate(angle[DmsMinutes]);
-            _Seconds = (angle[DmsMinutes] - (double)Minutes) * 60.0;
+            _Seconds = (angle[DmsMinutes] - _Minutes) * 60.0;
          }
          else if (angle.Length == 3)
          {
@@ -290,13 +293,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          /* All members must be set before calling out of the constructor so set dummy values
             so compiler is happy.
          */
-         Value = 0.0;
+         _Value = 0.0D;
 
          _Format = AngularFormat.DegreesMinutesSeconds;
          _HasBeenSet = true;
          _Degrees = degrees;
          _Minutes = minutes;
-         _Seconds = (double)seconds;
+         _Seconds = seconds;
          _Value = SetDegreesFromDms();
       }
 
@@ -305,10 +308,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          /* All members must be set before calling out of the constructor so set dummy values
             so compiler is happy.
          */
-         _Value = 0.0;
+         _Value = 0.0D;
          _Degrees = 0;
          _Minutes = 0;
-         _Seconds = 0.0;
+         _Seconds = 0.0D;
          _Format = AngularFormat.NotSpecified;
          _HasBeenSet = false;
 
@@ -326,15 +329,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                if (direction == Direction.North
                    || direction == Direction.South)
                {
-                  _Degrees = System.Convert.ToInt32(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
-                  _Minutes = System.Convert.ToInt32(match.Groups["LatMin"].Value, CultureInfo.InvariantCulture);
-                  _Seconds = System.Convert.ToDouble(match.Groups["LatSec"].Value, CultureInfo.InvariantCulture);
+                  _Degrees = Convert.ToInt32(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
+                  _Minutes = Convert.ToInt32(match.Groups["LatMin"].Value, CultureInfo.InvariantCulture);
+                  _Seconds = Convert.ToDouble(match.Groups["LatSec"].Value, CultureInfo.InvariantCulture);
                }
                else
                {
-                  _Degrees = System.Convert.ToInt32(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
-                  _Minutes = System.Convert.ToInt32(match.Groups["LongMin"].Value, CultureInfo.InvariantCulture);
-                  _Seconds = System.Convert.ToDouble(match.Groups["LongSec"].Value, CultureInfo.InvariantCulture);
+                  _Degrees = Convert.ToInt32(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
+                  _Minutes = Convert.ToInt32(match.Groups["LongMin"].Value, CultureInfo.InvariantCulture);
+                  _Seconds = Convert.ToDouble(match.Groups["LongSec"].Value, CultureInfo.InvariantCulture);
                }
 
                if (direction == Direction.South
@@ -368,20 +371,20 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                   if (direction == Direction.North
                       || direction == Direction.South)
                   {
-                     _Value = System.Convert.ToDouble(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
+                     _Value = Convert.ToDouble(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
                   }
                   else
                   {
-                     _Value = System.Convert.ToDouble(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
+                     _Value = Convert.ToDouble(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
                   }
 
                   if (direction == Direction.South
                       || direction == Direction.West)
                   {
-                     _Value *= -1.0;
+                     _Value *= -1.0D;
                   }
 
-                  SetDmsFromDegrees(Value);
+                  SetDmsFromDegrees(_Value);
 
                   _Format = AngularFormat.DecimalDegrees;
                   _HasBeenSet = true;
@@ -397,23 +400,23 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                Match match = regex.Match(angle);
                if (match.Success)
                {
-                  double minutes = 0.0;
+                  double minutes = 0.0D;
                   Direction direction = CheckMatchForDirection(match);
 
                   if (direction == Direction.North
                       || direction == Direction.South)
                   {
-                     _Degrees = System.Convert.ToInt32(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
-                     minutes = System.Convert.ToDouble(match.Groups["LatMin"].Value, CultureInfo.InvariantCulture);
+                     _Degrees = Convert.ToInt32(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
+                     minutes = Convert.ToDouble(match.Groups["LatMin"].Value, CultureInfo.InvariantCulture);
                   }
                   else
                   {
-                     _Degrees = System.Convert.ToInt32(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
-                     minutes = System.Convert.ToDouble(match.Groups["LongMin"].Value, CultureInfo.InvariantCulture);
+                     _Degrees = Convert.ToInt32(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
+                     minutes = Convert.ToDouble(match.Groups["LongMin"].Value, CultureInfo.InvariantCulture);
                   }
 
                   _Minutes = (int)Truncate(minutes);
-                  _Seconds = (minutes - (double)Minutes) * 60.0;
+                  _Seconds = (minutes - _Minutes) * 60.0D;
 
                   if (direction == Direction.South
                       || direction == Direction.West)
@@ -421,7 +424,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                      SetDmsToNegative();
                   }
 
-                  Value = SetDegreesFromDms();
+                  _Value = SetDegreesFromDms();
                   _Format = AngularFormat.DegreesDecimalMinutes;
                   _HasBeenSet = true;
                   break;
@@ -440,15 +443,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                   if (direction == Direction.North
                       || direction == Direction.South)
                   {
-                     _Degrees = System.Convert.ToInt32(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
-                     _Minutes = System.Convert.ToInt32(match.Groups["LatMin"].Value, CultureInfo.InvariantCulture);
-                     _Seconds = System.Convert.ToDouble(match.Groups["LatSec"].Value, CultureInfo.InvariantCulture);
+                     _Degrees = Convert.ToInt32(match.Groups["LatDeg"].Value, CultureInfo.InvariantCulture);
+                     _Minutes = Convert.ToInt32(match.Groups["LatMin"].Value, CultureInfo.InvariantCulture);
+                     _Seconds = Convert.ToDouble(match.Groups["LatSec"].Value, CultureInfo.InvariantCulture);
                   }
                   else
                   {
-                     _Degrees = System.Convert.ToInt32(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
-                     _Minutes = System.Convert.ToInt32(match.Groups["LongMin"].Value, CultureInfo.InvariantCulture);
-                     _Seconds = System.Convert.ToDouble(match.Groups["LongSec"].Value, CultureInfo.InvariantCulture);
+                     _Degrees = Convert.ToInt32(match.Groups["LongDeg"].Value, CultureInfo.InvariantCulture);
+                     _Minutes = Convert.ToInt32(match.Groups["LongMin"].Value, CultureInfo.InvariantCulture);
+                     _Seconds = Convert.ToDouble(match.Groups["LongSec"].Value, CultureInfo.InvariantCulture);
                   }
 
                   if (direction == Direction.South
@@ -457,7 +460,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                      SetDmsToNegative();
                   }
 
-                  Value = SetDegreesFromDms();
+                  _Value = SetDegreesFromDms();
                   _Format = AngularFormat.DegreesMinutesSeconds;
                   _HasBeenSet = true;
                   break;
@@ -494,12 +497,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// Gets or sets the value of the <see cref="Angle"/> in double degrees.
       /// </summary>
       [DefaultValue(0.0)]
-#if !__MOBILE__
       [Browsable(false)]
-      [Category("Data")]
       [DisplayName("Value")]
       [Description("The value of the angle in degrees.")]
-#endif
       public double Value
       {
          get
@@ -508,11 +508,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          set
          {
-            if (Set<double>("Value", ref _Value, value))
-            {
-               _HasBeenSet = true;
-               SetDmsFromDegrees(_Value);
-            }
+            _Value = value;
+            _HasBeenSet = true;
+            SetDmsFromDegrees(_Value);
          }
       }
 
@@ -521,7 +519,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       [DefaultValue(0.0)]
       [Browsable(false)]
-      [Category("Data")]
       [DisplayName("Radians")]
       [Description("The value of the angle in radians.")]
       [JsonIgnore]
@@ -533,11 +530,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          set
          {
-            if (Set<double>("Value", ref _Value, Angle.RadiansToDegrees(value)))
-            {
-               _HasBeenSet = true;
-               SetDmsFromDegrees(_Value);
-            }
+            _Value = Angle.RadiansToDegrees(value);
+            _HasBeenSet = true;
+            SetDmsFromDegrees(_Value);
          }
       }
 
@@ -553,12 +548,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          set
          {
-            if (Set<int>("Degrees", ref _Degrees, value))
-            {
-               MatchDmsSigns(value);
-               _Value = DmsToDegrees(_Degrees, _Minutes, _Seconds);
-               _HasBeenSet = true;
-            }
+            _Degrees = value;
+            MatchDmsSigns(value);
+
+            _Value = DmsToDegrees(_Degrees, _Minutes, _Seconds);
+            _HasBeenSet = true;
          }
       }
 
@@ -580,12 +574,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                throw new ArgumentException("Minutes must be between -60 and 60", "value");
             }
 
-            if (Set<int>("Minutes", ref _Minutes, value))
-            {
-               MatchDmsSigns(value);
-               _Value = DmsToDegrees(_Degrees, _Minutes, _Seconds);
-               _HasBeenSet = true;
-            }
+            _Minutes = value;
+            MatchDmsSigns(value);
+
+            _Value = DmsToDegrees(_Degrees, _Minutes, _Seconds);
+            _HasBeenSet = true;
          }
       }
 
@@ -607,12 +600,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                throw new ArgumentException("Seconds must be between -60.0 and 60.0", "value");
             }
 
-            if (Set<double>("Seconds", ref _Seconds, value))
-            {
-               MatchDmsSigns(value);
-               _Value = DmsToDegrees(_Degrees, _Minutes, _Seconds);
-               _HasBeenSet = true;
-            }
+            _Seconds = value;
+            MatchDmsSigns(value);
+            _Value = DmsToDegrees(_Degrees, _Minutes, _Seconds);
+            _HasBeenSet = true;
          }
       }
 
@@ -625,38 +616,30 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          get
          {
-            return (_Degrees * 3600.0) + (_Minutes * 60.0) + (double)_Seconds;
+            return (_Degrees * 3600.0) + (_Minutes * 60.0) + _Seconds;
          }
          set
          {
             _Degrees = (int)Truncate(value / 3600.0);
             value %= 3600.0;
             _Minutes = (int)Truncate(value / 60.0);
-            _Seconds = (double)(value % 60.0);
+            _Seconds = (value % 60.0);
 
             _Value = DmsToDegrees(_Degrees, _Minutes, _Seconds);
             _HasBeenSet = true;
-            RaisePropertyChanged("Degrees");
-            RaisePropertyChanged("Minutes");
-            RaisePropertyChanged("Seconds");
-            RaisePropertyChanged("Value");
-            RaisePropertyChanged("Radians");
          }
       }
 
       /// <summary>
       /// Gets the absolute value of the <see cref="Angle"/>.
       /// </summary>
-      [Browsable(false)]
-      [Category("Data")]
-      [Description("The absolute value of the angle.")]
       [JsonIgnore]
       public Angle Abs
       {
          get
          {
             /* Use the individual elements to avoid rounding errors */
-            return new Angle(Math.Abs(_Degrees), Math.Abs(_Minutes), (double)Math.Abs(_Seconds));
+            return new Angle(Math.Abs(_Degrees), Math.Abs(_Minutes), Math.Abs(_Seconds));
          }
       }
 
@@ -698,7 +681,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public static implicit operator double(Angle angle)
       {
-         return angle.Value;
+         return angle._Value;
       }
 
 
@@ -718,10 +701,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       public static bool operator ==(Angle angle1, Angle angle2)
       {
          /* Just in case of rounding errors... */
-         return (Math.Abs(angle1.Value - angle2.Value) <= Angle.DefaultDegreesDelta
-                 || (angle1.Degrees == angle2.Degrees
-                     && angle1.Minutes == angle2.Minutes
-                     && Math.Abs(angle1.Seconds - angle2.Seconds) <= (Angle.DefaultDegreesDelta * 3600.0)));
+         return (Math.Abs(angle1._Value - angle2._Value) <= Angle.DefaultDegreesDelta
+                 || (angle1._Degrees == angle2._Degrees
+                     && angle1._Minutes == angle2._Minutes
+                     && Math.Abs(angle1._Seconds - angle2._Seconds) <= (Angle.DefaultDegreesDelta * 3600D)));
       }
 
       public static bool operator !=(Angle angle1, Angle angle2)
@@ -733,7 +716,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          return (angle1.Format == AngularFormat.DecimalDegrees
                  || angle1.Format == AngularFormat.DecimalDegreesWestEast
-                     ? (angle1.Value < angle2.Value)
+                     ? (angle1._Value < angle2._Value)
                      : (angle1.TotalSeconds < angle2.TotalSeconds));
       }
 
@@ -741,7 +724,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          return (angle1.Format == AngularFormat.DecimalDegrees
                  || angle1.Format == AngularFormat.DecimalDegreesWestEast
-                     ? (angle1.Value <= angle2.Value)
+                     ? (angle1._Value <= angle2._Value)
                      : (angle1.TotalSeconds <= angle2.TotalSeconds));
       }
 
@@ -749,7 +732,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          return (angle1.Format == AngularFormat.DecimalDegrees
                  || angle1.Format == AngularFormat.DecimalDegreesWestEast
-                     ? (angle1.Value > angle2.Value)
+                     ? (angle1._Value > angle2._Value)
                      : (angle1.TotalSeconds > angle2.TotalSeconds));
       }
 
@@ -757,101 +740,85 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          return (angle1.Format == AngularFormat.DecimalDegrees
                  || angle1.Format == AngularFormat.DecimalDegreesWestEast
-                     ? (angle1.Value >= angle2.Value)
+                     ? (angle1._Value >= angle2._Value)
                      : (angle1.TotalSeconds >= angle2.TotalSeconds));
       }
 
       public static Angle operator +(Angle angle1, Angle angle2)
       {
-         Angle result = new Angle(0.0);
-         result.Format = angle1.Format;
          if (angle1.Format == AngularFormat.DecimalDegrees
              || angle1.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            result.Value = new Angle(angle1.Value + angle2.Value);
+            angle1.Value += angle2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
          }
          else
          {
             double seconds = angle1.TotalSeconds + angle2.TotalSeconds;
-            result = FromSeconds(seconds);
+            angle1 = FromSeconds(seconds);
          }
-         result.Format = angle1.Format;
-         return result;
+
+         return angle1.Value;
       }
 
       public static Angle operator -(Angle angle1, Angle angle2)
       {
-         Angle result = new Angle(0.0);
-         result.Format = angle1.Format;
          if (angle1.Format == AngularFormat.DecimalDegrees
              || angle1.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            result.Value = angle1.Value - angle2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
+            angle1.Value -= angle2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
          }
          else
          {
             double seconds = angle1.TotalSeconds - angle2.TotalSeconds;
-            result = FromSeconds(seconds);
+            angle1 = FromSeconds(seconds);
          }
 
-         return result;
+         return angle1;
       }
 
       public static Angle operator *(Angle angle, double factor)
       {
-         Angle result = new Angle(0.0);
-         result.Format = angle.Format;
          if (angle.Format == AngularFormat.DecimalDegrees
              || angle.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            result.Value = angle.Value * factor;  /* Use Value property to ensure DMS properties are also updated properly */
+            angle.Value *= factor;  /* Use Value property to ensure DMS properties are also updated properly */
          }
          else
          {
             double seconds = angle.TotalSeconds * factor;
-            result = FromSeconds(seconds);
+            angle = FromSeconds(seconds);
          }
 
-         return result;
+         return angle;
       }
 
       public static Angle operator /(Angle angle, double factor)
       {
-         Angle result = new Angle(0.0);
-         result.Format = angle.Format;
          if (angle.Format == AngularFormat.DecimalDegrees
              || angle.Format == AngularFormat.DecimalDegreesWestEast)
          {
-            result.Value = angle.Value / factor;     /* Use Value property to ensure DMS properties are also updated properly */
+            angle.Value /= factor;     /* Use Value property to ensure DMS properties are also updated properly */
          }
          else
          {
             double seconds = angle.TotalSeconds / factor;
-            result = FromSeconds(seconds);
+            angle = FromSeconds(seconds);
          }
 
-         return result;
+         return angle;
       }
 
       public static double operator /(Angle angle1, Angle angle2)
       {
-         Angle result = new Angle(0.0);
-         result.Format = angle2.Format;
-         if (angle2.Format == AngularFormat.DecimalDegrees
-                 || angle2.Format == AngularFormat.DecimalDegreesWestEast)
-         {
-            result.Value = (double)(angle1.Value / angle2.Value);
-         }
-         else
-         {
-            result = FromSeconds(angle1.TotalSeconds / angle2.TotalSeconds);
-         }
-         return result;
+         return (angle2.Format == AngularFormat.DecimalDegrees
+                 || angle2.Format == AngularFormat.DecimalDegreesWestEast
+                     ? (angle1._Value / angle2._Value)
+                     : angle1.TotalSeconds / angle2.TotalSeconds);
       }
 
       public override int GetHashCode()
       {
-         return Value.GetHashCode();
+         return _Value.GetHashCode();
       }
 
       public override bool Equals(object obj)
@@ -862,19 +829,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public double[] ToDms()
       {
-         return new double[] {(double)Degrees,
-                              (double)Minutes,
-                              (double)Seconds,
+         return new double[] {_Degrees,
+                              _Minutes,
+                              _Seconds,
                              };
       }
 
-      public double Delta(Angle angle)
-      {
-         double delta = angle.Value - (double)Value;
-         return (Math.Abs(delta) <= 180.0 ? delta
-                                          : (360.0 - Math.Abs(delta)) * (angle.Value > (double)Value ? -1.0 : 1.0));
-
-      }
 
       public override string ToString()
       {
@@ -883,7 +843,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public string ToString(string format)
       {
-         return Value.ToString(format);
+         return _Value.ToString(format);
       }
 
       public string ToString(AngularFormat format, bool asLongitude = true)
@@ -891,58 +851,58 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          string text = string.Empty;
          int degrees;
          int minutes;
-         double doubleMinutes;
+         double decimalMinutes;
          double seconds;
          int increment;
 
          switch (format)
          {
             case AngularFormat.DecimalDegrees:
-               text = CustomFormat.ToString(Resources.AngleInDecimalDegrees, _NumberDecimalDigitsForDegrees, Value);
+               text = CustomFormat.ToString(Resources.AngleInDecimalDegrees, _NumberDecimalDigitsForDegrees, _Value);
                break;
 
             case AngularFormat.DegreesDecimalMinutes:
-               increment = (Value >= 0.0 ? 1 : -1);
-               doubleMinutes = Math.Round((double)Minutes + (Seconds / 60.0), _NumberDecimalDigitsForDegrees);
-               if (Math.Abs(doubleMinutes) < 60.0)
+               increment = (_Value >= 0.0D ? 1 : -1);
+               decimalMinutes = Math.Round(_Minutes + (_Seconds / 60.0D), _NumberDecimalDigitsForDegrees);
+               if (Math.Abs(decimalMinutes) < 60.0D)
                {
-                  degrees = Degrees;
+                  degrees = _Degrees;
                }
                else
                {
-                  doubleMinutes = 0.0;
-                  degrees = Degrees + increment;
+                  decimalMinutes = 0.0D;
+                  degrees = _Degrees + increment;
                }
 
                text = CustomFormat.ToString(Resources.AngleInDegreesDecimalMinutes, _NumberDecimalDigitsForDegrees,
-                                            degrees, doubleMinutes);
+                                            degrees, decimalMinutes);
                break;
 
             case AngularFormat.DegreesMinutesSeconds:
             case AngularFormat.CadDegreesMinutesSeconds:
             case AngularFormat.CompactDegreesMinutesSeconds:
-               increment = (Value >= 0.0 ? 1 : -1);
-               seconds = Math.Round(Seconds, format != AngularFormat.CompactDegreesMinutesSeconds ? _NumberDecimalDigitsForSeconds
+               increment = (_Value >= 0.0D ? 1 : -1);
+               seconds = Math.Round(_Seconds, format != AngularFormat.CompactDegreesMinutesSeconds ? _NumberDecimalDigitsForSeconds
                                                                                                       : Angle.NumberDecimalDigitsForCompactSeconds);
 
-               if (Math.Abs(seconds) < 60.0)
+               if (Math.Abs(seconds) < 60.0D)
                {
-                  minutes = Minutes;
+                  minutes = _Minutes;
                }
                else
                {
-                  seconds = 0.0;
-                  minutes = Minutes + increment;
+                  seconds = 0.0D;
+                  minutes = _Minutes + increment;
                }
 
                if (Math.Abs(minutes) < 60)
                {
-                  degrees = Degrees;
+                  degrees = _Degrees;
                }
                else
                {
                   minutes = 0;
-                  degrees = Degrees + increment;
+                  degrees = _Degrees + increment;
                }
 
                if (format == AngularFormat.DegreesMinutesSeconds)
@@ -955,13 +915,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                   string stringFormat = asLongitude ? Resources.LongitudeInCompactDegreesMinutesSeconds
                                                     : Resources.LatitudeInCompactDegreesMinutesSeconds;
                   text = string.Format(stringFormat, Math.Abs(degrees), Math.Abs(minutes), Math.Abs(seconds),
-                                       asLongitude ? (Value >= 0.0 ? "E" : "W")
-                                                   : (Value >= 0.0 ? "N" : "S"));
+                                       asLongitude ? (_Value >= 0.0D ? "E" : "W")
+                                                   : (_Value >= 0.0D ? "N" : "S"));
                }
                else
                {
                   /* Because 'CAD' coordinates use a comma as the lat/long delimiter, a period must
-                     be used as the double point, hence the use of the InvariantCulture.
+                     be used as the decimal point, hence the use of the InvariantCulture.
                   */
                   text = CustomFormat.ToString(CultureInfo.InvariantCulture,
                                                Resources.AngleInCadDegreesMinutesSeconds, _NumberDecimalDigitsForSeconds,
@@ -970,12 +930,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                break;
 
             case AngularFormat.DecimalDegreesWestEast:
-               double angle = Angle.Normalize(Value);
+               double angle = Angle.Normalize(_Value);
                string direction = "E";
 
-               if (angle > 180.0)
+               if (angle > 180.0D)
                {
-                  angle = 360.0 - angle;
+                  angle = 360.0D - angle;
                   direction = "W";
                }
 
@@ -983,13 +943,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                break;
 
             case AngularFormat.DecimalDegreesPlusMinus:
-               double angle180 = Angle.NormalizeTo180(Value);
+               double angle180 = Angle.NormalizeTo180(_Value);
                text = CustomFormat.ToString(Resources.AngleInDecimalDegreesPlusMinus, _NumberDecimalDigitsForDegrees, angle180);
                break;
 
             default:
                Debug.Assert(format == AngularFormat.NotSpecified, "Unrecognised AngularFormat value - " + format.ToString());
-               text = CustomFormat.ToString(Resources.AngleWithNoFormat, _NumberDecimalDigitsForDegrees, Value);
+               text = CustomFormat.ToString(Resources.AngleWithNoFormat, _NumberDecimalDigitsForDegrees, _Value);
                break;
          }
 
@@ -998,8 +958,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public void Normalize()
       {
-         _Value = Angle.Normalize(Value);
-         _Degrees = (int)Angle.Normalize((double)Degrees);
+         _Value = Angle.Normalize(_Value);
+         _Degrees = (int)Angle.Normalize(_Degrees);
       }
 
       /// <summary>
@@ -1011,11 +971,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       public static double Normalize(double angle)
       {
-         angle %= 360.0;
+         angle %= 360.0D;
 
-         if (angle < 0.0)
+         if (angle < 0.0D)
          {
-            angle += 360.0;
+            angle += 360.0D;
          }
 
          return angle;
@@ -1030,21 +990,22 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          SetDmsFromDegrees(_Value);
       }
 
+      
 
       /// <summary>
       /// Converts the angle to the range 180.0 to -180.0 degrees
       /// </summary>
       public static double NormalizeTo180(double angle)
       {
-         angle %= 360.0;   /* Need it in the standard range first */
+         angle %= 360.0D;   /* Need it in the standard range first */
 
-         if (angle > 180.0)
+         if (angle > 180.0D)
          {
-            angle -= 360.0;
+            angle -= 360.0D;
          }
-         else if (angle < -180.0)
+         else if (angle < -180.0D)
          {
-            angle += 360.0;
+            angle += 360.0D;
          }
 
          return angle;
@@ -1063,11 +1024,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       private static double DmsToDegrees(int degrees, int minutes, double seconds)
       {
-         Debug.Assert((degrees >= 0 && minutes >= 0 && seconds >= 0.0)
-                      || (degrees <= 0 && minutes <= 0 && seconds <= 0.0),
+         Debug.Assert((degrees >= 0 && minutes >= 0 && seconds >= 0.0D)
+                      || (degrees <= 0 && minutes <= 0 && seconds <= 0.0D),
                       "Degrees/minutes/seconds don't have consistent signs.");
 
-         return (double)degrees + ((double)minutes / 60.0) + (seconds / 3600.0);
+         return degrees + (minutes / 60.0D) + (seconds / 3600.0D);
       }
 
       public static double RadiansToDegrees(double radians)
@@ -1109,7 +1070,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public static double GradientToDegrees(double gradient)
       {
-         return NormalizeTo180((double)Angle.RadiansToDegrees(Math.Atan(gradient)));   /* NormalizeTo180() because a gradient can be negative */
+         return NormalizeTo180(Angle.RadiansToDegrees(Math.Atan(gradient)));   /* NormalizeTo180() because a gradient can be negative */
       }
 
       public static double CompassAngleFrom2Points(double x1, double y1, double x2, double y2)
@@ -1207,13 +1168,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          return regexes;
       }
 
-      private static double[] CastToDecimalArray(double[] source)
+      private static double[] CastToDoubleArray(double[] source)
       {
          double[] target = new double[source.Length];
 
          for (int i = 0; i < source.Length; i++)
          {
-            target[i] = (double)source[i];
+            target[i] = source[i];
          }
 
          return target;
@@ -1222,19 +1183,19 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       private void SetDmsFromDegrees(double angle)
       {
          _Degrees = (int)Truncate(angle);
-         angle = (angle - Degrees) * 60.0;
+         angle = (angle - _Degrees) * 60.0D;
          _Minutes = (int)Truncate(angle);
-         _Seconds = (angle - Minutes) * 60.0;
+         _Seconds = (angle - _Minutes) * 60.0D;
       }
 
       private double SetDegreesFromDms()
       {
-         if (Degrees < 0 || Minutes < 0 || Seconds < 0.0)
+         if (_Degrees < 0 || _Minutes < 0 || _Seconds < 0.0D)
          {
             SetDmsToNegative();
          }
 
-         return (double)Degrees + ((double)Minutes / 60.0) + (Seconds / 3600.0);
+         return _Degrees + (_Minutes / 60.0D) + (_Seconds / 3600.0D);
       }
 
       private void MatchDmsSigns(double value)
@@ -1262,7 +1223,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             _Minutes *= -1;
          }
 
-         if (_Seconds < 0.0)
+         if (_Seconds < 0.0D)
          {
             _Seconds *= -1.0D;
          }
@@ -1280,7 +1241,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             _Minutes *= -1;
          }
 
-         if (_Seconds > 0.0)
+         if (_Seconds > 0.0D)
          {
             _Seconds *= -1.0D;
          }
@@ -1321,7 +1282,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          else
          {
             Angle that = (Angle)obj;
-            result = Value.CompareTo(that.Value);
+            result = _Value.CompareTo(that._Value);
          }
 
          return result;
@@ -1333,5 +1294,39 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          return Math.Truncate(value);
       }
+
+      public double Range360()
+      {
+         double ang = this.Value;
+         ang = ang % 360.0;
+         while (ang < 0.0)
+         {
+            ang = ang + 360.0;
+         }
+         return ang;
+      }
+
+      public static double Range360(double ang)
+      {
+         ang = ang % 360.0;
+         while (ang < 0.0)
+         {
+            ang = ang + 360.0;
+         }
+         return ang;
+      }
+
+      public double Range2Pi()
+      {
+         double rad = this.Radians;
+         rad = rad % Constants.TWO_PI;
+         while (rad < 0.0)
+         {
+            rad = rad + Constants.TWO_PI;
+         }
+         return rad;
+      }
+
    }
 }
+

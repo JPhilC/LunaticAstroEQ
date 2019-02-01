@@ -1,15 +1,11 @@
-﻿using GalaSoft.MvvmLight;
-using ASCOM.LunaticAstroEQ.Core.Properties;
+﻿using ASCOM.LunaticAstroEQ.Core.Properties;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace ASCOM.LunaticAstroEQ.Core.Geometry
 {
@@ -46,8 +42,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
    }
 
 
-   public class HourAngle
-      : ObservableObject, IComparable
+   public struct HourAngle
+      : IComparable
    {
       private const int HmsHours = 0;
       private const int HmsMinutes = 1;
@@ -104,10 +100,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public HourAngle(double hour, bool radians = false)
       {
-         if (radians) {
+         if (radians)
+         {
             _Value = (double)HourAngle.RadiansToHours(hour);
          }
-         else {
+         else
+         {
             _Value = hour;
          }
          _Format = HourAngleFormat.DecimalHours;
@@ -130,17 +128,20 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          */
          _Value = 0.0;
 
-         if (hour.Length == 2) {
+         if (hour.Length == 2)
+         {
             _Format = HourAngleFormat.HoursDecimalMinutes;
             _Minutes = (int)Truncate(hour[HmsMinutes]);
-            _Seconds = (hour[HmsMinutes] - (double)Minutes) * 60.0;
+            _Seconds = (hour[HmsMinutes] - (double)_Minutes) * 60.0;
          }
-         else if (hour.Length == 3) {
+         else if (hour.Length == 3)
+         {
             _Format = HourAngleFormat.HoursMinutesSeconds;
             _Minutes = (int)Truncate(hour[HmsMinutes]);
             _Seconds = hour[HmsSeconds];
          }
-         else {
+         else
+         {
             throw new ArgumentException("Array must contain either two or three elements.", "angle");
          }
 
@@ -180,9 +181,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          /* The 'CAD' format is checked first against the InvariantCulture; it uses a comma as
             the lat/long delimiter, so a period must be used as the double point.
          */
-         foreach (Regex regex in _CadRegexes) {
+         foreach (Regex regex in _CadRegexes)
+         {
             Match match = regex.Match(hour);
-            if (match.Success) {
+            if (match.Success)
+            {
                _Hours = System.Convert.ToInt32(match.Groups["Hrs"].Value, CultureInfo.InvariantCulture);
                _Minutes = System.Convert.ToInt32(match.Groups["Mins"].Value, CultureInfo.InvariantCulture);
                _Seconds = System.Convert.ToDouble(match.Groups["Secs"].Value, CultureInfo.InvariantCulture);
@@ -201,10 +204,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          */
          hour = hour.Replace(CultureInfo.CurrentCulture.NumberFormat.CurrencyDecimalSeparator, ".");
 
-         if (!_HasBeenSet) {
-            foreach (Regex regex in _HrsRegexes) {
+         if (!_HasBeenSet)
+         {
+            foreach (Regex regex in _HrsRegexes)
+            {
                Match match = regex.Match(hour);
-               if (match.Success) {
+               if (match.Success)
+               {
                   _Value = System.Convert.ToDouble(match.Groups["Hrs"].Value, CultureInfo.InvariantCulture);
                   SetHmsFromHours(_Value);
                   _Format = HourAngleFormat.DecimalHours;
@@ -214,10 +220,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             }
          }
 
-         if (!_HasBeenSet) {
-            foreach (Regex regex in _HdmRegexes) {
+         if (!_HasBeenSet)
+         {
+            foreach (Regex regex in _HdmRegexes)
+            {
                Match match = regex.Match(hour);
-               if (match.Success) {
+               if (match.Success)
+               {
                   double minutes = 0.0;
                   _Hours = System.Convert.ToInt32(match.Groups["Hrs"].Value, CultureInfo.InvariantCulture);
                   minutes = System.Convert.ToDouble(match.Groups["Mins"].Value, CultureInfo.InvariantCulture);
@@ -233,10 +242,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             }
          }
 
-         if (!_HasBeenSet) {
-            foreach (Regex regex in _HmsRegexes) {
+         if (!_HasBeenSet)
+         {
+            foreach (Regex regex in _HmsRegexes)
+            {
                Match match = regex.Match(hour);
-               if (match.Success) {
+               if (match.Success)
+               {
                   _Hours = System.Convert.ToInt32(match.Groups["Hrs"].Value, CultureInfo.InvariantCulture);
                   _Minutes = System.Convert.ToInt32(match.Groups["Mins"].Value, CultureInfo.InvariantCulture);
                   _Seconds = System.Convert.ToDouble(match.Groups["Secs"].Value, CultureInfo.InvariantCulture);
@@ -249,7 +261,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             }
          }
 
-         if (!_HasBeenSet) {
+         if (!_HasBeenSet)
+         {
             throw new FormatException("Invalid hour format.");
          }
       }
@@ -259,7 +272,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       [DefaultValue(0.0)]
       [Browsable(false)]
-      [Category("Data")]
       [DisplayName("Value")]
       [Description("The value of the angle in hours.")]
       public double Value
@@ -270,10 +282,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          set
          {
-            if (Set<double>("Value", ref _Value, value)) {
-               _HasBeenSet = true;
-               SetHmsFromHours(_Value);
-            }
+            _Value = value;
+            _HasBeenSet = true;
+            SetHmsFromHours(_Value);
+
          }
       }
 
@@ -282,9 +294,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// </summary>
       [DefaultValue(0.0)]
       [Browsable(false)]
-      [Category("Data")]
       [DisplayName("Radians")]
       [Description("The value of the angle in radians.")]
+      [JsonIgnore]
       public double Radians
       {
          get
@@ -293,17 +305,16 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          set
          {
-            if (Set<double>("Radians", ref _Value, HourAngle.RadiansToHours(value))) {
-               RaisePropertyChanged("Value");
-               _HasBeenSet = true;
-               SetHmsFromHours(_Value);
-            }
+            _Value = HourAngle.RadiansToHours(value);
+            _HasBeenSet = true;
+            SetHmsFromHours(_Value);
          }
       }
 
       [DefaultValue(0)]
       [DisplayName("Hours")]
       [Description("")]
+      [JsonIgnore]
       public int Hours
       {
          get
@@ -312,17 +323,17 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          set
          {
-            if (Set<int>("Hours", ref _Hours, value)) {
-               MatchHmsSigns(_Hours);
-               _Value = HmsToHours(_Hours, _Minutes, _Seconds);
-               _HasBeenSet = true;
-            }
+            _Hours = value;
+            MatchHmsSigns(_Hours);
+            _Value = HmsToHours(_Hours, _Minutes, _Seconds);
+            _HasBeenSet = true;
          }
       }
 
       [DefaultValue(0)]
       [DisplayName("Minutes")]
       [Description("")]
+      [JsonIgnore]
       public int Minutes
       {
          get
@@ -332,20 +343,21 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          set
          {
             if (value < -60
-                || value > 60) {
+                || value > 60)
+            {
                throw new ArgumentException("Minutes must be between -60 and 60", "value");
             }
-            if (Set<int>("Minutes", ref _Minutes, value)) {
-               MatchHmsSigns(_Minutes);
-               _Value = HmsToHours(_Hours, _Minutes, _Seconds);
-               _HasBeenSet = true;
-            }
+            _Minutes = value;
+            MatchHmsSigns(_Minutes);
+            _Value = HmsToHours(_Hours, _Minutes, _Seconds);
+            _HasBeenSet = true;
          }
       }
 
       [DefaultValue(0.0)]
       [DisplayName("Seconds")]
       [Description("")]
+      [JsonIgnore]
       public double Seconds
       {
          get
@@ -355,14 +367,14 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          set
          {
             if (value < -60.0
-                || value > 60.0) {
+                || value > 60.0)
+            {
                throw new ArgumentException("Seconds must be between -60.0 and 60.0", "value");
             }
-            if (Set<double>("Seconds", ref _Seconds, value)) {
-               MatchHmsSigns(_Value);
-               _Value = HmsToHours(_Hours, _Minutes, _Seconds);
-               _HasBeenSet = true;
-            }
+            _Seconds = value;
+            MatchHmsSigns(_Value);
+            _Value = HmsToHours(_Hours, _Minutes, _Seconds);
+            _HasBeenSet = true;
          }
       }
 
@@ -370,6 +382,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       [Browsable(false)]
       [DisplayName("Total Seconds")]
       [Description("The value of the Angle expressed in seconds.")]
+      [JsonIgnore]
       public double TotalSeconds
       {
          get
@@ -385,11 +398,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
             _Value = HmsToHours(_Hours, _Minutes, _Seconds);
             _HasBeenSet = true;
-            RaisePropertyChanged("Hours");
-            RaisePropertyChanged("Minutes");
-            RaisePropertyChanged("Seconds");
-            RaisePropertyChanged("Value");
-            RaisePropertyChanged("Radians");
 
          }
       }
@@ -398,8 +406,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// Gets the absolute value of the <see cref="Angle"/>.
       /// </summary>
       [Browsable(false)]
-      [Category("Data")]
       [Description("The absolute value of the angle.")]
+      [JsonIgnore]
       public HourAngle Abs
       {
          get
@@ -510,25 +518,29 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          HourAngle result = new HourAngle(0.0);
          result.Format = hour1.Format;
-         if (hour1.Format == HourAngleFormat.DecimalHours) {
+         if (hour1.Format == HourAngleFormat.DecimalHours)
+         {
             result.Value = hour1.Value + hour2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
          }
-         else {
+         else
+         {
             double seconds = hour1.TotalSeconds + hour2.TotalSeconds;
             result = FromSeconds(seconds);
          }
 
-         return result ;
+         return result;
       }
 
       public static HourAngle operator -(HourAngle hour1, HourAngle hour2)
       {
          HourAngle result = new HourAngle(0.0);
          result.Format = hour1.Format;
-         if (hour1.Format == HourAngleFormat.DecimalHours) {
+         if (hour1.Format == HourAngleFormat.DecimalHours)
+         {
             result.Value = hour1.Value - hour2.Value;    /* Use Value property to ensure DMS properties are also updated properly */
          }
-         else {
+         else
+         {
             double seconds = hour1.TotalSeconds - hour2.TotalSeconds;
             result = FromSeconds(seconds);
          }
@@ -540,10 +552,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          HourAngle result = new HourAngle(0.0);
          result.Format = hour.Format;
-         if (hour.Format == HourAngleFormat.DecimalHours) {
+         if (hour.Format == HourAngleFormat.DecimalHours)
+         {
             result.Value = hour.Value * factor;  /* Use Value property to ensure HMS properties are also updated properly */
          }
-         else {
+         else
+         {
             double seconds = hour.TotalSeconds * factor;
             result = FromSeconds(seconds);
          }
@@ -555,10 +569,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          HourAngle result = new HourAngle(0.0);
          result.Format = hour.Format;
-         if (hour.Format == HourAngleFormat.DecimalHours) {
+         if (hour.Format == HourAngleFormat.DecimalHours)
+         {
             result.Value = hour.Value / factor;     /* Use Value property to ensure DMS properties are also updated properly */
          }
-         else {
+         else
+         {
             double seconds = hour.TotalSeconds / factor;
             result = FromSeconds(seconds);
          }
@@ -570,10 +586,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          HourAngle result = new HourAngle(0.0);
          result.Format = hour2.Format;
-         if (hour2.Format == HourAngleFormat.DecimalHours) {
+         if (hour2.Format == HourAngleFormat.DecimalHours)
+         {
             result.Value = (double)(hour1.Value / hour2.Value);
-               }
-         else {
+         }
+         else
+         {
             result = FromSeconds(hour1.TotalSeconds / hour2.TotalSeconds);
          }
          return result;
@@ -625,7 +643,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          double seconds;
          int increment;
 
-         switch (format) {
+         switch (format)
+         {
             case HourAngleFormat.DecimalHours:
                text = CustomFormat.ToString(Resources.HourAngleInDecimalHours, _NumberDecimalDigitsForHours, Value);
                break;
@@ -633,10 +652,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             case HourAngleFormat.HoursDecimalMinutes:
                increment = (Value >= 0.0 ? 1 : -1);
                doubleMinutes = Math.Round((double)Minutes + (Seconds / 60.0), _NumberDecimalDigitsForHours);
-               if (Math.Abs(doubleMinutes) < 60.0) {
+               if (Math.Abs(doubleMinutes) < 60.0)
+               {
                   hours = Hours;
                }
-               else {
+               else
+               {
                   doubleMinutes = 0.0;
                   hours = Hours + increment;
                }
@@ -652,31 +673,38 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
                seconds = Math.Round(Seconds, format != HourAngleFormat.CompactHoursMinutesSeconds ? _NumberDecimalDigitsForSeconds
                                                                                                       : HourAngle.NumberDecimalDigitsForCompactSeconds);
 
-               if (Math.Abs(seconds) < 60.0) {
+               if (Math.Abs(seconds) < 60.0)
+               {
                   minutes = Minutes;
                }
-               else {
+               else
+               {
                   seconds = 0.0;
                   minutes = Minutes + increment;
                }
 
-               if (Math.Abs(minutes) < 60) {
+               if (Math.Abs(minutes) < 60)
+               {
                   hours = Hours;
                }
-               else {
+               else
+               {
                   minutes = 0;
                   hours = Hours + increment;
                }
 
-               if (format == HourAngleFormat.HoursMinutesSeconds) {
+               if (format == HourAngleFormat.HoursMinutesSeconds)
+               {
                   text = CustomFormat.ToString(Resources.HourAngleInHoursMinutesSeconds, _NumberDecimalDigitsForSeconds,
                                                hours, minutes, seconds);
                }
-               else if (format == HourAngleFormat.CompactHoursMinutesSeconds) {
+               else if (format == HourAngleFormat.CompactHoursMinutesSeconds)
+               {
                   text = CustomFormat.ToString(Resources.HoursAngleInCompactHoursMinutesSeconds, _NumberDecimalDigitsForSeconds,
                      hours, minutes, seconds);
                }
-               else {
+               else
+               {
                   /* Because 'CAD' coordinates use a comma as the lat/long delimiter, a period must
                      be used as the double point, hence the use of the InvariantCulture.
                   */
@@ -713,7 +741,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          hour %= 360.0;
 
-         if (hour < 0.0) {
+         if (hour < 0.0)
+         {
             hour += 360.0;
          }
 
@@ -737,10 +766,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          hour %= 360.0;   /* Need it in the standard range first */
 
-         if (hour > 180.0) {
+         if (hour > 180.0)
+         {
             hour -= 360.0;
          }
-         else if (hour < -180.0) {
+         else if (hour < -180.0)
+         {
             hour += 360.0;
          }
 
@@ -778,11 +809,23 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
 
+      public static double DegreesToHours(double deg)
+      {
+         return deg * (24.0 / 360.0);
+      }
+
+      public static double HoursToDegrees(double hours)
+      {
+         return hours / (24.0 / 360.0);
+      }
+
+
       internal static Regex[] BuildRegexArray(string[] regexPatterns)
       {
          Regex[] regexes = new Regex[regexPatterns.Length];
 
-         for (int i = 0; i < regexPatterns.Length; i++) {
+         for (int i = 0; i < regexPatterns.Length; i++)
+         {
             regexes[i] = new Regex(@"^\s*" + regexPatterns[i] + @"\s*$",
                                    RegexOptions.Compiled | RegexOptions.IgnoreCase);
          }
@@ -794,7 +837,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          decimal[] target = new decimal[source.Length];
 
-         for (int i = 0; i < source.Length; i++) {
+         for (int i = 0; i < source.Length; i++)
+         {
             target[i] = (decimal)source[i];
          }
 
@@ -811,7 +855,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       private double SetHoursFromHms()
       {
-         if (Hours < 0 || Minutes < 0 || Seconds < 0.0) {
+         if (Hours < 0 || Minutes < 0 || Seconds < 0.0)
+         {
             SetHmsToNegative();
          }
 
@@ -821,40 +866,48 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       private void MatchHmsSigns(double value)
       {
          /* If the value is zero, no sign can be inferred */
-         if (value > 0.0) {
+         if (value > 0.0)
+         {
             SetHmsToPositive();
          }
-         else if (value < 0.0) {
+         else if (value < 0.0)
+         {
             SetHmsToNegative();
          }
       }
 
       private void SetHmsToPositive()
       {
-         if (Hours < 0) {
+         if (Hours < 0)
+         {
             _Hours *= -1;
          }
 
-         if (Minutes < 0) {
+         if (Minutes < 0)
+         {
             _Minutes *= -1;
          }
 
-         if (Seconds < 0.0) {
+         if (Seconds < 0.0)
+         {
             _Seconds *= -1.0;
          }
       }
 
       private void SetHmsToNegative()
       {
-         if (Hours > 0) {
+         if (Hours > 0)
+         {
             _Hours *= -1;
          }
 
-         if (Minutes > 0) {
+         if (Minutes > 0)
+         {
             _Minutes *= -1;
          }
 
-         if (Seconds > 0.0) {
+         if (Seconds > 0.0)
+         {
             _Seconds *= -1.0;
          }
       }
@@ -867,10 +920,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          int result = 0;
 
          if (obj == null
-             || !(obj is HourAngle)) {
+             || !(obj is HourAngle))
+         {
             result = 1;
          }
-         else {
+         else
+         {
             HourAngle that = (HourAngle)obj;
             result = Value.CompareTo(that.Value);
          }
@@ -884,6 +939,39 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       public static double Truncate(double value)
       {
          return Math.Truncate(value);
+      }
+
+
+      public double Range24()
+      {
+         double hours = this.Value;
+         hours = hours % 24.0;
+         while (hours < 0.0)
+         {
+            hours = hours + 24.0;
+         }
+         return hours;
+      }
+
+      public static double Range24(double hours)
+      {
+         hours = hours % 24.0;
+         while (hours < 0.0)
+         {
+            hours = hours + 24.0;
+         }
+         return hours;
+      }
+
+      public double Range2Pi()
+      {
+         double rad = this.Radians;
+         rad = rad % Constants.TWO_PI;
+         while (rad < 0.0)
+         {
+            rad = rad + Constants.TWO_PI;
+         }
+         return rad;
       }
 
    }

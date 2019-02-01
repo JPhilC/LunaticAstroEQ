@@ -45,6 +45,7 @@ using Core = ASCOM.LunaticAstroEQ.Core;
 using ASCOM.LunaticAstroEQ.Controller;
 using ASCOM.LunaticAstroEQ.Core;
 using ASCOM.LunaticAstroEQ.Core.Geometry;
+using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -79,12 +80,29 @@ namespace ASCOM.LunaticAstroEQ
       /// </summary>
       internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ.";
 
-      private AstroEQController _Controller;
+      private AstroEQController Controller
+      {
+         get
+         {
+            return SharedResources.Controller;
+         }
+      }
 
+      private static TraceLogger _tl = null;
       /// <summary>
       /// Variable to hold the trace logger object (creates a diagnostic log file with information that you specify)
       /// </summary>
-      internal static TraceLogger tl;
+      internal static TraceLogger tl
+      {
+         get
+         {
+            if (_tl == null)
+            {
+               _tl = new TraceLogger("", "LunaticAstroEQ");
+            }
+            return _tl;
+         }
+      }
 
       internal bool TraceState
       {
@@ -137,12 +155,8 @@ namespace ASCOM.LunaticAstroEQ
          driverDescription = GetDriverDescription();
 
 
-         _Controller = AstroEQController.Instance;
+         tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
 
-         tl = new TraceLogger("", "LunaticAstroEQ")
-         {
-            Enabled = Settings.TracingState // This will also load the settings as it is the first time it is accessed.
-         };
 
          tl.LogMessage("Telescope", "Starting initialisation");
 
@@ -155,29 +169,37 @@ namespace ASCOM.LunaticAstroEQ
 
       private void InitialiseAscomTools()
       {
+         double latitude, longitude, elevation, temperature;
+         lock (Controller)
+         {
+            latitude = Controller.ObservatoryLocation.Latitude.Value;
+            longitude = Controller.ObservatoryLocation.Longitude.Value;
+            elevation = Controller.ObservatoryElevation;
+            temperature = 15.0;
+         }
          _AscomToolsCurrentPosition = new AscomTools();
 
          // Initialise the transform from the site details stored with the controller
-         _AscomToolsCurrentPosition.Transform.SiteLatitude = _Controller.ObservatoryLocation.Latitude.Value;
-         _AscomToolsCurrentPosition.Transform.SiteLongitude = _Controller.ObservatoryLocation.Longitude.Value;
-         _AscomToolsCurrentPosition.Transform.SiteElevation = _Controller.ObservatoryElevation;
-         _AscomToolsCurrentPosition.Transform.SiteTemperature = 15.0;
+         _AscomToolsCurrentPosition.Transform.SiteLatitude = latitude;
+         _AscomToolsCurrentPosition.Transform.SiteLongitude = longitude;
+         _AscomToolsCurrentPosition.Transform.SiteElevation = elevation;
+         _AscomToolsCurrentPosition.Transform.SiteTemperature = temperature;
 
          _AscomToolsCelestialPole = new AscomTools();
 
          // Initialise the transform from the site details stored with the controller
-         _AscomToolsCelestialPole.Transform.SiteLatitude = _Controller.ObservatoryLocation.Latitude.Value;
-         _AscomToolsCelestialPole.Transform.SiteLongitude = _Controller.ObservatoryLocation.Longitude.Value;
-         _AscomToolsCelestialPole.Transform.SiteElevation = _Controller.ObservatoryElevation;
-         _AscomToolsCelestialPole.Transform.SiteTemperature = 15.0;
+         _AscomToolsCelestialPole.Transform.SiteLatitude = latitude;
+         _AscomToolsCelestialPole.Transform.SiteLongitude = longitude;
+         _AscomToolsCelestialPole.Transform.SiteElevation = elevation;
+         _AscomToolsCelestialPole.Transform.SiteTemperature = temperature;
 
          _AscomToolsTargetPosition = new AscomTools();
 
          // Initialise the transform from the site details stored with the controller
-         _AscomToolsTargetPosition.Transform.SiteLatitude = _Controller.ObservatoryLocation.Latitude.Value;
-         _AscomToolsTargetPosition.Transform.SiteLongitude = _Controller.ObservatoryLocation.Longitude.Value;
-         _AscomToolsTargetPosition.Transform.SiteElevation = _Controller.ObservatoryElevation;
-         _AscomToolsTargetPosition.Transform.SiteTemperature = 15.0;
+         _AscomToolsTargetPosition.Transform.SiteLatitude = latitude;
+         _AscomToolsTargetPosition.Transform.SiteLongitude = longitude;
+         _AscomToolsTargetPosition.Transform.SiteElevation = elevation;
+         _AscomToolsTargetPosition.Transform.SiteTemperature = temperature;
       }
       private string GetDriverDescription()
       {
@@ -340,9 +362,9 @@ namespace ASCOM.LunaticAstroEQ
       public void Dispose()
       {
          // Clean up the tracelogger and util objects
-         tl.Enabled = false;
-         tl.Dispose();
-         tl = null;
+         //tl.Enabled = false;
+         //tl.Dispose();
+         //tl = null;
          _AscomToolsCurrentPosition.Dispose();
       }
 
@@ -355,39 +377,49 @@ namespace ASCOM.LunaticAstroEQ
          }
          set
          {
-            LogMessage("Connected", "Set {0}", value);
-            if (value == IsConnected)
-               return;
-
-            if (value)
+            lock (Controller)
             {
-               if (string.IsNullOrWhiteSpace(Settings.COMPort))
-               {
-                  throw new ASCOM.ValueNotSetException("comPort");
-               }
-               LogMessage("Connected Set", "Connecting to port {0}", Settings.COMPort);
-               int connectionResult = _Controller.Connect(Settings.COMPort, (int)Settings.BaudRate, (int)Settings.Timeout, (int)Settings.Retry);
-               if (connectionResult == Core.Constants.MOUNT_SUCCESS)
-               {
-                  IsConnected = true;
-                  InitialiseCurrentPosition();
+               LogMessage("Connected", "Set {0}", value);
+               if (value == IsConnected)
+                  return;
 
-               }
-               else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
+               if (value)
                {
-                  IsConnected = true;
+                  if (string.IsNullOrWhiteSpace(Settings.COMPort))
+                  {
+                     throw new ASCOM.ValueNotSetException("comPort");
+                  }
+                  LogMessage("Connected Set", "Connecting to port {0}", Settings.COMPort);
+                  int connectionResult = Controller.Connect(Settings.COMPort, (int)Settings.BaudRate, (int)Settings.Timeout, (int)Settings.Retry);
+                  if (connectionResult == Core.Constants.MOUNT_SUCCESS)
+                  {
+                     IsConnected = true;
+
+                     // Zero axis positions at NCP
+
+                     Controller.MCSetAxisPosition(AXISID.AXIS1, 0.0);
+                     Controller.MCSetAxisPosition(AXISID.AXIS2, 0.0);
+
+                     InitialiseCurrentPosition();
+
+                  }
+                  else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
+                  {
+                     IsConnected = true;
+
+                  }
+                  else
+                  {
+                     // Something went wrong so not connected.
+                     IsConnected = false;
+                  }
                }
                else
                {
-                  // Something went wrong so not connected.
-                  IsConnected = false;
+                  Controller.Disconnect();
+                  LogMessage("Connected Set", "Disconnecting from port {0}", Settings.COMPort);
+                  IsConnected = false; ;
                }
-            }
-            else
-            {
-               _Controller.Disconnect();
-               LogMessage("Connected Set", "Disconnecting from port {0}", Settings.COMPort);
-               IsConnected = false; ;
             }
          }
       }
@@ -467,7 +499,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            lock (_CurrentPosition)
+            lock (Controller)
             {
                RefreshCurrentPosition();
                double altitude = _CurrentPosition.AltAzimuth.Altitude.Value;
@@ -524,7 +556,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            lock (_CurrentPosition)
+            lock (Controller)
             {
                RefreshCurrentPosition();
                double azimuth = _CurrentPosition.AltAzimuth.Azimuth.Value;
@@ -694,11 +726,13 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            lock (_CurrentPosition)
+            lock (Controller)
             {
                RefreshCurrentPosition();
-               double declination = _CurrentPosition.Equatorial.Declination.Value;
-               tl.LogMessage("Declination", "Get - " + _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
+               double declination = _CurrentPosition.Equatorial.Declination;
+               LogMessage("Declination", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
+               // System.Diagnostics.Debug.WriteLine($"Declination Get - {_AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":")}");
+
                return declination;
             }
          }
@@ -806,7 +840,7 @@ namespace ASCOM.LunaticAstroEQ
          bool isRASlewing = false;
          bool isDecSlewing = false;
          double deltaMax = AstroEQController.MAX_SLEW_SPEED_DEGREES - rate;
-         lock (_Controller)
+         lock (Controller)
          {
             System.Diagnostics.Debug.WriteLine(String.Format("MoveAxis({0}, {1})", axis, rate));
             if (AtPark)
@@ -823,11 +857,11 @@ namespace ASCOM.LunaticAstroEQ
             {
                case TelescopeAxes.axisPrimary:
                   isRASlewing = (rate > 0);
-                  _Controller.MCAxisSlew((AXISID)AxisId.Axis1_RA, rate);
+                  Controller.MCAxisSlew((AXISID)AxisId.Axis1_RA, rate);
                   break;
                case TelescopeAxes.axisSecondary:
                   isDecSlewing = (rate > 0);
-                  _Controller.MCAxisSlew((AXISID)AxisId.Axis2_DEC, rate);
+                  Controller.MCAxisSlew((AXISID)AxisId.Axis2_DEC, rate);
                   break;
                default:
                   throw new ASCOM.InvalidValueException("Tertiary axis is not supported by MoveAxis command");
@@ -838,9 +872,12 @@ namespace ASCOM.LunaticAstroEQ
 
       public void Park()
       {
-         LogMessage("Park", "Parking");
-         _Controller.MCAxisSlewTo(AXISID.AXIS1, _CelestialPolePosition.ObservedAxes[0]);    // Target position in radians
-         _Controller.MCAxisSlewTo(AXISID.AXIS2, _CelestialPolePosition.ObservedAxes[1]);    // Target position in radians
+         lock (Controller)
+         {
+            LogMessage("Park", "Parking");
+            Controller.MCAxisSlewTo(AXISID.AXIS1, _CelestialPolePosition.ObservedAxes[0]);    // Target position in radians
+            Controller.MCAxisSlewTo(AXISID.AXIS2, _CelestialPolePosition.ObservedAxes[1]);    // Target position in radians
+         }
       }
 
       public void PulseGuide(GuideDirections Direction, int Duration)
@@ -853,11 +890,12 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            lock (_CurrentPosition)
+            lock (Controller)
             {
                RefreshCurrentPosition();
                double rightAscension = _CurrentPosition.Equatorial.RightAscension.Value;
-               tl.LogMessage("RightAscension", "Get - " + _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension));
+               LogMessage("RightAscension", "Get - {0}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension));
+               // System.Diagnostics.Debug.WriteLine($"RightAscension Get - {_AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension)}");
                return rightAscension;
             }
          }
@@ -888,28 +926,13 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            PierSide value = PierSide.pierUnknown;
-            switch (Settings.AscomCompliance.SideOfPier)
-            {
-               case SideOfPierOption.Pointing:
-                  value = SOP_Pointing(_CurrentPosition.ObservedAxes.DecAxis.Radians);
-                  break;
-               case SideOfPierOption.Physical:
-                  value = SOP_Physical(_CurrentPosition.Equatorial.RightAscension);
-                  break;
-               case SideOfPierOption.None:
-                  value = PierSide.pierUnknown;
-                  break;
-               case SideOfPierOption.V124g:
-                  value = SOP_Dec(_CurrentPosition.ObservedAxes.DecAxis.Radians);
-                  break;
-            }
-            tl.LogMessage("SideOfPier", "Get - " + value.ToString());
+            PierSide value = _CurrentPosition.PointingSideOfPier;
+            LogMessage("SideOfPier", "Get - {0}", value);
             return value;
          }
          set
          {
-            tl.LogMessage("SideOfPier Set", "Not implemented");
+            LogMessage("SideOfPier Set", "Not implemented");
             throw new ASCOM.PropertyNotImplementedException("SideOfPier", true);
          }
       }
@@ -918,7 +941,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            lock (_CurrentPosition)
+            lock (Controller)
             {
                RefreshCurrentPosition();
                double lst = _CurrentPosition.LocalApparentSiderialTime.Value;
@@ -932,19 +955,25 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            LogMessage("SiteElevation", "Get {0}", _Controller.ObservatoryElevation);
-            return _Controller.ObservatoryElevation;
+            lock (Controller)
+            {
+               LogMessage("SiteElevation", "Get {0}", Controller.ObservatoryElevation);
+               return Controller.ObservatoryElevation;
+            }
          }
          set
          {
-            LogMessage("SiteElevation", "Set {0}", value);
-            if (_Controller.ObservatoryElevation == value)
+            lock (Controller)
             {
-               return;
+               LogMessage("SiteElevation", "Set {0}", value);
+               if (Controller.ObservatoryElevation == value)
+               {
+                  return;
+               }
+               _AscomToolsCurrentPosition.Transform.SiteElevation = value;
+               Controller.ObservatoryElevation = value;
+               _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
             }
-            _AscomToolsCurrentPosition.Transform.SiteElevation = value;
-            _Controller.ObservatoryElevation = value;
-            _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
          }
       }
 
@@ -952,20 +981,26 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            LogMessage("SiteLatitude", "Get {0}", _Controller.ObservatoryLocation.Latitude.Value);
-            return _Controller.ObservatoryLocation.Latitude.Value;
+            lock (Controller)
+            {
+               LogMessage("SiteLatitude", "Get {0}", Controller.ObservatoryLocation.Latitude.Value);
+               return Controller.ObservatoryLocation.Latitude.Value;
+            }
          }
          set
          {
-            LogMessage("SiteLatitude", "Set {0}", value);
-            if (_Controller.ObservatoryLocation.Latitude.Value == value)
+            lock (Controller)
             {
-               return;
+               LogMessage("SiteLatitude", "Set {0}", value);
+               if (Controller.ObservatoryLocation.Latitude.Value == value)
+               {
+                  return;
+               }
+               _AscomToolsCurrentPosition.Transform.SiteLatitude = value;
+               Controller.ObservatoryLocation.Latitude = value;
+               // See if the controller is at it's park position and if so set RA/Dec
+               _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
             }
-            _AscomToolsCurrentPosition.Transform.SiteLatitude = value;
-            _Controller.ObservatoryLocation.Latitude.Value = value;
-            // See if the controller is at it's park position and if so set RA/Dec
-            _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
          }
       }
 
@@ -974,19 +1009,25 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            LogMessage("SiteLongitude", "Get {0}", _Controller.ObservatoryLocation.Longitude.Value);
-            return _Controller.ObservatoryLocation.Longitude.Value;
+            lock (Controller)
+            {
+               LogMessage("SiteLongitude", "Get {0}", Controller.ObservatoryLocation.Longitude.Value);
+               return Controller.ObservatoryLocation.Longitude.Value;
+            }
          }
          set
          {
-            LogMessage("SiteLongitude", "Set {0}", value);
-            if (_Controller.ObservatoryLocation.Longitude.Value == value)
+            lock (Controller)
             {
-               return;
+               LogMessage("SiteLongitude", "Set {0}", value);
+               if (Controller.ObservatoryLocation.Longitude.Value == value)
+               {
+                  return;
+               }
+               _AscomToolsCurrentPosition.Transform.SiteLongitude = value;
+               Controller.ObservatoryLocation.Longitude = value;
+               _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
             }
-            _AscomToolsCurrentPosition.Transform.SiteLongitude = value;
-            _Controller.ObservatoryLocation.Longitude.Value = value;
-            _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
          }
       }
 
@@ -994,38 +1035,35 @@ namespace ASCOM.LunaticAstroEQ
       {
          DateTime now = DateTime.Now;
          AltAzCoordinate altAzPosition = new AltAzCoordinate(SiteLatitude, 0.0);
-         AxisPosition axisPosition = new AxisPosition(_Controller.MCGetAxisPosition(AXISID.AXIS1)
-                                    , _Controller.MCGetAxisPosition(AXISID.AXIS2));
+         AxisPosition axisPosition = new AxisPosition(0.0, 0.0);      // NCP
          _CelestialPolePosition = new MountCoordinate(altAzPosition, axisPosition, _AscomToolsCelestialPole, now);
-         _CurrentPosition = new MountCoordinate(altAzPosition, axisPosition, _AscomToolsCurrentPosition, now);
+         EquatorialCoordinate currentRaDec = new EquatorialCoordinate(_CelestialPolePosition.Equatorial.RightAscension.Value, _CelestialPolePosition.Equatorial.Declination.Value);
+         _CurrentPosition = new MountCoordinate(currentRaDec, axisPosition, _AscomToolsCurrentPosition, now);
       }
 
 
+      private DateTime _lastMessage = DateTime.Now;
       /// <summary>
       /// Refreshes the NCP and current positions if more than 500ms have elapsed since the last refresh.
       /// </summary>
       private void RefreshCurrentPosition()
       {
          DateTime now = DateTime.Now;
-         //if (now - _CurrentPosition.SyncTime > new TimeSpan(0, 0, 0, 0, 500))
-         //{
-         // Refresh the Celestial pole position to update the RA and observed time.
-         _CelestialPolePosition.Refresh(_AscomToolsCelestialPole, now);
-         // Get the axis positions from the controller/hardware.
-         AxisPosition axisPosition = new AxisPosition(_Controller.MCGetAxisPosition(AXISID.AXIS1)
-                                    , _Controller.MCGetAxisPosition(AXISID.AXIS2));
-         // Calculate change in axis angle
-         AxisPosition delta = axisPosition - _CelestialPolePosition.ObservedAxes;
-         // Great equatorial difference
-         EquatorialCoordinate deltaCoordinate = new EquatorialCoordinate(HourAngle.RadiansToHours(axisPosition[0]), Angle.RadiansToDegrees(axisPosition[1]));
-         // Determine RA/Dec by adding the difference to the current celestial pole RA/Dec
-         EquatorialCoordinate newPosition = _CelestialPolePosition.Equatorial + deltaCoordinate;
-         _CurrentPosition = new MountCoordinate(newPosition, axisPosition, _AscomToolsCurrentPosition, now);
-         // Check if slew finished
-         if (_IsSlewing && (axisPosition == _TargetPosition.ObservedAxes))
+         AxisPosition axisPosition;
+         lock (Controller)
          {
-            _IsSlewing = false;
+            axisPosition = Controller.MCGetAxisPositions();
+            // System.Diagnostics.Debug.WriteLine($"Controller axis position: {axisPosition.ToString()}");
          }
+
+         _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+
+         // _CurrentPosition = new MountCoordinate(newPosition, axisPosition, _AscomToolsCurrentPosition, now);
+         System.Diagnostics.Debug.WriteLine($"RA: {_AscomToolsCurrentPosition.Util.HoursToHMS(_CurrentPosition.Equatorial.RightAscension.Value)} / Dec: {_AscomToolsCurrentPosition.Util.DegreesToDMS(_CurrentPosition.Equatorial.Declination, ":", ":")} Axis: {_CurrentPosition.ObservedAxes.ToString()}");
+         //// Check if slew finished
+         //if (_IsSlewing && (axisPosition == _TargetPosition.ObservedAxes))
+         //{
+         //   _IsSlewing = false;
          //}
       }
 
@@ -1056,20 +1094,60 @@ namespace ASCOM.LunaticAstroEQ
          throw new ASCOM.MethodNotImplementedException("SlewToAltAzAsync");
       }
 
-      public void SlewToCoordinates(double RightAscension, double Declination)
+      public void SlewToCoordinates(double rightAscension, double declination)
       {
-         LogMessage("SlewToCoordinates", "RA:{0}/Dec:{1}", _AscomToolsCurrentPosition.Util.HoursToHMS(RightAscension, "h", "m", "s"), _AscomToolsCurrentPosition.Util.DegreesToDMS(Declination, ":", ":"));
-         EquatorialCoordinate target = new EquatorialCoordinate(RightAscension, Declination);
-         RefreshCurrentPosition();
-         AxisPosition targetAxisPosition = _CelestialPolePosition.Equatorial.GetRelativeAxisPositionOf(target);
-         _IsSlewing = true;
-         _TargetPosition = new MountCoordinate(target, targetAxisPosition, _AscomToolsTargetPosition, _CelestialPolePosition.SyncTime);
-         System.Diagnostics.Debug.WriteLine($"Slew RA to { targetAxisPosition.RAAxis.Degrees } degrees");
-         System.Diagnostics.Debug.WriteLine($"Slew Dec to { targetAxisPosition.DecAxis.Degrees } degrees");
+         lock (Controller)
+         {
+            LogMessage("SlewToCoordinates", "RA:{0}/Dec:{1}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension, "h", "m", "s"), _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
+            DateTime currentTime = DateTime.Now;
 
-         _Controller.MCAxisSlewTo(AXISID.AXIS1, targetAxisPosition[0]);    // Target position in radians
-         _Controller.MCAxisSlewTo(AXISID.AXIS2, targetAxisPosition[1]);    // Target position in radians
+            // Build the target position // using current axis position
+            Angle[] deltaSlew = _CurrentPosition.GetRADecSlewAnglesTo(rightAscension, declination);
+            _TargetPosition = new MountCoordinate(new EquatorialCoordinate(rightAscension, declination), _CurrentPosition.ObservedAxes.RotateBy(deltaSlew), _AscomToolsTargetPosition, currentTime);
 
+            System.Diagnostics.Debug.WriteLine("");
+            System.Diagnostics.Debug.WriteLine($"Currently At RA:{_AscomToolsCurrentPosition.Util.HoursToHMS(_CurrentPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsCurrentPosition.Util.DegreesToDMS(_CurrentPosition.Equatorial.Declination, ":", ":")}");
+
+            System.Diagnostics.Debug.WriteLine($"Slewing to   RA:{_AscomToolsCurrentPosition.Util.HoursToHMS(_TargetPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsCurrentPosition.Util.DegreesToDMS(_TargetPosition.Equatorial.Declination, ":", ":")}");
+
+
+            System.Diagnostics.Debug.WriteLine("");
+            System.Diagnostics.Debug.WriteLine($"Current axis position: {_CurrentPosition.ObservedAxes.ToString()}");
+
+            //_AscomToolsCurrentPosition.Transform.JulianDateTT = _AscomToolsCurrentPosition.Util.DateLocalToJulian(now);
+            //_AscomToolsCurrentPosition.Transform.SetTopocentric(RightAscension, Declination);
+            //AltAzCoordinate altAzPosition = new AltAzCoordinate(_AscomToolsCurrentPosition.Transform.ElevationTopocentric, _AscomToolsCurrentPosition.Transform.AzimuthTopocentric);
+            //MountCoordinate target = new MountCoordinate(altAzPosition, _CurrentPosition.ObservedAxes, _AscomToolsCelestialPole, now);
+            //double[] axisDelta = _CurrentPosition.Equatorial.GetAxisOffsetTo(target.Equatorial);
+
+
+            //System.Diagnostics.Debug.WriteLine($"Axis change = {axisDelta[0]}/{axisDelta[1]}");
+
+            //AxisPosition targetAxisPosition = _CurrentPosition.ObservedAxes.RotateBy(axisDelta);
+            //System.Diagnostics.Debug.WriteLine($"Initial axis position: {targetAxisPosition.ToString()}");
+            //// Perform axis safety check
+            //if (targetAxisPosition[0] > 90.0 && targetAxisPosition[0] < 270.0)
+            //{
+            //   // Final position will be weights up so need to flip.
+            //   targetAxisPosition = targetAxisPosition.Flip();
+            //   System.Diagnostics.Debug.WriteLine($"Revised axis position: {targetAxisPosition.ToDegreesString()}");
+            //}
+            //System.Diagnostics.Debug.WriteLine($"Target axis position: {targetAxisPosition.ToDegreesString()}");
+
+            //axisDelta = _CurrentPosition.ObservedAxes.GetSlewAnglesTo(targetAxisPosition);
+            //Angle deltRa = new Angle(axisDelta[0]);
+            //Angle deltaDec = new Angle(axisDelta[1]);
+
+            //System.Diagnostics.Debug.WriteLine($"Slewing through : {deltRa}/{deltaDec}");
+
+            //_TargetPosition = new MountCoordinate(target.Equatorial, targetAxisPosition, _AscomToolsTargetPosition, _CelestialPolePosition.SyncTime);
+
+            Controller.MCAxisSlewBy(new Angle[] { deltaSlew[0], deltaSlew[1]});
+            //Controller.MCAxisSlewTo(AXISID.AXIS1, targetAxisPosition[0]);    // Target position in radians
+            // Controller.MCAxisSlewTo(AXISID.AXIS2, targetAxisPosition[1]);    // Target position in radians
+            System.Diagnostics.Debug.WriteLine("");
+
+         }
       }
 
       public void SlewToCoordinatesAsync(double RightAscension, double Declination)
@@ -1156,11 +1234,12 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("TargetRightAscension Get", "Not implemented");
+            LogMessage("TargetRightAscension", " - Get {0}", "Not implemented");
             throw new ASCOM.PropertyNotImplementedException("TargetRightAscension", false);
          }
          set
          {
+            LogMessage("TargetRightAscension", " - Set {0} Not implemented", value);
             tl.LogMessage("TargetRightAscension Set", "Not implemented");
             throw new ASCOM.PropertyNotImplementedException("TargetRightAscension", true);
          }
@@ -1266,6 +1345,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          var msg = string.Format(message, args);
          tl.LogMessage(identifier, msg);
+         // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
       }
       #endregion
    }

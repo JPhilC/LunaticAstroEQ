@@ -150,7 +150,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             }
          }
 
-         return new AxisPosition(AstroConvert.Range2Pi(Math.Atan2(HVC[1], HVC[0])), AstroConvert.Range2Pi(Math.Asin(HVC[2])));
+         return new AxisPosition(AstroConvert.Range2Pi(Math.Atan2(HVC[1], HVC[0])), AstroConvert.Range2Pi(Math.Asin(HVC[2])), true);
       }
 
       public EquatorialCoordinate GetEquatorialCoords(AxisPosition axes, DateTime localTime)
@@ -235,7 +235,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
    //            OVC[i] += _T[i, j] * OVC[j];
    //         }
    //      }
-   //      return new AxisPosition(Math.Atan2(OVC[1], OVC[0]), Math.Asin(OVC[2]));
+   //      return new AxisPosition(Math.Atan2(OVC[1], OVC[0]), Math.Asin(OVC[2]), true);
    //   }
 
    //   public AxisPosition GetTheoreticalPosition(AxisPosition observed)
@@ -248,7 +248,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
    //            TVC[i] += _iT[i, j] * TVC[j];
    //         }
    //      }
-   //      return new AxisPosition(Math.Atan2(TVC[1], TVC[0]), Math.Asin(TVC[2]));
+   //      return new AxisPosition(Math.Atan2(TVC[1], TVC[0]), Math.Asin(TVC[2]), true);
    //   }
 
 

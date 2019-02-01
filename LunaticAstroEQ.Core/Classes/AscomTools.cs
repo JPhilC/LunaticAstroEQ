@@ -1,6 +1,7 @@
 ﻿using System;
 using ASCOM.Astrometry.AstroUtils;
 using ASCOM.Astrometry.Transform;
+using ASCOM.LunaticAstroEQ.Core.Geometry;
 using ASCOM.Utilities;
 
 namespace ASCOM.LunaticAstroEQ.Core
@@ -95,6 +96,21 @@ namespace ASCOM.LunaticAstroEQ.Core
                _AstroUtils = null;
             }
          }
+      }
+
+      public AltAzCoordinate GetAltAz(double rightAscension, double declination, DateTime when)
+      {
+         _Transform.JulianDateTT = _Util.DateLocalToJulian(when);
+         _Transform.SetTopocentric(rightAscension, declination);
+         return new AltAzCoordinate(_Transform.ElevationTopocentric, AstroConvert.RangeAzimuth(_Transform.AzimuthTopocentric));
+
+      }
+
+      public EquatorialCoordinate GetEquatorial(double altitude, double azimuth, DateTime when)
+      {
+         _Transform.JulianDateTT = _Util.DateLocalToJulian(when);
+         _Transform.SetAzimuthElevation(azimuth, altitude);
+         return new EquatorialCoordinate(_Transform.RATopocentric, _Transform.DECTopocentric);
       }
    }
 }

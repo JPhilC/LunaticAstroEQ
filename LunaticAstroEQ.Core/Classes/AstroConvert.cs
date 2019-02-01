@@ -74,6 +74,16 @@ namespace ASCOM.LunaticAstroEQ.Core
          return rad;
       }
 
+      public static double Range360Degrees(double ang)
+      {
+         ang = ang % 360.0;
+         while (ang < 0.0)
+         {
+            ang = ang + 360.0;
+         }
+         return ang;
+      }
+
       public static double RangeAzimuth(double vdeg)
       {
          vdeg = vdeg % 360;
@@ -111,7 +121,20 @@ namespace ASCOM.LunaticAstroEQ.Core
          {
             ha = ha + 24.0;
          }
-         while (ha > 24.0)
+         while (ha >= 24.0)
+         {
+            ha = ha - 24.0;
+         }
+         return ha;
+      }
+
+      public static double RangeHA(double ha)
+      {
+         while (ha < -12.0)
+         {
+            ha = ha + 24.0;
+         }
+         while (ha >= 12.0)
          {
             ha = ha - 24.0;
          }
@@ -119,45 +142,115 @@ namespace ASCOM.LunaticAstroEQ.Core
       }
 
 
+      public static double FlipDecAxisDegrees(double degrees)
+      {
+         if (degrees == 0.0)
+         {
+            return degrees;
+         }
+         bool isNegative = (degrees < 0.0);
+         double absDegrees = AstroConvert.Range360Degrees(Math.Abs(degrees));  // Converts to an absolute value from 0-360
+         double flippedValue = 360.0 - absDegrees;
+         if (isNegative)
+         {
+            flippedValue = flippedValue * -1.0;
+         }
+         return flippedValue;
+      }
+
+      public static double FlipDecAxisRadians(double rad)
+      {
+         if (rad == 0.0)
+         {
+            return rad;
+         }
+         bool isNegative = (rad < 0.0);
+         double absRad = AstroConvert.Range2Pi(Math.Abs(rad));  // Converts to an absolute value from 0-360
+         double flippedValue = Constants.TWO_PI - absRad;
+         if (isNegative)
+         {
+            flippedValue = flippedValue * -1.0;
+         }
+         return flippedValue;
+      }
+
+
+      public static double FlipRAAxisDegrees(double degrees)
+      {
+         bool isNegative = (degrees <= 0.0);
+         double absDegrees = Math.Abs(degrees);  // Converts to an absolute value from 0-360
+         double flippedValue = absDegrees - 180.0;
+         if (isNegative)
+         {
+            flippedValue = flippedValue * -1.0;
+         }
+         return flippedValue;
+      }
+
+      public static double FlipRAAxisRadians(double rad)
+      {
+         bool isNegative = (rad <= 0.0);
+         double absRad = Math.Abs(rad);  // Converts to an absolute value from 0-360
+         double flippedValue = absRad - Math.PI;
+         if (isNegative)
+         {
+            flippedValue = flippedValue * -1.0;
+         }
+         return flippedValue;
+      }
 
       /// <summary>
-      /// Function that will ensure that the DEC value will be between -90 to 90
-      /// Even if it is set at the other side of the pier
+      /// Converts a declination (range -90 to +90) to the range 0-360
       /// </summary>
-      /// <param name="degrees"></param>
+      /// <param name="declination"></param>
+      /// <param name="latitude"></param>
+      /// <param name="raAxisPosition"></param>
       /// <returns></returns>
-      public static double RangeDEC(double degrees)
+      public static double DecTo360(double declination, double siteLatitude, double raAxisPosition, double targetAlt, double targetAz)
       {
-
-         degrees = (degrees % 360.0);
-         double signFactor = degrees < 0 ? -1.0 : 1.0;
-         degrees = degrees * signFactor;
-         double result = degrees;
-         if (degrees >= 270.0 && degrees <= 360.0)
+         double decAxis;
+         if (raAxisPosition <= 180)
          {
-            result = degrees - 360.0;
-         }
-         else
-         {
-            if (degrees >= 180.0 && degrees < 270.0)
+            // Mount to the east of the pier
+            if (targetAlt < siteLatitude && (targetAz < 90.0 || targetAz >= 270.0))
             {
-               result = 180.0 - degrees;
+               // declination 30° maps to axis value 300°
+               // declination -30° maps to axis value 240°
+               decAxis = declination + 270.0;
+
             }
             else
             {
-               if (degrees >= 90.0 && degrees < 180.0)
-               {
-                  result = 180.0 - degrees;
-               }
+               // declination 30° maps to axis value 60°
+               // declination -30° maps to axis value 120°
+               decAxis = 90.0 - declination;
+            }
+
+         }
+         else
+         {
+            // Mount to the west of the pier
+            if (targetAlt < siteLatitude && (targetAz <= 90.0 || targetAz > 270.0))
+            {
+               // declination 30° maps to axis value 60°
+               // declination -30° maps to axis value 120°
+               decAxis = 90.0 - declination;
+            }
+            else
+            {
+               // declination 30° maps to axis value 300°
+               // declination -30° maps to axis value 240°
+               decAxis = declination + 270.0;
             }
          }
-         return result * signFactor;
+         return decAxis;
       }
 
-     
-      #endregion
 
-      #region Sidereal time ...
+      
+#endregion
+
+#region Sidereal time ...
       public static double LocalApparentSiderealTime(double longitude)
       {
          return LocalApparentSiderealTime(longitude, DateTime.Now);
@@ -190,9 +283,9 @@ namespace ASCOM.LunaticAstroEQ.Core
          siderealTime = (siderealTime + 24.0) % 24.0;
          return siderealTime;
       }
-      #endregion
+#endregion
 
-      #region JulanDateUTC ...
+#region JulanDateUTC ...
       /// <summary>
       /// Converts localtime into Julian time taking into account timezone offset and daylight saving.
       /// </summary>
@@ -207,9 +300,9 @@ namespace ASCOM.LunaticAstroEQ.Core
          }
          return julianDate;
       }
-      #endregion
+#endregion
 
-      #region Axis positions (radians) ...
+#region Axis positions (radians) ...
 
       ///// <summary>
       ///// Returns an hour value for a given axis position in Radians
@@ -395,9 +488,9 @@ namespace ASCOM.LunaticAstroEQ.Core
       //      End Function
       //    */
       //}
-      #endregion
+#endregion
 
-      #region Axis positions (encoder steps) ...
+#region Axis positions (encoder steps) ...
       //public static double GetEncoderHours(int encoderZeroPos, int encoderValue, int stepsPer360, HemisphereOption hemisphere)
       //{
       //   double result = 0.0;
@@ -483,9 +576,9 @@ namespace ASCOM.LunaticAstroEQ.Core
       //   }
       //   return result;
       //}
-      #endregion
+#endregion
 
-      #region AA-HADEC ...
+#region AA-HADEC ...
       static double lastLatitide;
       static double sinLatitude = 0.0;
       static double cosLatitude = 0.0;
@@ -600,7 +693,7 @@ namespace ASCOM.LunaticAstroEQ.Core
 
          Bp = AstroConvert.Range2Pi(B);
       }
-      #endregion
+#endregion
 
    }
 }

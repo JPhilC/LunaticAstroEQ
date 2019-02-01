@@ -51,7 +51,7 @@ namespace LunaticAstroEQ.Tests
             _AscomTools.Transform.SiteElevation = 192;
             DateTime testTime = new DateTime(2019, 1, 18, 21, 11, 00);
             AltAzCoordinate altAzPosition = new AltAzCoordinate(_AscomTools.Transform.SiteLatitude, 0.0);
-            MountCoordinate currentPosition = new MountCoordinate(altAzPosition, _AscomTools, testTime);
+            MountCoordinate currentPosition = new MountCoordinate(altAzPosition, new AxisPosition(0.0, 0.0), _AscomTools, testTime);
             double lst = currentPosition.LocalApparentSiderialTime;
             double ra = currentPosition.Equatorial.RightAscension.Value;
             double dec = currentPosition.Equatorial.Declination.Value;
