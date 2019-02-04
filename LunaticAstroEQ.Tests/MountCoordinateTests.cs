@@ -88,8 +88,92 @@ namespace LunaticAstroEQ.Tests
       }
 
 
-      [TestMethod]
-      public void TestGetAngleFromDecDegrees()
+
+
+
+      [DataRow(0, -90, 329.919511756115, 180, false)]
+      [DataRow(0, -60, 329.919511756115, 210, false)]
+      [DataRow(0, -30, 329.919511756115, 240, false)]
+      [DataRow(0, 0, 329.919511756115, 270, false)]
+      [DataRow(0, 30, 329.919511756115, 300, false)]
+      [DataRow(0, 60, 329.919511756115, 330, false)]
+      [DataRow(0, 90, 329.919511756115, 0, false)]
+      [DataRow(3, -90, 14.9195117561147, 180, false)]
+      [DataRow(3, -60, 14.9195117561147, 210, false)]
+      [DataRow(3, -30, 14.9195117561147, 240, false)]
+      [DataRow(3, 0, 14.9195117561147, 270, false)]
+      [DataRow(3, 30, 14.9195117561147, 300, false)]
+      [DataRow(3, 60, 14.9195117561147, 330, false)]
+      [DataRow(3, 90, 14.9195117561147, 0, false)]
+      [DataRow(6, -90, 59.9195117561147, 180, false)]
+      [DataRow(6, -60, 59.9195117561147, 210, false)]
+      [DataRow(6, -30, 59.9195117561147, 240, false)]
+      [DataRow(6, 0, 59.9195117561147, 270, false)]
+      [DataRow(6, 30, 59.9195117561147, 300, false)]
+      [DataRow(6, 60, 59.9195117561147, 330, false)]
+      [DataRow(6, 90, 59.9195117561147, 0, false)]
+      [DataRow(9, -90, 284.919511756115, 180, true)]
+      [DataRow(9, -60, 284.919511756115, 150, true)]
+      [DataRow(9, -30, 284.919511756115, 120, true)]
+      [DataRow(9, 0, 284.919511756115, 90, true)]
+      [DataRow(9, 30, 284.919511756115, 60, true)]
+      [DataRow(9, 60, 284.919511756115, 30, true)]
+      [DataRow(9, 90, 284.919511756115, 0, true)]
+      [DataRow(12, -90, 329.919511756115, 180, true)]
+      [DataRow(12, -60, 329.919511756115, 150, true)]
+      [DataRow(12, -30, 329.919511756115, 120, true)]
+      [DataRow(12, 0, 329.919511756115, 90, true)]
+      [DataRow(12, 30, 329.919511756115, 60, true)]
+      [DataRow(12, 60, 329.919511756115, 30, true)]
+      [DataRow(12, 90, 329.919511756115, 0, true)]
+      [DataRow(15, -90, 14.9195117561147, 180, true)]
+      [DataRow(15, -60, 14.9195117561147, 150, true)]
+      [DataRow(15, -30, 14.9195117561147, 120, true)]
+      [DataRow(15, 0, 14.9195117561147, 90, true)]
+      [DataRow(15, 30, 14.9195117561147, 60, true)]
+      [DataRow(15, 60, 14.9195117561147, 30, true)]
+      [DataRow(15, 90, 14.9195117561147, 0, true)]
+      [DataRow(18, -90, 59.9195117561147, 180, true)]
+      [DataRow(18, -60, 59.9195117561147, 150, true)]
+      [DataRow(18, -30, 59.9195117561147, 120, true)]
+      [DataRow(18, 0, 59.9195117561147, 90, true)]
+      [DataRow(18, 30, 59.9195117561147, 60, true)]
+      [DataRow(18, 60, 59.9195117561147, 30, true)]
+      [DataRow(18, 90, 59.9195117561147, 0, true)]
+      [DataRow(21, -90, 284.919511756115, 180, false)]
+      [DataRow(21, -60, 284.919511756115, 210, false)]
+      [DataRow(21, -30, 284.919511756115, 240, false)]
+      [DataRow(21, 0, 284.919511756115, 270, false)]
+      [DataRow(21, 30, 284.919511756115, 300, false)]
+      [DataRow(21, 60, 284.919511756115, 330, false)]
+      [DataRow(21, 90, 284.919511756115, 0, false)]
+      [DataRow(8, 90, 89.9195117561147, 0, false)]
+      [DataRow(8, 45, 89.9195117561147, 315, false)]
+      [DataRow(8, 0, 89.9195117561147, 270, false)]
+      [DataRow(8, -45, 89.9195117561147, 225, false)]
+      [DataRow(8, -90, 89.9195117561147, 180, false)]
+      [DataRow(9, 90, 284.919511756115, 0, true)]
+      [DataRow(9, 45, 284.919511756115, 45, true)]
+      [DataRow(9, 0, 284.919511756115, 90, true)]
+      [DataRow(9, -45, 284.919511756115, 135, true)]
+      [DataRow(9, -90, 284.919511756115, 180, true)]
+      [DataRow(14, 90, 359.919511756115, 0, true)]
+      [DataRow(14, 45, 359.919511756115, 45, true)]
+      [DataRow(14, 0, 359.919511756115, 90, true)]
+      [DataRow(14, -45, 359.919511756115, 135, true)]
+      [DataRow(14, -90, 359.919511756115, 180, true)]
+      [DataRow(21, 90, 284.919511756115, 0, false)]
+      [DataRow(21, 45, 284.919511756115, 315, false)]
+      [DataRow(21, 0, 284.919511756115, 270, false)]
+      [DataRow(21, -45, 284.919511756115, 225, false)]
+      [DataRow(21, -90, 284.919511756115, 180, false)]
+      // ASCOM_SOP Tests
+      [DataRow(17, 15, 44.9195117561147, 75, true)]     // Point A (SE)
+      [DataRow(5, 60, 44.9195117561147, 330, false)]     // Point B (NW)
+      [DataRow(11, 60, 314.919511756115, 30, true)]     // Point C (NE)
+      [DataRow(23, 15, 314.919511756115, 285, false)]     // Point D (SW)
+      [DataTestMethod]
+      public void TestCalculateTargetAxis(double targetRa, double targetDec, double expectedAxisRa, double expectedAxisDec, bool decFlipped)
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
          MountCoordinate mount = new MountCoordinate(
@@ -97,18 +181,97 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         System.Diagnostics.Debug.WriteLine("DEC\t\t\tAngle\t\tAngle flipped");
-         System.Diagnostics.Debug.WriteLine("===\t\t\t=====\t\t=============");
-         for (double dec = -90.0; dec <= 90.0; dec = dec + 10)
-         {
-            System.Diagnostics.Debug.WriteLine($"{dec}\t\t\t{mount.GetAngleFromDecDegrees(dec, false)}\t\t\t{mount.GetAngleFromDecDegrees(dec, true)}");
-         }
-         Assert.IsTrue(true);
+         AxisPosition axisPosition = mount.GetAxisPositionForRADec(targetRa, targetDec, _Tools);
+         Assert.AreEqual(expectedAxisRa, axisPosition.RAAxis, 0.000001, "RA Axis");
+         Assert.AreEqual(expectedAxisDec, axisPosition.DecAxis, 0.000001, "Dec Axis");
+         Assert.AreEqual(decFlipped, axisPosition.DecFlipped, "Dec flipped");
+
       }
 
 
-      [TestMethod]
-      public void TestGetAngleFromHours()
+      [DataRow(0, -90, 329.919511756115, 180, false)]
+      [DataRow(0, -60, 329.919511756115, 210, false)]
+      [DataRow(0, -30, 329.919511756115, 240, false)]
+      [DataRow(0, 0, 329.919511756115, 270, false)]
+      [DataRow(0, 30, 329.919511756115, 300, false)]
+      [DataRow(0, 60, 329.919511756115, 330, false)]
+      [DataRow(0, 90, 329.919511756115, 0, false)]
+      [DataRow(3, -90, 14.9195117561147, 180, false)]
+      [DataRow(3, -60, 14.9195117561147, 210, false)]
+      [DataRow(3, -30, 14.9195117561147, 240, false)]
+      [DataRow(3, 0, 14.9195117561147, 270, false)]
+      [DataRow(3, 30, 14.9195117561147, 300, false)]
+      [DataRow(3, 60, 14.9195117561147, 330, false)]
+      [DataRow(3, 90, 14.9195117561147, 0, false)]
+      [DataRow(6, -90, 59.9195117561147, 180, false)]
+      [DataRow(6, -60, 59.9195117561147, 210, false)]
+      [DataRow(6, -30, 59.9195117561147, 240, false)]
+      [DataRow(6, 0, 59.9195117561147, 270, false)]
+      [DataRow(6, 30, 59.9195117561147, 300, false)]
+      [DataRow(6, 60, 59.9195117561147, 330, false)]
+      [DataRow(6, 90, 59.9195117561147, 0, false)]
+      [DataRow(9, -90, 284.919511756115, 180, true)]
+      [DataRow(9, -60, 284.919511756115, 150, true)]
+      [DataRow(9, -30, 284.919511756115, 120, true)]
+      [DataRow(9, 0, 284.919511756115, 90, true)]
+      [DataRow(9, 30, 284.919511756115, 60, true)]
+      [DataRow(9, 60, 284.919511756115, 30, true)]
+      [DataRow(9, 90, 284.919511756115, 0, true)]
+      [DataRow(12, -90, 329.919511756115, 180, true)]
+      [DataRow(12, -60, 329.919511756115, 150, true)]
+      [DataRow(12, -30, 329.919511756115, 120, true)]
+      [DataRow(12, 0, 329.919511756115, 90, true)]
+      [DataRow(12, 30, 329.919511756115, 60, true)]
+      [DataRow(12, 60, 329.919511756115, 30, true)]
+      [DataRow(12, 90, 329.919511756115, 0, true)]
+      [DataRow(15, -90, 14.9195117561147, 180, true)]
+      [DataRow(15, -60, 14.9195117561147, 150, true)]
+      [DataRow(15, -30, 14.9195117561147, 120, true)]
+      [DataRow(15, 0, 14.9195117561147, 90, true)]
+      [DataRow(15, 30, 14.9195117561147, 60, true)]
+      [DataRow(15, 60, 14.9195117561147, 30, true)]
+      [DataRow(15, 90, 14.9195117561147, 0, true)]
+      [DataRow(18, -90, 59.9195117561147, 180, true)]
+      [DataRow(18, -60, 59.9195117561147, 150, true)]
+      [DataRow(18, -30, 59.9195117561147, 120, true)]
+      [DataRow(18, 0, 59.9195117561147, 90, true)]
+      [DataRow(18, 30, 59.9195117561147, 60, true)]
+      [DataRow(18, 60, 59.9195117561147, 30, true)]
+      [DataRow(18, 90, 59.9195117561147, 0, true)]
+      [DataRow(21, -90, 284.919511756115, 180, false)]
+      [DataRow(21, -60, 284.919511756115, 210, false)]
+      [DataRow(21, -30, 284.919511756115, 240, false)]
+      [DataRow(21, 0, 284.919511756115, 270, false)]
+      [DataRow(21, 30, 284.919511756115, 300, false)]
+      [DataRow(21, 60, 284.919511756115, 330, false)]
+      [DataRow(21, 90, 284.919511756115, 0, false)]
+      [DataRow(8, 90, 89.9195117561147, 0, false)]
+      [DataRow(8, 45, 89.9195117561147, 315, false)]
+      [DataRow(8, 0, 89.9195117561147, 270, false)]
+      [DataRow(8, -45, 89.9195117561147, 225, false)]
+      [DataRow(8, -90, 89.9195117561147, 180, false)]
+      [DataRow(9, 90, 284.919511756115, 0, true)]
+      [DataRow(9, 45, 284.919511756115, 45, true)]
+      [DataRow(9, 0, 284.919511756115, 90, true)]
+      [DataRow(9, -45, 284.919511756115, 135, true)]
+      [DataRow(9, -90, 284.919511756115, 180, true)]
+      [DataRow(14, 90, 359.919511756115, 0, true)]
+      [DataRow(14, 45, 359.919511756115, 45, true)]
+      [DataRow(14, 0, 359.919511756115, 90, true)]
+      [DataRow(14, -45, 359.919511756115, 135, true)]
+      [DataRow(14, -90, 359.919511756115, 180, true)]
+      [DataRow(21, 90, 284.919511756115, 0, false)]
+      [DataRow(21, 45, 284.919511756115, 315, false)]
+      [DataRow(21, 0, 284.919511756115, 270, false)]
+      [DataRow(21, -45, 284.919511756115, 225, false)]
+      [DataRow(21, -90, 284.919511756115, 180, false)]
+      // ASCOM_SOP Tests
+      [DataRow(17, 15, 44.9195117561147, 75, true)]     // Point A (SE)
+      [DataRow(5, 60, 44.9195117561147, 330, false)]     // Point B (NW)
+      [DataRow(11, 60, 314.919511756115, 30, true)]     // Point C (NE)
+      [DataRow(23, 15, 314.919511756115, 285, false)]     // Point D (SW)
+      [DataTestMethod]
+      public void TestGetRA(double expectedRa, double expectedDec, double RAAxis, double DecAxis, bool flippedDec)
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
          MountCoordinate mount = new MountCoordinate(
@@ -116,17 +279,99 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         System.Diagnostics.Debug.WriteLine("RA\t\t\tAngle");
-         System.Diagnostics.Debug.WriteLine("===\t\t\t=====");
-         for (double ra = 0.0; ra < 24.0; ra++)
-         {
-            System.Diagnostics.Debug.WriteLine($"{ra}\t\t\t{mount.GetAngleFromHours(ra)}");
-         }
-         Assert.IsTrue(true);
+         AxisPosition axisPosition = new AxisPosition(RAAxis, DecAxis);
+         System.Diagnostics.Debug.Write($"\nFlipped:{(flippedDec ? "Y" : "N")} Expecting: {expectedRa} ->");
+         HourAngle testRa = mount.GetRA(axisPosition, flippedDec);
+         //if (Math.Abs(expectedRa-testRa)> 0.000001)
+         //{
+         //   System.Diagnostics.Debug.Write(" - FAIL");
+         //}
+         Assert.AreEqual(expectedRa, testRa, 0.000001, "RA Value");
       }
 
-      [TestMethod]
-      public void TestGetAxisPositionForRA()
+      [DataRow(0, -90, 329.919511756115, 180, false)]
+      [DataRow(0, -60, 329.919511756115, 210, false)]
+      [DataRow(0, -30, 329.919511756115, 240, false)]
+      [DataRow(0, 0, 329.919511756115, 270, false)]
+      [DataRow(0, 30, 329.919511756115, 300, false)]
+      [DataRow(0, 60, 329.919511756115, 330, false)]
+      [DataRow(0, 90, 329.919511756115, 0, false)]
+      [DataRow(3, -90, 14.9195117561147, 180, false)]
+      [DataRow(3, -60, 14.9195117561147, 210, false)]
+      [DataRow(3, -30, 14.9195117561147, 240, false)]
+      [DataRow(3, 0, 14.9195117561147, 270, false)]
+      [DataRow(3, 30, 14.9195117561147, 300, false)]
+      [DataRow(3, 60, 14.9195117561147, 330, false)]
+      [DataRow(3, 90, 14.9195117561147, 0, false)]
+      [DataRow(6, -90, 59.9195117561147, 180, false)]
+      [DataRow(6, -60, 59.9195117561147, 210, false)]
+      [DataRow(6, -30, 59.9195117561147, 240, false)]
+      [DataRow(6, 0, 59.9195117561147, 270, false)]
+      [DataRow(6, 30, 59.9195117561147, 300, false)]
+      [DataRow(6, 60, 59.9195117561147, 330, false)]
+      [DataRow(6, 90, 59.9195117561147, 0, false)]
+      [DataRow(9, -90, 284.919511756115, 180, true)]
+      [DataRow(9, -60, 284.919511756115, 150, true)]
+      [DataRow(9, -30, 284.919511756115, 120, true)]
+      [DataRow(9, 0, 284.919511756115, 90, true)]
+      [DataRow(9, 30, 284.919511756115, 60, true)]
+      [DataRow(9, 60, 284.919511756115, 30, true)]
+      [DataRow(9, 90, 284.919511756115, 0, true)]
+      [DataRow(12, -90, 329.919511756115, 180, true)]
+      [DataRow(12, -60, 329.919511756115, 150, true)]
+      [DataRow(12, -30, 329.919511756115, 120, true)]
+      [DataRow(12, 0, 329.919511756115, 90, true)]
+      [DataRow(12, 30, 329.919511756115, 60, true)]
+      [DataRow(12, 60, 329.919511756115, 30, true)]
+      [DataRow(12, 90, 329.919511756115, 0, true)]
+      [DataRow(15, -90, 14.9195117561147, 180, true)]
+      [DataRow(15, -60, 14.9195117561147, 150, true)]
+      [DataRow(15, -30, 14.9195117561147, 120, true)]
+      [DataRow(15, 0, 14.9195117561147, 90, true)]
+      [DataRow(15, 30, 14.9195117561147, 60, true)]
+      [DataRow(15, 60, 14.9195117561147, 30, true)]
+      [DataRow(15, 90, 14.9195117561147, 0, true)]
+      [DataRow(18, -90, 59.9195117561147, 180, true)]
+      [DataRow(18, -60, 59.9195117561147, 150, true)]
+      [DataRow(18, -30, 59.9195117561147, 120, true)]
+      [DataRow(18, 0, 59.9195117561147, 90, true)]
+      [DataRow(18, 30, 59.9195117561147, 60, true)]
+      [DataRow(18, 60, 59.9195117561147, 30, true)]
+      [DataRow(18, 90, 59.9195117561147, 0, true)]
+      [DataRow(21, -90, 284.919511756115, 180, false)]
+      [DataRow(21, -60, 284.919511756115, 210, false)]
+      [DataRow(21, -30, 284.919511756115, 240, false)]
+      [DataRow(21, 0, 284.919511756115, 270, false)]
+      [DataRow(21, 30, 284.919511756115, 300, false)]
+      [DataRow(21, 60, 284.919511756115, 330, false)]
+      [DataRow(21, 90, 284.919511756115, 0, false)]
+      [DataRow(8, 90, 89.9195117561147, 0, false)]
+      [DataRow(8, 45, 89.9195117561147, 315, false)]
+      [DataRow(8, 0, 89.9195117561147, 270, false)]
+      [DataRow(8, -45, 89.9195117561147, 225, false)]
+      [DataRow(8, -90, 89.9195117561147, 180, false)]
+      [DataRow(9, 90, 284.919511756115, 0, true)]
+      [DataRow(9, 45, 284.919511756115, 45, true)]
+      [DataRow(9, 0, 284.919511756115, 90, true)]
+      [DataRow(9, -45, 284.919511756115, 135, true)]
+      [DataRow(9, -90, 284.919511756115, 180, true)]
+      [DataRow(14, 90, 359.919511756115, 0, true)]
+      [DataRow(14, 45, 359.919511756115, 45, true)]
+      [DataRow(14, 0, 359.919511756115, 90, true)]
+      [DataRow(14, -45, 359.919511756115, 135, true)]
+      [DataRow(14, -90, 359.919511756115, 180, true)]
+      [DataRow(21, 90, 284.919511756115, 0, false)]
+      [DataRow(21, 45, 284.919511756115, 315, false)]
+      [DataRow(21, 0, 284.919511756115, 270, false)]
+      [DataRow(21, -45, 284.919511756115, 225, false)]
+      [DataRow(21, -90, 284.919511756115, 180, false)]
+      // ASCOM_SOP Tests
+      [DataRow(17, 15, 44.9195117561147, 75, true)]     // Point A (SE)
+      [DataRow(5, 60, 44.9195117561147, 330, false)]     // Point B (NW)
+      [DataRow(11, 60, 314.919511756115, 30, true)]     // Point C (NE)
+      [DataRow(23, 15, 314.919511756115, 285, false)]     // Point D (SW)
+      [DataTestMethod]
+      public void TestGetDec(double expectedRA, double expectedDec, double RAAxis, double DecAxis, bool decFlipped)
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
          MountCoordinate mount = new MountCoordinate(
@@ -134,89 +379,66 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         System.Diagnostics.Debug.WriteLine("RA\t\t\tAxis1");
-         System.Diagnostics.Debug.WriteLine("==\t\t\t=====");
-         for (double ra = -0.0; ra < 24.0; ra++)
-         {
-            System.Diagnostics.Debug.WriteLine($"{ra}\t\t\t{mount.GetAxisPositionForRA(ra, 0.0)}");
-         }
-         Assert.IsTrue(true);
+         AxisPosition axisPosition = new AxisPosition(RAAxis, DecAxis);
+         Angle testDec = mount.GetDec(axisPosition);
+         Assert.AreEqual(expectedDec, testDec, 0.000001, "Dec Value");
       }
 
+      /// <summary>
+      /// Not really a test method. Just used to generate test input data.
+      /// </summary>
       [TestMethod]
-      public void TestGetAxisPositionForDec()
+      public void GenerateTestData()
       {
-         EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
          MountCoordinate mount = new MountCoordinate(
                new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         System.Diagnostics.Debug.WriteLine("DEC\t\t\tAxis\t\tAxis flipped");
-         System.Diagnostics.Debug.WriteLine("===\t\t\t=====\t\t=============");
-         for (double dec = -90.0; dec <= 90.0; dec = dec + 10)
-         {
-            System.Diagnostics.Debug.WriteLine($"{dec}\t\t\t{mount.GetAxisPositionForDec(dec, false)}\t\t\t{mount.GetAxisPositionForDec(dec, true)}");
-         }
-         Assert.IsTrue(true);
-      }
+         AxisPosition axes = mount.GetAxisPositionForRADec(17.0, 15, _Tools);
 
-
-      [TestMethod]
-      public void TestCalculateTargetAxis()
-      {
-         EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
-               _Tools,
-               _Now);
-         System.Diagnostics.Debug.Write($"\nDEC");
-         for (double dec = 90.0; dec >= -90; dec = dec - 15.0)
+         for (double ra = 0.0; ra < 24.0; ra = ra + 3.0)
          {
-            System.Diagnostics.Debug.Write($"\t{dec}");
-         }
-         System.Diagnostics.Debug.Write($"\nRA");
-         for (double ra = 0.0; ra < 24.0; ra = ra + 1)
-         {
-            System.Diagnostics.Debug.Write($"\n{ra}");
-            for (double dec = 90.0; dec >= -90; dec = dec - 15.0)
+            for (double dec = -90.0; dec <= 90.0; dec = dec + 30.0)
             {
-               AxisPosition axisPosition = mount.CalculateTargetAxes(ra, dec, _Tools);
-               System.Diagnostics.Debug.Write($"\t{Math.Round(axisPosition.RAAxis, 0)}/{Math.Round(axisPosition.DecAxis, 0)}");
+               axes = mount.GetAxisPositionForRADec(ra, dec, _Tools);
+               System.Diagnostics.Debug.WriteLine($"[DataRow({ra}, {dec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true":"false")})]");
             }
          }
-         System.Diagnostics.Debug.WriteLine("");
-         Assert.IsTrue(true);
-      }
 
-      [TestMethod]
-      public void TestRAAdjustment()
-      {
-         EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
-               _Tools,
-               _Now);
-         //System.Diagnostics.Debug.Write($"\nDEC");
-         //for (double dec = 90.0; dec >= -90; dec = dec - 15.0)
-         //{
-         //   System.Diagnostics.Debug.Write($"\t{dec}");
-         //}
-         //System.Diagnostics.Debug.Write($"\nRA");
-         for (double ra = 0.0; ra < 24.0; ra = ra + 1)
+         foreach (double ra in new double[] { 8.0, 9.0, 14.0, 21.0 })
          {
-            // System.Diagnostics.Debug.Write($"\n{ra}");
-            //for (double dec = 90.0; dec >= -90; dec = dec - 15.0)
-            //{
-               mount.TestCalculateTargetAxes(ra, 90.0, _Tools);
-            //}
+            foreach (double dec in new double[] { 90.0, 45.0, 0.0, -45.0, -90.0 })
+            {
+               axes = mount.GetAxisPositionForRADec(ra, dec, _Tools);
+               System.Diagnostics.Debug.WriteLine($"[DataRow({ra}, {dec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]");
+            }
          }
-         System.Diagnostics.Debug.WriteLine("");
+
+         System.Diagnostics.Debug.WriteLine("// ASCOM_SOP Tests");
+
+         double sopRA = 17.0;
+         double sopDec = 15.0;
+         axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
+         System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point A (SE)");
+
+         sopRA = 5.0;
+         sopDec = 60.0;
+         axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
+         System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point B (NW)");
+
+         sopRA = 11.0;
+         sopDec = 60.0;
+         axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
+         System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point C (NE)");
+
+         sopRA = 23.0;
+         sopDec = 15.0;
+         axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
+         System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point D (SW)");
+
          Assert.IsTrue(true);
       }
-
 
    }
 }

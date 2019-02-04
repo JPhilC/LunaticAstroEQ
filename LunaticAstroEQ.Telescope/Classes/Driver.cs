@@ -926,7 +926,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            PierSide value = _CurrentPosition.PointingSideOfPier;
+            PierSide value = _CurrentPosition.GetPointingSideOfPier(false);
             LogMessage("SideOfPier", "Get - {0}", value);
             return value;
          }
@@ -1102,7 +1102,7 @@ namespace ASCOM.LunaticAstroEQ
             DateTime currentTime = DateTime.Now;
 
             // Build the target position // using current axis position
-            Angle[] deltaSlew = _CurrentPosition.GetRADecSlewAnglesTo(rightAscension, declination);
+            Angle[] deltaSlew = _CurrentPosition.GetRADecSlewAnglesTo(rightAscension, declination, _AscomToolsCurrentPosition);
             _TargetPosition = new MountCoordinate(new EquatorialCoordinate(rightAscension, declination), _CurrentPosition.ObservedAxes.RotateBy(deltaSlew), _AscomToolsTargetPosition, currentTime);
 
             System.Diagnostics.Debug.WriteLine("");

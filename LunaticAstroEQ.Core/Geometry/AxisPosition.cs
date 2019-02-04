@@ -30,6 +30,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
       }
 
+      public bool DecFlipped { get; private set; }
+
       public int AxisCount
       {
          get
@@ -40,44 +42,35 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
 
       /// <summary>
-      /// Initialise the Axis positions
-      /// </summary>
-      /// <param name="raPosition">RA Axis position in degrees</param>
-      /// <param name="decPosition">Dec Axis position in degrees</param>
-      public AxisPosition(string raPosition, string decPosition)
-      {
-         _RAAxis = Angle.Range360(new Angle(raPosition).Value);
-         _DecAxis = Angle.Range360(new Angle(decPosition).Value);
-      }
-
-
-      /// <summary>
       /// Create a new axis position
       /// </summary>
       /// <param name="ra">RA axis angle in degrees</param>
       /// <param name="dec">Dec axis angle in degrees</param>
-      public AxisPosition(double ra, double dec, bool radians = false)
+      public AxisPosition(double ra, double dec, bool decFlipped = false, bool radians = false)
       {
          if (radians)
          {
             _RAAxis = Angle.Range360(Angle.RadiansToDegrees(ra));
             _DecAxis = Angle.Range360(Angle.RadiansToDegrees(dec));
+            DecFlipped = decFlipped;
          }
          else
          {
             _RAAxis = Angle.Range360(ra);
             _DecAxis = Angle.Range360(dec);
+            DecFlipped = decFlipped;
          }
       }
 
 
-      public AxisPosition(string axisPositions)
+      public AxisPosition(string axisPositions, bool decFlipped = false)
       {
          string[] positions = axisPositions.Split(',');
          try
          {
             _RAAxis = Angle.Range360(double.Parse(positions[0]));
             _DecAxis = Angle.Range360(double.Parse(positions[1]));
+            DecFlipped = decFlipped;
          }
          catch
          {

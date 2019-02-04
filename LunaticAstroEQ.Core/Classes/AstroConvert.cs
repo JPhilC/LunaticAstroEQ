@@ -142,6 +142,24 @@ namespace ASCOM.LunaticAstroEQ.Core
       }
 
 
+      public static double RangeDec(double dec)
+      {
+         double rangeDec = dec;
+         if (dec >= 270.0 && dec <= 360)
+         {
+            rangeDec = dec - 360.0;
+         }
+         else if (dec >= 180.0 && dec < 270.0)
+         {
+            rangeDec = 180.0 - dec;
+         }
+         else if (dec >= 90.0 && dec < 180.0)
+         {
+            rangeDec = 180 - dec;
+         }
+         return rangeDec;
+      }
+
       public static double FlipDecAxisDegrees(double degrees)
       {
          if (degrees == 0.0)

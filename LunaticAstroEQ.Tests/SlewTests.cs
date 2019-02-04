@@ -18,7 +18,7 @@ namespace LunaticAstroEQ.Tests
       [TestInitialize]
       public void Initialize()
       {
-         _Now = new DateTime(2019, 1, 25, 12, 0, 0);
+         _Now = new DateTime(2019, 1, 25, 11, 47, 40);      // Gives an hourangle of approximately 20
          _Tools = new AscomTools();
          _Tools.Transform.SiteElevation = 192;
          _Tools.Transform.SiteLatitude = 52.667;
@@ -61,10 +61,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(8.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(37.333, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(307.333, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -79,10 +79,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(20.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(-37.333, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(127.333, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -97,10 +97,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(2.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(0.0, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(0.0, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -115,10 +115,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierEast, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(14.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(0.0, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(270.0, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -133,10 +133,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierEast, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(11.62626, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(295.39285, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -151,10 +151,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierEast, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(16.75814, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(-25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(244.60715, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -169,10 +169,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(23.62626, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(-25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(115.39285, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -187,10 +187,10 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination);
+         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
          mount.MoveRADec(delta, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.PointingSideOfPier, "Pointing side of pier");
+         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
          Assert.AreEqual(4.75814, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(64.60715, mount.ObservedAxes[1], 0.001, "Declination axis value");
@@ -247,26 +247,27 @@ namespace LunaticAstroEQ.Tests
       {
          EquatorialCoordinate currentRaDec = new EquatorialCoordinate(_CelestialPolePosition.Equatorial.RightAscension.Value, _CelestialPolePosition.Equatorial.Declination.Value);
          MountCoordinate currentPosition = new MountCoordinate(currentRaDec, _CelestialPolePosition.ObservedAxes, _Tools, _Now);
+         double ha = currentPosition.LocalApparentSiderialTime;
 
-         Angle[] slewDistance = currentPosition.GetRADecSlewAnglesTo(23.62626, 10.0);
+         Angle[] slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha - 3.0), 10.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
          currentPosition.MoveRADec(slewDistance, _Tools, _Now);
-         // Assert.AreEqual(PierSide.pierWest, currentPosition.PointingSideOfPier, "Point A");
+         Assert.AreEqual(PierSide.pierWest, currentPosition.GetPointingSideOfPier(false), "Point A");
 
-         slewDistance = currentPosition.GetRADecSlewAnglesTo(11.62626, 60.0);
+         slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha + 9.0), 60.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
          currentPosition.MoveRADec(slewDistance, _Tools, _Now);
-         // Assert.AreEqual(PierSide.pierEast, currentPosition.PointingSideOfPier, "Point B");
+         Assert.AreEqual(PierSide.pierEast, currentPosition.GetPointingSideOfPier(false), "Point B");
 
-         slewDistance = currentPosition.GetRADecSlewAnglesTo(4.75814, 60.0);
+         slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha - 9.0), 60.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
          currentPosition.MoveRADec(slewDistance, _Tools, _Now);
-         // Assert.AreEqual(PierSide.pierWest, currentPosition.PointingSideOfPier, "Point C");
+         Assert.AreEqual(PierSide.pierWest, currentPosition.GetPointingSideOfPier(false), "Point C");
 
-         slewDistance = currentPosition.GetRADecSlewAnglesTo(16.75814, 10.0);
+         slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha + 3.0), 10.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
          currentPosition.MoveRADec(slewDistance, _Tools, _Now);
-         Assert.AreEqual(PierSide.pierEast, currentPosition.PointingSideOfPier, "Point D");
+         Assert.AreEqual(PierSide.pierEast, currentPosition.GetPointingSideOfPier(false), "Point D");
 
       }
 
@@ -280,7 +281,7 @@ namespace LunaticAstroEQ.Tests
 
          System.Diagnostics.Debug.WriteLine("\nPoint A (SE)");
          System.Diagnostics.Debug.WriteLine("============");
-         AxisPosition targetAngles = currentPosition.CalculateTargetAxes(AstroConvert.RangeRA(ha+3.0), 10.0, _Tools);
+         AxisPosition targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha-3.0), 10.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
          currentPosition.MoveRADec(targetAngles, _Tools, _Now);
          currentPosition.DumpDebugInfo();
@@ -288,7 +289,7 @@ namespace LunaticAstroEQ.Tests
 
          System.Diagnostics.Debug.WriteLine("\nPoint B (NW)");
          System.Diagnostics.Debug.WriteLine("============");
-         targetAngles = currentPosition.CalculateTargetAxes(AstroConvert.RangeRA(ha-9.0), 60.0, _Tools);
+         targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha+9.0), 60.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
          currentPosition.MoveRADec(targetAngles, _Tools, _Now);
          currentPosition.DumpDebugInfo();
@@ -296,7 +297,7 @@ namespace LunaticAstroEQ.Tests
 
          System.Diagnostics.Debug.WriteLine("\nPoint C (NE)");
          System.Diagnostics.Debug.WriteLine("============");
-         targetAngles = currentPosition.CalculateTargetAxes(AstroConvert.RangeRA(ha+9.0), 60.0, _Tools);
+         targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha-9.0), 60.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
          currentPosition.MoveRADec(targetAngles, _Tools, _Now);
          currentPosition.DumpDebugInfo();
@@ -304,11 +305,11 @@ namespace LunaticAstroEQ.Tests
 
          System.Diagnostics.Debug.WriteLine("\nPoint D (SW)");
          System.Diagnostics.Debug.WriteLine("============");
-         targetAngles = currentPosition.CalculateTargetAxes(AstroConvert.RangeRA(ha-3.0), 10.0, _Tools);
+         targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha+3.0), 10.0, _Tools);
          System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
          currentPosition.MoveRADec(targetAngles, _Tools, _Now);
          currentPosition.DumpDebugInfo();
-         Assert.AreEqual(PierSide.pierEast, currentPosition.PointingSideOfPier, "Point D");
+         Assert.AreEqual(PierSide.pierEast, currentPosition.GetPointingSideOfPier(false), "Point D");
 
       }
 

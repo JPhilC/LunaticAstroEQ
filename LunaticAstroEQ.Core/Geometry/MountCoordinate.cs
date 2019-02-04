@@ -34,50 +34,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public HourAngle LocalApparentSiderialTime { get; private set; }
 
-      /// <summary>
-      /// Returns the pointing side of Pier as required by ASCOM
-      /// </summary>
-      public PierSide PointingSideOfPier
-      {
-         get
-         {
-            if (AltAzimuth != null)
-            {
-               if (AltAzimuth.Azimuth > 180.0)
-               {
-                  return PierSide.pierEast;
-               }
-               else
-               {
-                  return PierSide.pierWest;
-               }
-            }
-            else
-            {
-               return PierSide.pierUnknown;
-            }
-         }
-      }
-
-      /// <summary>
-      /// Returns which side of the pier the Dec axis would be pointing if
-      /// if the RA axis were at the 12-o-clock
-      /// </summary>
-      public PierSide PhysicalSideOfPier
-      {
-         get
-         {
-            if (Equatorial != null)
-            {
-               return GetPhysicalSideOfPier(ObservedAxes[0]);
-            }
-            else
-            {
-               return PierSide.pierUnknown;
-            }
-         }
-      }
-
 
       public MountCoordinate(EquatorialCoordinate equatorial, AxisPosition axisPosition, AscomTools tools, DateTime syncTime)
       {
@@ -141,7 +97,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          SyncTime = syncTime;
          LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, syncTime));
-         Equatorial = new EquatorialCoordinate(GetRA(), GetDec());
+         Equatorial = new EquatorialCoordinate(GetRA(ObservedAxes), GetDec(ObservedAxes));
          UpdateAltAzimuth(tools, syncTime);
       }
 
@@ -153,61 +109,12 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, syncTime));
          // Apply the axis rotation to the new position.
          ObservedAxes = newAxisPosition;
-         Equatorial = new EquatorialCoordinate(GetRA(), GetDec());
+         Equatorial = new EquatorialCoordinate(GetRA(ObservedAxes), GetDec(ObservedAxes));
          UpdateAltAzimuth(tools, syncTime);
       }
 
 
-      private double GetRA()
-      {
-         // Turn ACW +ve Observer position into CW angle
-         double cwAngle = 360.0 - ObservedAxes[0];
-         double ra = LocalApparentSiderialTime - 12.0 + HourAngle.DegreesToHours(cwAngle);
 
-         if (Hemisphere == HemisphereOption.Northern)
-         {
-            if (ObservedAxes[1] > 180.0)
-            {
-               ra = ra + 12;
-            }
-         }
-         else
-         {
-            System.Diagnostics.Debug.Assert(false, "Not tested for Southern Hemisphere");
-            if (ObservedAxes[1] > 90.0 && ObservedAxes[1] <= 270.0)
-            {
-               ra = ra + 12;
-            }
-         }
-         return AstroConvert.RangeRA(ra);
-      }
-
-      private double GetDec()
-      {
-         if (Hemisphere == HemisphereOption.Northern)
-         {
-            if (ObservedAxes[1] <= 180)
-            {
-               return 90.0 - ObservedAxes[1];
-            }
-            else
-            {
-               return ObservedAxes[1] - 270.0;
-            }
-         }
-         else
-         {
-            System.Diagnostics.Debug.Assert(false, "Untested in Southern Hemisphere");
-            if (ObservedAxes[1] <= 180)
-            {
-               return ObservedAxes[1] - 270.0;
-            }
-            else
-            {
-               return 90.0 - ObservedAxes[1];
-            }
-         }
-      }
 
       public void MoveRADec(Angle[] delta, AscomTools tools, DateTime syncTime)
       {
@@ -216,45 +123,106 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          // Refresh the Equatorial at the current position
          UpdateEquatorial(tools, syncTime);
          // Apply the axis rotation to the new position.
-         double newRA = AstroConvert.RangeRA(LocalApparentSiderialTime + 12.0 + HourAngle.DegreesToHours(ObservedAxes[0] + delta[0]));
-         double newDec = AddDec(Equatorial.Declination, delta[1]);
          ObservedAxes = ObservedAxes.RotateBy(delta);
-         Equatorial = new EquatorialCoordinate(newRA, newDec);
+         Equatorial = new EquatorialCoordinate(GetRA(ObservedAxes), GetDec(ObservedAxes));
          UpdateAltAzimuth(tools, syncTime);
       }
 
 
-      public Angle[] GetRADecSlewAnglesTo(double targetRA, double targetDec)
+      public Angle[] GetRADecSlewAnglesTo(double targetRA, double targetDec, AscomTools tools)
       {
+         AxisPosition targetAxisPosition = GetAxisPositionForRADec(targetRA, targetDec, tools);
+         return ObservedAxes.GetSlewAnglesTo(targetAxisPosition);
+      }
 
-         double targetHA = AstroConvert.RangeHA(targetRA - LocalApparentSiderialTime);
-         System.Diagnostics.Debug.WriteLine($"Target HA: {targetHA}");
 
-
-
-         double deltaHrs = (targetRA - Equatorial.RightAscension) % 12.0;    // Mod 12 because a single axis position is two RA angles 12 hours apart.
-         double deltaRa = HourAngle.HoursToDegrees(deltaHrs);
-         double deltaDec = targetDec - Equatorial.Declination;
-         Angle[] slewAngles = new Angle[] { new Angle(deltaRa), new Angle(deltaDec) };
-
-         // Get the desired final axis position
-         AxisPosition finalAxisPosition = this.ObservedAxes.RotateBy(slewAngles);
-         // Get the SAFE (through the pole) angles to slew.
-         slewAngles = this.ObservedAxes.GetSlewAnglesTo(finalAxisPosition);
-         return new Angle[] { slewAngles[0], slewAngles[1] };
+      #region Side of Pier calculations
+      /// <summary>
+      /// Returns the pointing side of Pier as required by ASCOM
+      /// </summary>
+      public PierSide GetPointingSideOfPier(bool swapSideOfPier)
+      {
+         PierSide pointingSOP = PierSide.pierUnknown;
+         if (ObservedAxes != null)
+         {
+            if (ObservedAxes[1] > 180.0)  //  (ObservedAxes[1] <= 90 || ObservedAxes[1] >= 270.0)
+            {
+               if (swapSideOfPier)
+               {
+                  pointingSOP = PierSide.pierEast;
+               }
+               else
+               {
+                  pointingSOP = PierSide.pierWest;
+               }
+            }
+            else
+            {
+               if (swapSideOfPier)
+               {
+                  pointingSOP = PierSide.pierWest;
+               }
+               else
+               {
+                  pointingSOP = PierSide.pierEast;
+               }
+            }
+            if (Hemisphere == HemisphereOption.Southern)
+            {
+               if (pointingSOP == PierSide.pierWest)
+               {
+                  pointingSOP = PierSide.pierEast;
+               }
+               else
+               {
+                  pointingSOP = PierSide.pierWest;
+               }
+            }
+         }
+         return pointingSOP;
       }
 
 
       /// <summary>
-      /// 
+      /// Gets the mounts physical side of pier.
       /// </summary>
-      /// <param name="RaAxisPosition">DEC axis position in degrees</param>
+      /// <param name="raHours"></param>
+      /// <param name="swapSideOfPier"></param>
       /// <returns></returns>
-      private PierSide GetPhysicalSideOfPier(double raAxisPosition)
+      public PierSide GetPhysicalSideOfPier(double raHours, bool swapSideOfPier)
       {
-         // Fudge to work around proble caused by un-initised doubles
-         return (raAxisPosition >= 0.0 && raAxisPosition <= 180.0) ? PierSide.pierEast : PierSide.pierWest;
+         PierSide physicalSOP = PierSide.pierUnknown;
+         double ha;
+
+         ha = AstroConvert.RangeHA(raHours - 6.0);
+         if (swapSideOfPier)
+         {
+            physicalSOP = (ha >= 0.0 ? PierSide.pierWest : PierSide.pierEast);
+         }
+         else
+         {
+            physicalSOP = (ha >= 0.0 ? PierSide.pierEast : PierSide.pierWest);
+         }
+         return physicalSOP;
       }
+
+
+      public PierSide GetDecSideOfPier(double dec)
+      {
+         PierSide decSOP = PierSide.pierUnknown;
+         dec = Math.Abs(dec - 180);
+         if (dec <= 90.0)
+         {
+            decSOP = PierSide.pierEast;
+         }
+         else
+         {
+            decSOP = PierSide.pierWest;
+         }
+         return decSOP;
+      }
+
+      #endregion
 
 
       private double AddDec(double original, double delta)
@@ -276,7 +244,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
 
-      public AxisPosition CalculateTargetAxes(double targetRA, double targetDec, AscomTools tools)
+      public AxisPosition GetAxisPositionForRADec(double targetRA, double targetDec, AscomTools tools)
       {
          bool flipDEC;
          double adjustedRA = targetRA;
@@ -340,9 +308,10 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          // Compute for Target RA/DEC angles
          Angle RAAxis = GetAxisPositionForRA(adjustedRA, 0.0);
          Angle DecAxis = GetAxisPositionForDec(targetDec, flipDEC);
-
-         return new AxisPosition(RAAxis.Value, DecAxis.Value);
+         // System.Diagnostics.Debug.WriteLine($"RA/Dec:{targetHA}/{targetDec} Axes:{ RAAxis.Value}/{ DecAxis.Value} FlipDec: {flipDEC}");
+         return new AxisPosition(RAAxis.Value, DecAxis.Value, flipDEC);
       }
+
 
 
       public void TestCalculateTargetAxes(double targetRA, double targetDec, AscomTools tools)
@@ -410,6 +379,32 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
 
       #region RA calcs ...
+      public HourAngle GetRA(AxisPosition axes, bool decFlippedHint = false)
+      {
+         double tempRA_hours = GetHourAngleFromAngle(axes.RAAxis.Value);
+         double tRa = LocalApparentSiderialTime + tempRA_hours;
+         double tHa = AstroConvert.RangeHA(tRa);
+         double dec = GetDec(axes);
+         System.Diagnostics.Debug.Write($"{axes.RAAxis.Value}/{axes.DecAxis.Value}\t{dec}\t{tHa}\t{tRa}");
+         if (Hemisphere == HemisphereOption.Northern)
+         {
+            if (decFlippedHint)
+            {
+               tRa = tRa - 12.0;
+               System.Diagnostics.Debug.Write("\t tRa - tRa - 12");
+            }
+         }
+         else
+         {
+            System.Diagnostics.Debug.Assert(false, "GetRA is not tested for Southern Hemisphere");
+            if (axes.DecAxis.Value > 180)
+            {
+               tRa = tRa + 12.0;
+            }
+         }
+         return new HourAngle(AstroConvert.RangeRA(tRa));
+      }
+
       /// <summary>
       /// 
       /// </summary>
@@ -418,7 +413,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="longitude">Site longitude</param>
       /// <param name="hemisphere">Site hemisphere</param>
       /// <returns></returns>
-      public Angle GetAxisPositionForRA(double targetRA, double targetDec)
+      private Angle GetAxisPositionForRA(double targetRA, double targetDec)
       {
          double deltaRa = targetRA - LocalApparentSiderialTime;
          if (Hemisphere == HemisphereOption.Northern)
@@ -437,36 +432,37 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
          deltaRa = AstroConvert.RangeRA(deltaRa);
 
-         return GetAngleFromHours(deltaRa);
+         return GetAngleFromHourAngle(deltaRa);
       }
 
-
-      public Angle GetAngleFromHours(double hourAngle)
+      private double GetHourAngleFromAngle(Angle raAxisAngle)
       {
-         double offset = 0.0;    // This may vary in the future if zero degrees is no longer at 12-0-clock
-         hourAngle = AstroConvert.RangeRA(hourAngle - 6.0); // Renormalise from a perpendicular position
-         double degrees;
+         double hours = HourAngle.DegreesToHours(raAxisAngle.Value);
          if (Hemisphere == HemisphereOption.Northern)
          {
-            //if (hourAngle < 12)
-            //{
-            //   degrees = offset - HourAngle.HoursToDegrees(hourAngle);
-            //}
-            //else
-            //{
-               degrees = HourAngle.HoursToDegrees(hourAngle) + offset;
-            //}
+            return AstroConvert.RangeRA(hours + 6.0);
          }
          else
          {
-            if (hourAngle < 12)
-            {
-               degrees = HourAngle.HoursToDegrees(hourAngle) + offset;
-            }
-            else
-            {
-               degrees = offset - HourAngle.HoursToDegrees(hourAngle);
-            }
+            return AstroConvert.RangeRA((24.0 - hours) + 6.0);
+         }
+
+      }
+
+      private Angle GetAngleFromHourAngle(double hourAngle)
+      {
+         double ha = 0.0;
+         double degrees;
+         if (Hemisphere == HemisphereOption.Northern)
+         {
+            ha = AstroConvert.RangeRA(hourAngle - 6.0); // Renormalise from a perpendicular position
+            degrees = HourAngle.HoursToDegrees(ha);
+         }
+         else
+         {
+            System.Diagnostics.Debug.Assert(false, "GetAngleFromHours not tested for Southern Hemisphere");
+            ha = AstroConvert.RangeRA((24 - hourAngle) - 6.0); // Renormalise from a perpendicular position
+            degrees = HourAngle.HoursToDegrees(ha);
          }
          return AstroConvert.Range360Degrees(degrees);
       }
@@ -475,8 +471,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
 
       #region Dec calcs ...
+      public Angle GetDec(AxisPosition axes)
+      {
+         double dec = GetDecDegreesFromAngle(axes.DecAxis.Value);
+         return new Angle(AstroConvert.RangeDec(dec));
+      }
 
-      public Angle GetAxisPositionForDec(double targetDec, bool flipDEC)
+
+
+      private Angle GetAxisPositionForDec(double targetDec, bool flipDEC)
       {
          double angle = targetDec;
          if (flipDEC)
@@ -487,7 +490,29 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
 
-      public Angle GetAngleFromDecDegrees(double angle, bool flipDEC)
+
+      private double GetDecDegreesFromAngle(Angle decAxisAngle)
+      {
+         double i = 0.0;
+         if (decAxisAngle.Value >= 180)
+         {
+            i = decAxisAngle.Value - 270.0;
+         }
+         else
+         {
+            i = 90.0 - decAxisAngle.Value;
+         }
+         if (Hemisphere == HemisphereOption.Northern)
+         {
+            return AstroConvert.Range360Degrees(i);
+         }
+         else
+         {
+            return AstroConvert.Range360Degrees(360.0 - i);
+         }
+      }
+
+      private Angle GetAngleFromDecDegrees(double angle, bool flipDEC)
       {
          double offset = -90.0;    // This may vary in the future if zero degrees is no longer at 12-0-clock
          double result = 0.0;
