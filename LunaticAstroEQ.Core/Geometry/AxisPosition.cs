@@ -203,19 +203,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
 
-      public double[] GetDeltaTo(AxisPosition targetPosition)
-      {
-         double[] delta = new double[2];
-         for (int i = 0; i < 2; i++)
-         {
-            delta[i] = targetPosition[i] - this[i];
-         }
-         return delta;
-      }
+      //public double[] GetDeltaTo(AxisPosition targetPosition)
+      //{
+      //   double[] delta = new double[2];
+      //   for (int i = 0; i < 2; i++)
+      //   {
+      //      delta[i] = targetPosition[i] - this[i];
+      //   }
+      //   return delta;
+      //}
 
-      public AxisPosition RotateBy(Angle[] delta)
-      {
-         return new AxisPosition(Angle.Range360(this.RAAxis.Value + delta[0].Value), Angle.Range360(this.DecAxis.Value+delta[1].Value));
-      }
    }
 }

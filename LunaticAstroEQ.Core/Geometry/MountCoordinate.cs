@@ -14,7 +14,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
    {
       public bool ForceMeridianFlip { get; set; } = false;
 
-
       public HemisphereOption Hemisphere { get; private set; } = HemisphereOption.Northern;
 
 
@@ -52,7 +51,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       {
          ObservedAxes = axisPosition;
          SyncTime = syncTime;
-         AltAzimuth = altAz;
          LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, syncTime));
          if (tools.Transform.SiteLatitude < 0.0)
          {
@@ -63,6 +61,18 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
 
+      public MountCoordinate(AxisPosition axisPosition, AscomTools tools, DateTime syncTime)
+      {
+         ObservedAxes = axisPosition;
+         SyncTime = syncTime;
+         LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, syncTime));
+         if (tools.Transform.SiteLatitude < 0.0)
+         {
+            Hemisphere = HemisphereOption.Southern;
+         }
+         Equatorial = new EquatorialCoordinate(GetRA(ObservedAxes), GetDec(ObservedAxes));
+         this.UpdateAltAzimuth(tools, syncTime);
+      }
 
 
       /// <summary>
@@ -116,24 +126,24 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
 
 
-      public void MoveRADec(Angle[] delta, AscomTools tools, DateTime syncTime)
-      {
-         SyncTime = syncTime;
-         LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, syncTime));
-         // Refresh the Equatorial at the current position
-         UpdateEquatorial(tools, syncTime);
-         // Apply the axis rotation to the new position.
-         ObservedAxes = ObservedAxes.RotateBy(delta);
-         Equatorial = new EquatorialCoordinate(GetRA(ObservedAxes), GetDec(ObservedAxes));
-         UpdateAltAzimuth(tools, syncTime);
-      }
+      //public void MoveRADec(Angle[] delta, AscomTools tools, DateTime syncTime)
+      //{
+      //   SyncTime = syncTime;
+      //   LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, syncTime));
+      //   // Refresh the Equatorial at the current position
+      //   UpdateEquatorial(tools, syncTime);
+      //   // Apply the axis rotation to the new position.
+      //   ObservedAxes = ObservedAxes.RotateBy(delta);
+      //   Equatorial = new EquatorialCoordinate(GetRA(ObservedAxes), GetDec(ObservedAxes));
+      //   UpdateAltAzimuth(tools, syncTime);
+      //}
 
 
-      public Angle[] GetRADecSlewAnglesTo(double targetRA, double targetDec, AscomTools tools)
-      {
-         AxisPosition targetAxisPosition = GetAxisPositionForRADec(targetRA, targetDec, tools);
-         return ObservedAxes.GetSlewAnglesTo(targetAxisPosition);
-      }
+      //public Angle[] GetRADecSlewAnglesTo(double targetRA, double targetDec, AscomTools tools)
+      //{
+      //   AxisPosition targetAxisPosition = GetAxisPositionForRADec(targetRA, targetDec, tools);
+      //   return ObservedAxes.GetSlewAnglesTo(targetAxisPosition);
+      //}
 
 
       #region Side of Pier calculations
@@ -149,22 +159,22 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             {
                if (swapSideOfPier)
                {
-                  pointingSOP = PierSide.pierEast;
+                  pointingSOP = PierSide.pierWest;
                }
                else
                {
-                  pointingSOP = PierSide.pierWest;
+                  pointingSOP = PierSide.pierEast;
                }
             }
             else
             {
                if (swapSideOfPier)
                {
-                  pointingSOP = PierSide.pierWest;
+                  pointingSOP = PierSide.pierEast;
                }
                else
                {
-                  pointingSOP = PierSide.pierEast;
+                  pointingSOP = PierSide.pierWest;
                }
             }
             if (Hemisphere == HemisphereOption.Southern)
@@ -379,7 +389,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
 
       #region RA calcs ...
-      public HourAngle GetRA(AxisPosition axes, bool decFlippedHint = false)
+      public HourAngle GetRA(AxisPosition axes)
       {
          double tempRA_hours = GetHourAngleFromAngle(axes.RAAxis.Value);
          double tRa = LocalApparentSiderialTime + tempRA_hours;
@@ -388,7 +398,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          System.Diagnostics.Debug.Write($"{axes.RAAxis.Value}/{axes.DecAxis.Value}\t{dec}\t{tHa}\t{tRa}");
          if (Hemisphere == HemisphereOption.Northern)
          {
-            if (decFlippedHint)
+            if (axes.DecFlipped)
             {
                tRa = tRa - 12.0;
                System.Diagnostics.Debug.Write("\t tRa - tRa - 12");
@@ -528,6 +538,8 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          {
             result = angle + offset;
          }
+         // This routine works clockwise so need to convert to Anti-clockwise
+         result = AstroConvert.Range360Degrees(360 + result);
          return result;
       }
 

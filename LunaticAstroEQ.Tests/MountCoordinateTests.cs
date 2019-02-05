@@ -176,11 +176,7 @@ namespace LunaticAstroEQ.Tests
       public void TestCalculateTargetAxis(double targetRa, double targetDec, double expectedAxisRa, double expectedAxisDec, bool decFlipped)
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
-               _Tools,
-               _Now);
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, _Now);
          AxisPosition axisPosition = mount.GetAxisPositionForRADec(targetRa, targetDec, _Tools);
          Assert.AreEqual(expectedAxisRa, axisPosition.RAAxis, 0.000001, "RA Axis");
          Assert.AreEqual(expectedAxisDec, axisPosition.DecAxis, 0.000001, "Dec Axis");
@@ -279,9 +275,9 @@ namespace LunaticAstroEQ.Tests
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         AxisPosition axisPosition = new AxisPosition(RAAxis, DecAxis);
+         AxisPosition axisPosition = new AxisPosition(RAAxis, DecAxis, flippedDec);
          System.Diagnostics.Debug.Write($"\nFlipped:{(flippedDec ? "Y" : "N")} Expecting: {expectedRa} ->");
-         HourAngle testRa = mount.GetRA(axisPosition, flippedDec);
+         HourAngle testRa = mount.GetRA(axisPosition);
          //if (Math.Abs(expectedRa-testRa)> 0.000001)
          //{
          //   System.Diagnostics.Debug.Write(" - FAIL");
@@ -417,22 +413,22 @@ namespace LunaticAstroEQ.Tests
 
          System.Diagnostics.Debug.WriteLine("// ASCOM_SOP Tests");
 
-         double sopRA = 17.0;
+         double sopRA = 23.0;
          double sopDec = 15.0;
          axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
          System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point A (SE)");
 
-         sopRA = 5.0;
+         sopRA = 11.0;
          sopDec = 60.0;
          axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
          System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point B (NW)");
 
-         sopRA = 11.0;
+         sopRA = 5.0;
          sopDec = 60.0;
          axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
          System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point C (NE)");
 
-         sopRA = 23.0;
+         sopRA = 17.0;
          sopDec = 15.0;
          axes = mount.GetAxisPositionForRADec(sopRA, sopDec, _Tools);
          System.Diagnostics.Debug.WriteLine($"[DataRow({sopRA}, {sopDec}, {axes.RAAxis.Value}, {axes.DecAxis.Value}, {(axes.DecFlipped ? "true" : "false")})]     // Point D (SW)");

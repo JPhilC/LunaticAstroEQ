@@ -10,10 +10,9 @@ namespace LunaticAstroEQ.Tests
    [TestClass]
    public class SlewTests
    {
-      private AscomTools _NCPTools;
+      // private AscomTools _NCPTools;
       private AscomTools _Tools;
       private DateTime _Now;
-      private MountCoordinate _CelestialPolePosition;
 
       [TestInitialize]
       public void Initialize()
@@ -24,30 +23,20 @@ namespace LunaticAstroEQ.Tests
          _Tools.Transform.SiteLatitude = 52.667;
          _Tools.Transform.SiteLongitude = -1.333;
          _Tools.Transform.SiteTemperature = 15.0;
-         _NCPTools = new AscomTools();
-         _NCPTools.Transform.SiteElevation = 192;
-         _NCPTools.Transform.SiteLatitude = 52.667;
-         _NCPTools.Transform.SiteLongitude = -1.333;
-         _NCPTools.Transform.SiteTemperature = 15.0;
-         _CelestialPolePosition = new MountCoordinate(
-            new AltAzCoordinate(_NCPTools.Transform.SiteLatitude, 0.0),
-            new AxisPosition(0.0, 0.0),
-            _NCPTools,
-            _Now);
       }
 
       [TestCleanup]
       public void Cleanup()
       {
          _Tools.Dispose();
-         _NCPTools.Dispose();
       }
 
       [TestMethod]
       public void GetNCPEquatorial()
       {
-         EquatorialCoordinate currentRaDec = _CelestialPolePosition.Equatorial;
-         Assert.AreEqual(2.19224, currentRaDec.RightAscension.Value, 0.00001, "RA Value");
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, _Now);
+         EquatorialCoordinate currentRaDec = mount.Equatorial;
+         Assert.AreEqual(2.00536, currentRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(90.0, currentRaDec.Declination.Value, 0.001, "Declination value");
       }
 
@@ -56,16 +45,12 @@ namespace LunaticAstroEQ.Tests
       public void NorthHorizonAltAz()
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 0.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
-               _Tools,
-               _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(8.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         // Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(7.98608, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(37.333, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(307.333, mount.ObservedAxes[1], 0.001, "Declination axis value");
       }
@@ -75,15 +60,14 @@ namespace LunaticAstroEQ.Tests
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 180.0, _Now);
          MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(20.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         // Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(19.98608, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(-37.333, testRaDec.Declination.Value, 0.001, "Declination value");
          Assert.AreEqual(127.333, mount.ObservedAxes[1], 0.001, "Declination axis value");
       }
@@ -92,36 +76,32 @@ namespace LunaticAstroEQ.Tests
       public void EastHorizonAltAz()
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 90.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(2.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
-         Assert.AreEqual(0.0, testRaDec.Declination.Value, 0.001, "Declination value");
-         Assert.AreEqual(0.0, mount.ObservedAxes[1], 0.001, "Declination axis value");
+         // Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(1.98608, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         Assert.AreEqual(0.0, testRaDec.Declination.Value, 0.00001, "Declination value");
+         Assert.AreEqual(270.0, mount.ObservedAxes[1], 0.00001, "Declination axis value");
       }
 
       [TestMethod]
       public void WestHorizonAltAz()
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 270.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(14.1922, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         // Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(13.98608, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(0.0, testRaDec.Declination.Value, 0.001, "Declination value");
-         Assert.AreEqual(270.0, mount.ObservedAxes[1], 0.001, "Declination axis value");
+         Assert.AreEqual(90.0, mount.ObservedAxes[1], 0.001, "Declination axis value");
       }
 
       [TestMethod]
@@ -129,71 +109,64 @@ namespace LunaticAstroEQ.Tests
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 315.0, _Now);
          MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
                new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(11.62626, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         // Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(11.42014, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
-         Assert.AreEqual(295.39285, mount.ObservedAxes[1], 0.001, "Declination axis value");
+         Assert.AreEqual(64.60715, mount.ObservedAxes[1], 0.001, "Declination axis value");
       }
 
       [TestMethod]
       public void SouthWestHorizonAltAz()
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 225.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(16.75814, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         // Assert.AreEqual(PierSide.pierEast, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(16.55202, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(-25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
-         Assert.AreEqual(244.60715, mount.ObservedAxes[1], 0.001, "Declination axis value");
+         Assert.AreEqual(115.39285, mount.ObservedAxes[1], 0.001, "Declination axis value");
       }
 
       [TestMethod]
       public void SouthEastHorizonAltAz()
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 135.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(23.62626, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         // Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(23.42014, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(-25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
-         Assert.AreEqual(115.39285, mount.ObservedAxes[1], 0.001, "Declination axis value");
+         Assert.AreEqual(244.60715, mount.ObservedAxes[1], 0.001, "Declination axis value");
       }
 
       [TestMethod]
       public void NorthEastHorizonAltAz()
       {
          EquatorialCoordinate target = _Tools.GetEquatorial(0.0, 45.0, _Now);
-         MountCoordinate mount = new MountCoordinate(
-               new AltAzCoordinate(_Tools.Transform.SiteLatitude, 0.0),
-               new AxisPosition(0.0, 0.0),
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0),
                _Tools,
                _Now);
-         Angle[] delta = mount.GetRADecSlewAnglesTo(target.RightAscension, target.Declination, _Tools);
-         mount.MoveRADec(delta, _Tools, _Now);
+         AxisPosition targetAxisPosition = mount.GetAxisPositionForRADec(target.RightAscension, target.Declination, _Tools);
+         mount.MoveRADec(targetAxisPosition, _Tools, _Now);
          EquatorialCoordinate testRaDec = mount.Equatorial;
-         Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
-         Assert.AreEqual(4.75814, testRaDec.RightAscension.Value, 0.00001, "RA Value");
+         // Assert.AreEqual(PierSide.pierWest, mount.GetPointingSideOfPier(false), "Pointing side of pier");
+         Assert.AreEqual(4.55202, testRaDec.RightAscension.Value, 0.00001, "RA Value");
          Assert.AreEqual(25.39285, testRaDec.Declination.Value, 0.001, "Declination value");
-         Assert.AreEqual(64.60715, mount.ObservedAxes[1], 0.001, "Declination axis value");
+         Assert.AreEqual(295.39285, mount.ObservedAxes[1], 0.001, "Declination axis value");
       }
       #endregion
 
@@ -212,8 +185,7 @@ namespace LunaticAstroEQ.Tests
       [DataTestMethod]
       public void SlewDec(double slewAngle, double expectedDec)
       {
-         EquatorialCoordinate currentRaDec = new EquatorialCoordinate(_CelestialPolePosition.Equatorial.RightAscension.Value, _CelestialPolePosition.Equatorial.Declination.Value);
-         MountCoordinate currentPosition = new MountCoordinate(currentRaDec, _CelestialPolePosition.ObservedAxes, _Tools, _Now);
+         MountCoordinate currentPosition = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, _Now);
          currentPosition.MoveRADec(new AxisPosition(0.0, slewAngle), _Tools, _Now);
          EquatorialCoordinate expected = new EquatorialCoordinate(currentPosition.Equatorial.RightAscension.Value, expectedDec);
          Assert.AreEqual(expected, currentPosition.Equatorial, "Slewed DEC test");
@@ -228,45 +200,54 @@ namespace LunaticAstroEQ.Tests
       [DataRow(210.0, 14.0)]
       [DataRow(240.0, 16.0)]
       [DataRow(270.0, 18.0)]
-      [DataRow(300.0, 220.0)]
+      [DataRow(300.0, 20.0)]
       [DataRow(330.0, 22.0)]
       [DataRow(360.0, 0.0)]
+      [DataRow(-30.0, 22.0)]
+      [DataRow(-60.0, 20.0)]
+      [DataRow(-90.0, 18.0)]
+      [DataRow(-120.0, 16.0)]
+      [DataRow(-150.0, 14.0)]
+      [DataRow(-180.0, 12.0)]
+      [DataRow(-210.0, 10.0)]
+      [DataRow(-240.0, 8.0)]
+      [DataRow(-270.0, 6.0)]
+      [DataRow(-300.0, 4.0)]
+      [DataRow(-330.0, 2.0)]
+      [DataRow(-360.0, 0.0)]
       [DataTestMethod]
       public void SlewRA(double slewAngle, double expectedRA)
       {
-         EquatorialCoordinate currentRaDec = new EquatorialCoordinate(_CelestialPolePosition.Equatorial.RightAscension.Value, _CelestialPolePosition.Equatorial.Declination.Value);
-         MountCoordinate currentPosition = new MountCoordinate(currentRaDec, _CelestialPolePosition.ObservedAxes, _Tools, _Now);
+         MountCoordinate currentPosition = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, _Now);
+         double targetRA = AstroConvert.RangeRA(currentPosition.Equatorial.RightAscension.Value + expectedRA);
+         double targetDec = currentPosition.Equatorial.Declination.Value;
          currentPosition.MoveRADec(new AxisPosition(slewAngle, 0.0), _Tools, _Now);
-         EquatorialCoordinate expected = new EquatorialCoordinate(currentPosition.Equatorial.RightAscension.Value + expectedRA, 0.0);
-         Assert.AreEqual(expected, currentPosition.Equatorial, "Slewed RA test");
+         EquatorialCoordinate expected = new EquatorialCoordinate(targetRA, targetDec);
+         Assert.AreEqual(expected.RightAscension, currentPosition.Equatorial.RightAscension, 0.000001, "RA test");
+         Assert.AreEqual(expected.Declination, currentPosition.Equatorial.Declination, 0.000001, "DEc test");
       }
 
 
       [TestMethod]
       public void ASCOM_SOP()
       {
-         EquatorialCoordinate currentRaDec = new EquatorialCoordinate(_CelestialPolePosition.Equatorial.RightAscension.Value, _CelestialPolePosition.Equatorial.Declination.Value);
-         MountCoordinate currentPosition = new MountCoordinate(currentRaDec, _CelestialPolePosition.ObservedAxes, _Tools, _Now);
+         MountCoordinate currentPosition = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, _Now);
          double ha = currentPosition.LocalApparentSiderialTime;
 
-         Angle[] slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha - 3.0), 10.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
-         currentPosition.MoveRADec(slewDistance, _Tools, _Now);
+         AxisPosition targetAxisPosition = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha - 3.0), 10.0, _Tools);
+         currentPosition.MoveRADec(targetAxisPosition, _Tools, _Now);
          Assert.AreEqual(PierSide.pierWest, currentPosition.GetPointingSideOfPier(false), "Point A");
 
-         slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha + 9.0), 60.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
-         currentPosition.MoveRADec(slewDistance, _Tools, _Now);
+         targetAxisPosition = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha + 9.0), 60.0, _Tools);
+         currentPosition.MoveRADec(targetAxisPosition, _Tools, _Now);
          Assert.AreEqual(PierSide.pierEast, currentPosition.GetPointingSideOfPier(false), "Point B");
 
-         slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha - 9.0), 60.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
-         currentPosition.MoveRADec(slewDistance, _Tools, _Now);
+         targetAxisPosition = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha - 9.0), 60.0, _Tools);
+         currentPosition.MoveRADec(targetAxisPosition, _Tools, _Now);
          Assert.AreEqual(PierSide.pierWest, currentPosition.GetPointingSideOfPier(false), "Point C");
 
-         slewDistance = currentPosition.GetRADecSlewAnglesTo(AstroConvert.RangeRA(ha + 3.0), 10.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{slewDistance[0]} / {slewDistance[1]}");
-         currentPosition.MoveRADec(slewDistance, _Tools, _Now);
+         targetAxisPosition = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha + 3.0), 10.0, _Tools);
+         currentPosition.MoveRADec(targetAxisPosition, _Tools, _Now);
          Assert.AreEqual(PierSide.pierEast, currentPosition.GetPointingSideOfPier(false), "Point D");
 
       }
@@ -275,39 +256,42 @@ namespace LunaticAstroEQ.Tests
       [TestMethod]
       public void CalculateSlewAngles()
       {
-         EquatorialCoordinate currentRaDec = new EquatorialCoordinate(_CelestialPolePosition.Equatorial.RightAscension.Value, _CelestialPolePosition.Equatorial.Declination.Value);
-         MountCoordinate currentPosition = new MountCoordinate(currentRaDec, _CelestialPolePosition.ObservedAxes, _Tools, _Now);
+         MountCoordinate currentPosition = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, _Now);
          double ha = currentPosition.LocalApparentSiderialTime;
 
          System.Diagnostics.Debug.WriteLine("\nPoint A (SE)");
          System.Diagnostics.Debug.WriteLine("============");
-         AxisPosition targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha-3.0), 10.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
-         currentPosition.MoveRADec(targetAngles, _Tools, _Now);
+         AxisPosition targetAxes = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha-3.0), 10.0, _Tools);
+         Angle[] deltaAngles = currentPosition.ObservedAxes.GetSlewAnglesTo(targetAxes);
+         System.Diagnostics.Debug.WriteLine($"Slewing through: {deltaAngles[0]} / {deltaAngles[1]}");
+         currentPosition.MoveRADec(targetAxes, _Tools, _Now);
          currentPosition.DumpDebugInfo();
-         // Assert.AreEqual(PierSide.pierWest, currentPosition.PointingSideOfPier, "Point A");
+         Assert.AreEqual(PierSide.pierWest, currentPosition.GetPointingSideOfPier(false), "Point A");
 
          System.Diagnostics.Debug.WriteLine("\nPoint B (NW)");
          System.Diagnostics.Debug.WriteLine("============");
-         targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha+9.0), 60.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
-         currentPosition.MoveRADec(targetAngles, _Tools, _Now);
+         targetAxes = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha+9.0), 60.0, _Tools);
+         deltaAngles = currentPosition.ObservedAxes.GetSlewAnglesTo(targetAxes);
+         System.Diagnostics.Debug.WriteLine($"Slewing through: {deltaAngles[0]} / {deltaAngles[1]}");
+         currentPosition.MoveRADec(targetAxes, _Tools, _Now);
          currentPosition.DumpDebugInfo();
-         // Assert.AreEqual(PierSide.pierEast, currentPosition.PointingSideOfPier, "Point B");
+         Assert.AreEqual(PierSide.pierEast, currentPosition.GetPointingSideOfPier(false), "Point B");
 
          System.Diagnostics.Debug.WriteLine("\nPoint C (NE)");
          System.Diagnostics.Debug.WriteLine("============");
-         targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha-9.0), 60.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
-         currentPosition.MoveRADec(targetAngles, _Tools, _Now);
+         targetAxes = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha-9.0), 60.0, _Tools);
+         deltaAngles = currentPosition.ObservedAxes.GetSlewAnglesTo(targetAxes);
+         System.Diagnostics.Debug.WriteLine($"Slewing through: {deltaAngles[0]} / {deltaAngles[1]}");
+         currentPosition.MoveRADec(targetAxes, _Tools, _Now);
          currentPosition.DumpDebugInfo();
-         // Assert.AreEqual(PierSide.pierWest, currentPosition.PointingSideOfPier, "Point C");
+         Assert.AreEqual(PierSide.pierWest, currentPosition.GetPointingSideOfPier(false), "Point C");
 
          System.Diagnostics.Debug.WriteLine("\nPoint D (SW)");
          System.Diagnostics.Debug.WriteLine("============");
-         targetAngles = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha+3.0), 10.0, _Tools);
-         System.Diagnostics.Debug.WriteLine($"{targetAngles[0]} / {targetAngles[1]}");
-         currentPosition.MoveRADec(targetAngles, _Tools, _Now);
+         targetAxes = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha+3.0), 10.0, _Tools);
+         deltaAngles = currentPosition.ObservedAxes.GetSlewAnglesTo(targetAxes);
+         System.Diagnostics.Debug.WriteLine($"Slewing through: {deltaAngles[0]} / {deltaAngles[1]}");
+         currentPosition.MoveRADec(targetAxes, _Tools, _Now);
          currentPosition.DumpDebugInfo();
          Assert.AreEqual(PierSide.pierEast, currentPosition.GetPointingSideOfPier(false), "Point D");
 

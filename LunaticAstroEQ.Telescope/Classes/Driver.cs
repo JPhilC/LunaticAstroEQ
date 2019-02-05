@@ -1102,17 +1102,18 @@ namespace ASCOM.LunaticAstroEQ
             DateTime currentTime = DateTime.Now;
 
             // Build the target position // using current axis position
-            Angle[] deltaSlew = _CurrentPosition.GetRADecSlewAnglesTo(rightAscension, declination, _AscomToolsCurrentPosition);
-            _TargetPosition = new MountCoordinate(new EquatorialCoordinate(rightAscension, declination), _CurrentPosition.ObservedAxes.RotateBy(deltaSlew), _AscomToolsTargetPosition, currentTime);
+            AxisPosition targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition);
+            _TargetPosition = new MountCoordinate(new EquatorialCoordinate(rightAscension, declination), targetAxisPosition, _AscomToolsTargetPosition, currentTime);
 
             System.Diagnostics.Debug.WriteLine("");
             System.Diagnostics.Debug.WriteLine($"Currently At RA:{_AscomToolsCurrentPosition.Util.HoursToHMS(_CurrentPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsCurrentPosition.Util.DegreesToDMS(_CurrentPosition.Equatorial.Declination, ":", ":")}");
 
-            System.Diagnostics.Debug.WriteLine($"Slewing to   RA:{_AscomToolsCurrentPosition.Util.HoursToHMS(_TargetPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsCurrentPosition.Util.DegreesToDMS(_TargetPosition.Equatorial.Declination, ":", ":")}");
+            System.Diagnostics.Debug.WriteLine($"Slewing to   RA:{_AscomToolsTargetPosition.Util.HoursToHMS(_TargetPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsTargetPosition.Util.DegreesToDMS(_TargetPosition.Equatorial.Declination, ":", ":")}");
 
 
             System.Diagnostics.Debug.WriteLine("");
             System.Diagnostics.Debug.WriteLine($"Current axis position: {_CurrentPosition.ObservedAxes.ToString()}");
+            System.Diagnostics.Debug.WriteLine($"Target axis position: {_TargetPosition.ObservedAxes.ToString()}");
 
             //_AscomToolsCurrentPosition.Transform.JulianDateTT = _AscomToolsCurrentPosition.Util.DateLocalToJulian(now);
             //_AscomToolsCurrentPosition.Transform.SetTopocentric(RightAscension, Declination);
@@ -1141,6 +1142,7 @@ namespace ASCOM.LunaticAstroEQ
             //System.Diagnostics.Debug.WriteLine($"Slewing through : {deltRa}/{deltaDec}");
 
             //_TargetPosition = new MountCoordinate(target.Equatorial, targetAxisPosition, _AscomToolsTargetPosition, _CelestialPolePosition.SyncTime);
+            Angle[] deltaSlew = _CurrentPosition.ObservedAxes.GetSlewAnglesTo(_TargetPosition.ObservedAxes);
 
             Controller.MCAxisSlewBy(new Angle[] { deltaSlew[0], deltaSlew[1]});
             //Controller.MCAxisSlewTo(AXISID.AXIS1, targetAxisPosition[0]);    // Target position in radians
