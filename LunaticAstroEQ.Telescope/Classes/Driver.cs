@@ -485,7 +485,6 @@ namespace ASCOM.LunaticAstroEQ
          {
             throw new ASCOM.InvalidOperationException("Abort slew is invvalid when the scope is parked.");
          }
-
          AbortSlewInternal();
       }
 

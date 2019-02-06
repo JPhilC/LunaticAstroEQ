@@ -19,6 +19,7 @@ using ASCOM.LunaticAstroEQ.Core;
 using ASCOM.LunaticAstroEQ.Core.Geometry;
 using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
 using System.Threading;
+using Constants = ASCOM.LunaticAstroEQ.Core.Constants;
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -115,6 +116,11 @@ namespace ASCOM.LunaticAstroEQ
                System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
             }
 
+            if (Slewing)
+            {
+               System.Diagnostics.Debug.WriteLine($"Is Move Slewing");
+            }
+
             if (_TargetPosition != null)
             {
                System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
@@ -180,6 +186,93 @@ namespace ASCOM.LunaticAstroEQ
             }
          }
       }
+
+      #region Move Axis test methods ...
+      private bool _buttonDown = false;
+      private int _currentCompassButton = 0;
+      /// <summary>
+      /// A test method to allow the active compass button to be toggled
+      /// when testing the slew buttons using CdC.
+      /// </summary>
+      public void ToggleCompassButton()
+      {
+         _currentCompassButton++;
+         if (_currentCompassButton > 3)
+         {
+            _currentCompassButton = 0;
+         }
+         string label = "";
+         switch (_currentCompassButton) {
+            case 0:
+               label = "N";
+               break;
+            case 1:
+               label = "E";
+               break;
+            case 2:
+               label = "S";
+               break;
+            case 3:
+               label = "W";
+               break;
+         }
+         System.Diagnostics.Debug.WriteLine($"Current compass button = {label}");
+      }
+
+      public void TestMoveAxis()
+      {
+         if (_buttonDown)
+         {
+            switch (_currentCompassButton)
+            {
+               case 0:  // N
+               case 2:  // S
+                  MoveAxis(TelescopeAxes.axisSecondary, 0.0);
+                  break;
+               case 1:  // E
+               case 3:  // W
+                  MoveAxis(TelescopeAxes.axisPrimary, 0.0);
+                  break;
+            }
+            _buttonDown = false;
+         }
+         else
+         {
+            double rate = 400 * Constants.SIDEREAL_RATE_DEGREES;
+            switch (_currentCompassButton)
+            {
+               case 0:  // N
+               case 2:  // S
+                  if (_currentCompassButton == 2)
+                  {
+                     System.Diagnostics.Debug.WriteLine("Slewing South");
+                     rate = -rate;
+                  }
+                  else
+                  {
+                     System.Diagnostics.Debug.WriteLine("Slewing North");
+                  }
+                  MoveAxis(TelescopeAxes.axisSecondary, rate);
+                  break;
+               case 1:  // E
+               case 3:  // W
+                  if (_currentCompassButton == 3)
+                  {
+                     System.Diagnostics.Debug.WriteLine("Slewing West");
+                     rate = -rate;
+                  }
+                  else
+                  {
+                     System.Diagnostics.Debug.WriteLine("Slewing East");
+                  }
+                  MoveAxis(TelescopeAxes.axisPrimary, rate);
+                  break;
+            }
+            _buttonDown = true;
+         }
+      }
+
+      #endregion
 
    }
 }
