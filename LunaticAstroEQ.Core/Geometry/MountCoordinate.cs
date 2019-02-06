@@ -24,6 +24,22 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public AxisPosition ObservedAxes { get; private set; }
 
+      public PierSide PhysicalSideOfPier
+      {
+         get
+         {
+            return GetPhysicalSideOfPier();
+         }
+      }
+
+
+      public PierSide PointingSideOfPier
+      {
+         get
+         {
+            return GetPointingSideOfPier(false);
+         }
+      }
 
       /// <summary>
       /// The last time everything was syncronised 
@@ -199,21 +215,9 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       /// <param name="raHours"></param>
       /// <param name="swapSideOfPier"></param>
       /// <returns></returns>
-      public PierSide GetPhysicalSideOfPier(double raHours, bool swapSideOfPier)
+      public PierSide GetPhysicalSideOfPier()
       {
-         PierSide physicalSOP = PierSide.pierUnknown;
-         double ha;
-
-         ha = AstroConvert.RangeHA(raHours - 6.0);
-         if (swapSideOfPier)
-         {
-            physicalSOP = (ha >= 0.0 ? PierSide.pierWest : PierSide.pierEast);
-         }
-         else
-         {
-            physicalSOP = (ha >= 0.0 ? PierSide.pierEast : PierSide.pierWest);
-         }
-         return physicalSOP;
+         return ObservedAxes[0] < 180 ? PierSide.pierEast : PierSide.pierWest;
       }
 
 
@@ -318,74 +322,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          // Compute for Target RA/DEC angles
          Angle RAAxis = GetAxisPositionForRA(adjustedRA, 0.0);
          Angle DecAxis = GetAxisPositionForDec(targetDec, flipDEC);
-         // System.Diagnostics.Debug.WriteLine($"RA/Dec:{targetHA}/{targetDec} Axes:{ RAAxis.Value}/{ DecAxis.Value} FlipDec: {flipDEC}");
+         System.Diagnostics.Debug.WriteLine($"RA/Dec:{targetHA}/{targetDec} Axes:{ RAAxis.Value}/{ DecAxis.Value} FlipDec: {flipDEC}");
          return new AxisPosition(RAAxis.Value, DecAxis.Value, flipDEC);
       }
 
 
-
-      public void TestCalculateTargetAxes(double targetRA, double targetDec, AscomTools tools)
-      {
-         bool flipDEC;
-         double adjustedRA = targetRA;
-         double targetHA = AstroConvert.RangeHA(targetRA - LocalApparentSiderialTime);
-         if (targetHA < 0) // Target is to the west.
-         {
-            if (ForceMeridianFlip)
-            {
-               if (Hemisphere == HemisphereOption.Northern)
-               {
-                  flipDEC = false;
-               }
-               else
-               {
-                  flipDEC = true;
-               }
-               adjustedRA = targetRA;
-            }
-            else
-            {
-               if (Hemisphere == HemisphereOption.Northern)
-               {
-                  flipDEC = true;
-               }
-               else
-               {
-                  flipDEC = false;
-               }
-               adjustedRA = AstroConvert.RangeRA(targetRA - 12);
-            }
-         }
-         else
-         {
-            if (ForceMeridianFlip)
-            {
-               if (Hemisphere == HemisphereOption.Northern)
-               {
-                  flipDEC = true;
-               }
-               else
-               {
-                  flipDEC = false;
-               }
-               adjustedRA = AstroConvert.RangeRA(targetRA - 12);
-            }
-            else
-            {
-               if (Hemisphere == HemisphereOption.Northern)
-               {
-                  flipDEC = false;
-               }
-               else
-               {
-                  flipDEC = true;
-               }
-               adjustedRA = targetRA;
-            }
-         }
-
-         System.Diagnostics.Debug.WriteLine($"{targetRA} -> {adjustedRA}");
-      }
 
 
       #region RA calcs ...
@@ -395,13 +336,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          double tRa = LocalApparentSiderialTime + tempRA_hours;
          double tHa = AstroConvert.RangeHA(tRa);
          double dec = GetDec(axes);
-         System.Diagnostics.Debug.Write($"{axes.RAAxis.Value}/{axes.DecAxis.Value}\t{dec}\t{tHa}\t{tRa}");
+         // System.Diagnostics.Debug.Write($"{axes.RAAxis.Value}/{axes.DecAxis.Value}\t{dec}\t{tHa}\t{tRa}");
          if (Hemisphere == HemisphereOption.Northern)
          {
             if (axes.DecFlipped)
             {
                tRa = tRa - 12.0;
-               System.Diagnostics.Debug.Write("\t tRa - tRa - 12");
+               // System.Diagnostics.Debug.Write("\t tRa - tRa - 12");
             }
          }
          else

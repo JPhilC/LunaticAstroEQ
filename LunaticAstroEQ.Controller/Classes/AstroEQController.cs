@@ -645,6 +645,17 @@ namespace ASCOM.LunaticAstroEQ.Controller
          _SlewingSpeed[(int)axis] = speed;
       }
 
+      public void MCAxisSlewTo(AxisPosition targetPosition)
+      {
+         MCAxisSlewTo(AXISID.AXIS1, targetPosition.RAAxis.Radians);
+         MCAxisSlewTo(AXISID.AXIS2, targetPosition.DecAxis.Radians);
+      }
+
+      /// <summary>
+      /// Slew one axis to a position given in Radians
+      /// </summary>
+      /// <param name="Axis">Axis to slew</param>
+      /// <param name="TargetPosition">Target position in Radians</param>
       public void MCAxisSlewTo(AXISID Axis, double TargetPosition)
       {
          // Get current position of the axis.
@@ -813,7 +824,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       public AxisPosition MCGetAxisPositions()
       {
-         return new AxisPosition(MCGetAxisPosition(AXISID.AXIS1), MCGetAxisPosition(AXISID.AXIS2), true);
+         return new AxisPosition(MCGetAxisPosition(AXISID.AXIS1), MCGetAxisPosition(AXISID.AXIS2), false, true);
       }
 
       public AxisStatus MCGetAxisStatus(AXISID Axis)

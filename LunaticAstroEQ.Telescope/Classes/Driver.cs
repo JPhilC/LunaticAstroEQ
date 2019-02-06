@@ -138,10 +138,9 @@ namespace ASCOM.LunaticAstroEQ
       /// Private variable to hold an ASCOM Utilities object
       /// </summary>
       private AscomTools _AscomToolsCurrentPosition;
-      private AscomTools _AscomToolsCelestialPole;
       private AscomTools _AscomToolsTargetPosition;
 
-      private MountCoordinate _CelestialPolePosition;
+      private AxisPosition _ParkedAxisPosition;
       private MountCoordinate _CurrentPosition;
       private MountCoordinate _TargetPosition;
 
@@ -184,14 +183,6 @@ namespace ASCOM.LunaticAstroEQ
          _AscomToolsCurrentPosition.Transform.SiteLongitude = longitude;
          _AscomToolsCurrentPosition.Transform.SiteElevation = elevation;
          _AscomToolsCurrentPosition.Transform.SiteTemperature = temperature;
-
-         _AscomToolsCelestialPole = new AscomTools();
-
-         // Initialise the transform from the site details stored with the controller
-         _AscomToolsCelestialPole.Transform.SiteLatitude = latitude;
-         _AscomToolsCelestialPole.Transform.SiteLongitude = longitude;
-         _AscomToolsCelestialPole.Transform.SiteElevation = elevation;
-         _AscomToolsCelestialPole.Transform.SiteTemperature = temperature;
 
          _AscomToolsTargetPosition = new AscomTools();
 
@@ -483,7 +474,18 @@ namespace ASCOM.LunaticAstroEQ
       public void AbortSlew()
       {
          tl.LogMessage("AbortSlew", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("AbortSlew");
+         if (AtPark)
+         {
+            throw new ASCOM.InvalidOperationException("Abort slew is invvalid when the scope is parked.");
+         }
+
+         lock (Controller)
+         {
+            Controller.MCAxisStop(AXISID.AXIS1);
+            Controller.MCAxisStop(AXISID.AXIS2);
+
+            // TODO: Restart tracking
+         }
       }
 
       public AlignmentModes AlignmentMode
@@ -875,8 +877,7 @@ namespace ASCOM.LunaticAstroEQ
          lock (Controller)
          {
             LogMessage("Park", "Parking");
-            Controller.MCAxisSlewTo(AXISID.AXIS1, _CelestialPolePosition.ObservedAxes[0]);    // Target position in radians
-            Controller.MCAxisSlewTo(AXISID.AXIS2, _CelestialPolePosition.ObservedAxes[1]);    // Target position in radians
+            Controller.MCAxisSlewTo(_ParkedAxisPosition);    // Target position in radians
          }
       }
 
@@ -1031,40 +1032,101 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private PierSide _previousPointingSOP = PierSide.pierUnknown;
+      private AxisPosition _previousAxisPosition;
+
       private void InitialiseCurrentPosition()
       {
          DateTime now = DateTime.Now;
-         AltAzCoordinate altAzPosition = new AltAzCoordinate(SiteLatitude, 0.0);
-         AxisPosition axisPosition = new AxisPosition(0.0, 0.0);      // NCP
-         _CelestialPolePosition = new MountCoordinate(altAzPosition, axisPosition, _AscomToolsCelestialPole, now);
-         EquatorialCoordinate currentRaDec = new EquatorialCoordinate(_CelestialPolePosition.Equatorial.RightAscension.Value, _CelestialPolePosition.Equatorial.Declination.Value);
-         _CurrentPosition = new MountCoordinate(currentRaDec, axisPosition, _AscomToolsCurrentPosition, now);
+         _ParkedAxisPosition = new AxisPosition(0.0, 0.0);
+         _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
+         _previousAxisPosition = _ParkedAxisPosition;
       }
 
 
       private DateTime _lastMessage = DateTime.Now;
+      private DateTime _lastRefresh = DateTime.MinValue;
+      private TimeSpan _minRefreshInterval = new TimeSpan(0, 0, 0, 0, 500);
+      private double _axisPositionTolerance = 0.00001;
+
+
       /// <summary>
       /// Refreshes the NCP and current positions if more than 500ms have elapsed since the last refresh.
       /// </summary>
       private void RefreshCurrentPosition()
       {
          DateTime now = DateTime.Now;
-         AxisPosition axisPosition;
-         lock (Controller)
+         bool axisHasMoved = false;
+         if (now - _lastRefresh > _minRefreshInterval)
          {
-            axisPosition = Controller.MCGetAxisPositions();
-            // System.Diagnostics.Debug.WriteLine($"Controller axis position: {axisPosition.ToString()}");
+            AxisPosition axisPosition = _previousAxisPosition;
+            lock (Controller)
+            {
+               axisPosition = Controller.MCGetAxisPositions();
+            }
+            if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
+            {
+               // Axes have moved.
+               axisHasMoved = true;
+               if (_previousPointingSOP == PierSide.pierUnknown)
+               {
+                  // First move away from home (NCP/SCP) position.
+                  if (_IsSlewing && _TargetPosition != null)
+                  {
+                     System.Diagnostics.Debug.WriteLine("Initialising SOP from goto target.");
+                     axisPosition.DecFlipped = _TargetPosition.ObservedAxes.DecFlipped;
+                  }
+               }
+               else
+               {
+                  // Keep the axis position the same
+                  axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
+               }
+            }
+            else
+            {
+               // Axes have not moved.
+               if (_TargetPosition != null)
+               {
+                  // System.Diagnostics.Debug.WriteLine($"RA:{Math.Abs(_TargetPosition.ObservedAxes.RAAxis.Value - axisPosition.RAAxis.Value)} Dec: {Math.Abs(_TargetPosition.ObservedAxes.DecAxis.Value - axisPosition.DecAxis.Value)}");
+                  _TargetPosition = null;
+               }
+               // Check if slew finished
+               if (_IsSlewing)
+               {
+                  _IsSlewing = false;
+                  LogMessage("SlewToCoordinates", "Slew Complete");
+               }
+               axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
+            }
+
+            _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+            if (_previousPointingSOP != PierSide.pierUnknown)
+            {
+               // See if pointing has moved across the meridian
+               if (_CurrentPosition.PointingSideOfPier != _previousPointingSOP)
+               {
+                  System.Diagnostics.Debug.WriteLine("** Crossing the meridian **");
+                  // Pointing has moved across the meridian so toggle the DecFlipped value;
+                  axisPosition.DecFlipped = !_previousAxisPosition.DecFlipped;
+                  _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+
+               }
+            }
+            if (axisHasMoved)
+            {
+               _previousPointingSOP = _CurrentPosition.PointingSideOfPier;
+            }
+
+            if (_TargetPosition != null)
+            {
+               System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
+            }
+            System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
+            _previousAxisPosition = axisPosition;
+            _lastRefresh = now;
          }
 
-         _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
-
-         // _CurrentPosition = new MountCoordinate(newPosition, axisPosition, _AscomToolsCurrentPosition, now);
-         System.Diagnostics.Debug.WriteLine($"RA: {_AscomToolsCurrentPosition.Util.HoursToHMS(_CurrentPosition.Equatorial.RightAscension.Value)} / Dec: {_AscomToolsCurrentPosition.Util.DegreesToDMS(_CurrentPosition.Equatorial.Declination, ":", ":")} Axis: {_CurrentPosition.ObservedAxes.ToString()}");
-         //// Check if slew finished
-         //if (_IsSlewing && (axisPosition == _TargetPosition.ObservedAxes))
-         //{
-         //   _IsSlewing = false;
-         //}
       }
 
 
@@ -1100,54 +1162,11 @@ namespace ASCOM.LunaticAstroEQ
          {
             LogMessage("SlewToCoordinates", "RA:{0}/Dec:{1}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension, "h", "m", "s"), _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
             DateTime currentTime = DateTime.Now;
-
-            // Build the target position // using current axis position
             AxisPosition targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition);
-            _TargetPosition = new MountCoordinate(new EquatorialCoordinate(rightAscension, declination), targetAxisPosition, _AscomToolsTargetPosition, currentTime);
-
-            System.Diagnostics.Debug.WriteLine("");
-            System.Diagnostics.Debug.WriteLine($"Currently At RA:{_AscomToolsCurrentPosition.Util.HoursToHMS(_CurrentPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsCurrentPosition.Util.DegreesToDMS(_CurrentPosition.Equatorial.Declination, ":", ":")}");
-
-            System.Diagnostics.Debug.WriteLine($"Slewing to   RA:{_AscomToolsTargetPosition.Util.HoursToHMS(_TargetPosition.Equatorial.RightAscension, "h", "m", "s")}/Dec:{_AscomToolsTargetPosition.Util.DegreesToDMS(_TargetPosition.Equatorial.Declination, ":", ":")}");
-
-
-            System.Diagnostics.Debug.WriteLine("");
-            System.Diagnostics.Debug.WriteLine($"Current axis position: {_CurrentPosition.ObservedAxes.ToString()}");
-            System.Diagnostics.Debug.WriteLine($"Target axis position: {_TargetPosition.ObservedAxes.ToString()}");
-
-            //_AscomToolsCurrentPosition.Transform.JulianDateTT = _AscomToolsCurrentPosition.Util.DateLocalToJulian(now);
-            //_AscomToolsCurrentPosition.Transform.SetTopocentric(RightAscension, Declination);
-            //AltAzCoordinate altAzPosition = new AltAzCoordinate(_AscomToolsCurrentPosition.Transform.ElevationTopocentric, _AscomToolsCurrentPosition.Transform.AzimuthTopocentric);
-            //MountCoordinate target = new MountCoordinate(altAzPosition, _CurrentPosition.ObservedAxes, _AscomToolsCelestialPole, now);
-            //double[] axisDelta = _CurrentPosition.Equatorial.GetAxisOffsetTo(target.Equatorial);
-
-
-            //System.Diagnostics.Debug.WriteLine($"Axis change = {axisDelta[0]}/{axisDelta[1]}");
-
-            //AxisPosition targetAxisPosition = _CurrentPosition.ObservedAxes.RotateBy(axisDelta);
-            //System.Diagnostics.Debug.WriteLine($"Initial axis position: {targetAxisPosition.ToString()}");
-            //// Perform axis safety check
-            //if (targetAxisPosition[0] > 90.0 && targetAxisPosition[0] < 270.0)
-            //{
-            //   // Final position will be weights up so need to flip.
-            //   targetAxisPosition = targetAxisPosition.Flip();
-            //   System.Diagnostics.Debug.WriteLine($"Revised axis position: {targetAxisPosition.ToDegreesString()}");
-            //}
-            //System.Diagnostics.Debug.WriteLine($"Target axis position: {targetAxisPosition.ToDegreesString()}");
-
-            //axisDelta = _CurrentPosition.ObservedAxes.GetSlewAnglesTo(targetAxisPosition);
-            //Angle deltRa = new Angle(axisDelta[0]);
-            //Angle deltaDec = new Angle(axisDelta[1]);
-
-            //System.Diagnostics.Debug.WriteLine($"Slewing through : {deltRa}/{deltaDec}");
-
-            //_TargetPosition = new MountCoordinate(target.Equatorial, targetAxisPosition, _AscomToolsTargetPosition, _CelestialPolePosition.SyncTime);
-            Angle[] deltaSlew = _CurrentPosition.ObservedAxes.GetSlewAnglesTo(_TargetPosition.ObservedAxes);
-
-            Controller.MCAxisSlewBy(new Angle[] { deltaSlew[0], deltaSlew[1]});
-            //Controller.MCAxisSlewTo(AXISID.AXIS1, targetAxisPosition[0]);    // Target position in radians
-            // Controller.MCAxisSlewTo(AXISID.AXIS2, targetAxisPosition[1]);    // Target position in radians
-            System.Diagnostics.Debug.WriteLine("");
+            _TargetPosition = new MountCoordinate(targetAxisPosition, _AscomToolsTargetPosition, currentTime);
+            System.Diagnostics.Debug.WriteLine($"Physical SOP: { targetAxisPosition.PhysicalSideOfPier}\t\tPointing SOP: {_TargetPosition.GetPointingSideOfPier(false)}");
+            _IsSlewing = true;
+            Controller.MCAxisSlewTo(targetAxisPosition);
 
          }
       }

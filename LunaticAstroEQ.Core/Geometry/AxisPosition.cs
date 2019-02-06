@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ASCOM.DeviceInterface;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -30,7 +31,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
       }
 
-      public bool DecFlipped { get; private set; }
+      public bool DecFlipped { get; set; }
 
       public int AxisCount
       {
@@ -40,6 +41,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          }
       }
 
+      public PierSide PhysicalSideOfPier
+      {
+         get
+         {
+            return RAAxis < 180.0 ? PierSide.pierEast : PierSide.pierWest;
+         }
+      }
 
       /// <summary>
       /// Create a new axis position
