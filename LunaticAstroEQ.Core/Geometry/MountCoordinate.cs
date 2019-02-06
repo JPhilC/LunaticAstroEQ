@@ -141,27 +141,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
 
 
-
-      //public void MoveRADec(Angle[] delta, AscomTools tools, DateTime syncTime)
-      //{
-      //   SyncTime = syncTime;
-      //   LocalApparentSiderialTime = new HourAngle(AstroConvert.LocalApparentSiderealTime(tools.Transform.SiteLongitude, syncTime));
-      //   // Refresh the Equatorial at the current position
-      //   UpdateEquatorial(tools, syncTime);
-      //   // Apply the axis rotation to the new position.
-      //   ObservedAxes = ObservedAxes.RotateBy(delta);
-      //   Equatorial = new EquatorialCoordinate(GetRA(ObservedAxes), GetDec(ObservedAxes));
-      //   UpdateAltAzimuth(tools, syncTime);
-      //}
-
-
-      //public Angle[] GetRADecSlewAnglesTo(double targetRA, double targetDec, AscomTools tools)
-      //{
-      //   AxisPosition targetAxisPosition = GetAxisPositionForRADec(targetRA, targetDec, tools);
-      //   return ObservedAxes.GetSlewAnglesTo(targetAxisPosition);
-      //}
-
-
       #region Side of Pier calculations
       /// <summary>
       /// Returns the pointing side of Pier as required by ASCOM
@@ -239,24 +218,6 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       #endregion
 
 
-      private double AddDec(double original, double delta)
-      {
-         double result = original + delta;
-         if (result > 90.0)
-         {
-            result = 180 - result;
-         }
-         if (result < -90.0)
-         {
-            result = -180 - result;
-         }
-         if (result > 90.0 || result < -90.0)
-         {
-            throw new ArgumentOutOfRangeException("delta", "AddDec can only handle small changes of declination.");
-         }
-         return result;
-      }
-
 
       public AxisPosition GetAxisPositionForRADec(double targetRA, double targetDec, AscomTools tools)
       {
@@ -322,7 +283,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          // Compute for Target RA/DEC angles
          Angle RAAxis = GetAxisPositionForRA(adjustedRA, 0.0);
          Angle DecAxis = GetAxisPositionForDec(targetDec, flipDEC);
-         System.Diagnostics.Debug.WriteLine($"RA/Dec:{targetHA}/{targetDec} Axes:{ RAAxis.Value}/{ DecAxis.Value} FlipDec: {flipDEC}");
+         // System.Diagnostics.Debug.WriteLine($"RA/Dec:{targetHA}/{targetDec} Axes:{ RAAxis.Value}/{ DecAxis.Value} FlipDec: {flipDEC}");
          return new AxisPosition(RAAxis.Value, DecAxis.Value, flipDEC);
       }
 

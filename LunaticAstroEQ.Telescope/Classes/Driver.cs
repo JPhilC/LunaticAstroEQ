@@ -635,6 +635,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
+            //TODO: CanSetPierSide - Needs functionality to force a meridian flip.
             tl.LogMessage("CanSetPierSide", "Get - " + false.ToString());
             return false;
          }
