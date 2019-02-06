@@ -46,6 +46,7 @@ using ASCOM.LunaticAstroEQ.Controller;
 using ASCOM.LunaticAstroEQ.Core;
 using ASCOM.LunaticAstroEQ.Core.Geometry;
 using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
+using System.Threading;
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -79,6 +80,7 @@ namespace ASCOM.LunaticAstroEQ
       /// Driver description that displays in the ASCOM Chooser.
       /// </summary>
       internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ.";
+      internal string driverName = "AstroEQ ASCOM Driver";
 
       private AstroEQController Controller
       {
@@ -429,9 +431,14 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            Version version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            // TODO customise this driver description
-            string driverInfo = "Information about the driver itself. Version: " + String.Format(CultureInfo.InvariantCulture, "{0}.{1}", version.Major, version.Minor);
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("{0}, Version {1}.{2}\n", driverDescription,
+               TelescopeSettingsProvider.MajorVersion,
+               TelescopeSettingsProvider.MinorVersion);
+            sb.AppendLine(TelescopeSettingsProvider.CompanyName);
+            sb.AppendLine(TelescopeSettingsProvider.Copyright);
+            sb.AppendLine(TelescopeSettingsProvider.Comments);
+            string driverInfo = sb.ToString();
             tl.LogMessage("DriverInfo Get", driverInfo);
             return driverInfo;
          }
@@ -462,7 +469,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            string name = "AstroEQ ASCOM Driver";
+            string name = driverName;
             tl.LogMessage("Name Get", name);
             return name;
          }
@@ -473,19 +480,13 @@ namespace ASCOM.LunaticAstroEQ
       #region ITelescope Implementation
       public void AbortSlew()
       {
-         tl.LogMessage("AbortSlew", "Not implemented");
-         if (AtPark)
+         tl.LogMessage("AbortSlew", "");
+         if (Settings.ParkStatus == ParkStatus.Parked)
          {
             throw new ASCOM.InvalidOperationException("Abort slew is invvalid when the scope is parked.");
          }
 
-         lock (Controller)
-         {
-            Controller.MCAxisStop(AXISID.AXIS1);
-            Controller.MCAxisStop(AXISID.AXIS2);
-
-            // TODO: Restart tracking
-         }
+         AbortSlewInternal();
       }
 
       public AlignmentModes AlignmentMode
@@ -544,7 +545,7 @@ namespace ASCOM.LunaticAstroEQ
          {
             bool atPark = (Settings.ParkStatus == ParkStatus.Parked);
             LogMessage("AtPark", "Get - {0}", atPark);
-            return false;
+            return atPark;
          }
       }
 
@@ -842,17 +843,20 @@ namespace ASCOM.LunaticAstroEQ
          bool isRASlewing = false;
          bool isDecSlewing = false;
          double deltaMax = AstroEQController.MAX_SLEW_SPEED_DEGREES - rate;
+
+         if (AtPark)
+         {
+            throw new ASCOM.ParkedException("The mount is currently parked.");
+         }
+
+         if (deltaMax < -0.000001)
+         {
+            throw new ASCOM.InvalidValueException("Method MoveAxis() rate exceed maximum allowed.");
+         }
+
          lock (Controller)
          {
             System.Diagnostics.Debug.WriteLine(String.Format("MoveAxis({0}, {1})", axis, rate));
-            if (AtPark)
-            {
-               throw new ASCOM.ParkedException("Method MoveAxis");
-            }
-            if (deltaMax < -0.000001)
-            {
-               throw new ASCOM.InvalidValueException("Method MoveAxis() rate exceed maximum allowed.");
-            }
             LogMessage("MoveAxis", "({0}, {1})", axis, rate);
 
             switch (axis)
@@ -874,11 +878,8 @@ namespace ASCOM.LunaticAstroEQ
 
       public void Park()
       {
-         lock (Controller)
-         {
-            LogMessage("Park", "Parking");
-            Controller.MCAxisSlewTo(_ParkedAxisPosition);    // Target position in radians
-         }
+         LogMessage("Command", "Park");
+         ParkInternal();
       }
 
       public void PulseGuide(GuideDirections Direction, int Duration)
@@ -1038,96 +1039,12 @@ namespace ASCOM.LunaticAstroEQ
       private void InitialiseCurrentPosition()
       {
          DateTime now = DateTime.Now;
-         _ParkedAxisPosition = new AxisPosition(0.0, 0.0);
+         _ParkedAxisPosition = Settings.AxisParkPosition;
          _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
          _previousAxisPosition = _ParkedAxisPosition;
       }
 
 
-      private DateTime _lastMessage = DateTime.Now;
-      private DateTime _lastRefresh = DateTime.MinValue;
-      private TimeSpan _minRefreshInterval = new TimeSpan(0, 0, 0, 0, 500);
-      private double _axisPositionTolerance = 0.00001;
-
-
-      /// <summary>
-      /// Refreshes the NCP and current positions if more than 500ms have elapsed since the last refresh.
-      /// </summary>
-      private void RefreshCurrentPosition()
-      {
-         DateTime now = DateTime.Now;
-         bool axisHasMoved = false;
-         if (now - _lastRefresh > _minRefreshInterval)
-         {
-            AxisPosition axisPosition = _previousAxisPosition;
-            lock (Controller)
-            {
-               axisPosition = Controller.MCGetAxisPositions();
-            }
-            if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
-            {
-               // Axes have moved.
-               axisHasMoved = true;
-               if (_previousPointingSOP == PierSide.pierUnknown)
-               {
-                  // First move away from home (NCP/SCP) position.
-                  if (_IsSlewing && _TargetPosition != null)
-                  {
-                     System.Diagnostics.Debug.WriteLine("Initialising SOP from goto target.");
-                     axisPosition.DecFlipped = _TargetPosition.ObservedAxes.DecFlipped;
-                  }
-               }
-               else
-               {
-                  // Keep the axis position the same
-                  axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
-               }
-            }
-            else
-            {
-               // Axes have not moved.
-               if (_TargetPosition != null)
-               {
-                  // System.Diagnostics.Debug.WriteLine($"RA:{Math.Abs(_TargetPosition.ObservedAxes.RAAxis.Value - axisPosition.RAAxis.Value)} Dec: {Math.Abs(_TargetPosition.ObservedAxes.DecAxis.Value - axisPosition.DecAxis.Value)}");
-                  _TargetPosition = null;
-               }
-               // Check if slew finished
-               if (_IsSlewing)
-               {
-                  _IsSlewing = false;
-                  LogMessage("SlewToCoordinates", "Slew Complete");
-               }
-               axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
-            }
-
-            _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
-            if (_previousPointingSOP != PierSide.pierUnknown)
-            {
-               // See if pointing has moved across the meridian
-               if (_CurrentPosition.PointingSideOfPier != _previousPointingSOP)
-               {
-                  System.Diagnostics.Debug.WriteLine("** Crossing the meridian **");
-                  // Pointing has moved across the meridian so toggle the DecFlipped value;
-                  axisPosition.DecFlipped = !_previousAxisPosition.DecFlipped;
-                  _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
-
-               }
-            }
-            if (axisHasMoved)
-            {
-               _previousPointingSOP = _CurrentPosition.PointingSideOfPier;
-            }
-
-            if (_TargetPosition != null)
-            {
-               System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
-            }
-            System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
-            _previousAxisPosition = axisPosition;
-            _lastRefresh = now;
-         }
-
-      }
 
 
       public short SlewSettleTime
@@ -1158,6 +1075,11 @@ namespace ASCOM.LunaticAstroEQ
 
       public void SlewToCoordinates(double rightAscension, double declination)
       {
+         if (AtPark)
+         {
+            throw new ASCOM.ParkedException("The mount is currently parked.");
+         }
+
          lock (Controller)
          {
             LogMessage("SlewToCoordinates", "RA:{0}/Dec:{1}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension, "h", "m", "s"), _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
@@ -1320,14 +1242,31 @@ namespace ASCOM.LunaticAstroEQ
          set
          {
             tl.LogMessage("UTCDate Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("UTCDate", true);
+            // throw new ASCOM.PropertyNotImplementedException("UTCDate", true);
+            /// TEMP CODE TO TEST PARKING AND UNPARKING
+            if (Settings.ParkStatus != ParkStatus.Parked)
+            {
+               Park();
+            }
+            else
+            {
+               Unpark();
+            }
          }
       }
 
       public void Unpark()
       {
-         tl.LogMessage("Unpark", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("Unpark");
+         LogMessage("COMMAND", "Unpark");
+         if (Settings.ParkStatus == ParkStatus.Parked)
+         {
+            lock (Controller)
+            {
+               //TODO: Sort out whether tracking should be restarted and restart if necessary.
+               Settings.ParkStatus = ParkStatus.Unparked;
+               TelescopeSettingsProvider.Current.SaveSettings();
+            }
+         }
       }
 
       #endregion

@@ -46,6 +46,8 @@ namespace ASCOM.LunaticAstroEQ
          Retry = RetryOption.Once;
          CustomTrackingRate = new double[] { 0.0D, 0.0D};
          AscomCompliance = new AscomCompliance();
+         AxisParkPosition = new AxisPosition(0.0, 0.0);
+         AxisUnparkPosition = new AxisPosition(0.0, 0.0);
 
       }
    }
