@@ -1,4 +1,5 @@
 ﻿using ASCOM.DeviceInterface;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,18 +17,29 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       private Angle _RAAxis;
       private Angle _DecAxis;
 
+      [JsonProperty]
       public Angle RAAxis
       {
          get
          {
-            return Angle.Range360(_RAAxis);
+            return _RAAxis;
+         }
+         private set
+         {
+            _RAAxis = value;
          }
       }
+      
+      [JsonProperty]
       public Angle DecAxis
       {
          get
          {
-            return Angle.Range360(_DecAxis);
+            return _DecAxis;
+         }
+         private set
+         {
+            _DecAxis = value;
          }
       }
 

@@ -359,6 +359,8 @@ namespace ASCOM.LunaticAstroEQ
          //tl.Dispose();
          //tl = null;
          _AscomToolsCurrentPosition.Dispose();
+         _AscomToolsTargetPosition.Dispose();
+         TelescopeSettingsProvider.Current.Dispose();
       }
 
       public bool Connected
@@ -387,12 +389,6 @@ namespace ASCOM.LunaticAstroEQ
                   if (connectionResult == Core.Constants.MOUNT_SUCCESS)
                   {
                      IsConnected = true;
-
-                     // Zero axis positions at NCP
-
-                     Controller.MCSetAxisPosition(AXISID.AXIS1, 0.0);
-                     Controller.MCSetAxisPosition(AXISID.AXIS2, 0.0);
-
                      InitialiseCurrentPosition();
 
                   }
@@ -611,8 +607,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("CanSetDeclinationRate", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanSetDeclinationRate", "Get - {0}", true);
+            return true;
          }
       }
 
@@ -620,6 +616,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
+            //TODO: CanSetGuideRates
             tl.LogMessage("CanSetGuideRates", "Get - " + false.ToString());
             return false;
          }
@@ -629,8 +626,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("CanSetPark", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanSetPark", "Get - {0}", true);
+            return true;
          }
       }
 
@@ -656,8 +653,12 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("CanSetTracking", "Get - " + false.ToString());
-            return false;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanSetTracking", "Get - {0}",  true);
+            return true;
          }
       }
 
@@ -665,8 +666,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("CanSlew", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanSlew", "Get - {0}", true);
+            return true;
          }
       }
 
@@ -919,8 +920,10 @@ namespace ASCOM.LunaticAstroEQ
 
       public void SetPark()
       {
-         tl.LogMessage("SetPark", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SetPark");
+         LogMessage("Command", "SetPark");
+         _ParkedAxisPosition = _CurrentPosition.ObservedAxes;
+         Settings.AxisParkPosition = _ParkedAxisPosition;
+         TelescopeSettingsProvider.Current.SaveSettings();
       }
 
       public PierSide SideOfPier
@@ -1032,16 +1035,6 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private PierSide _previousPointingSOP = PierSide.pierUnknown;
-      private AxisPosition _previousAxisPosition;
-
-      private void InitialiseCurrentPosition()
-      {
-         DateTime now = DateTime.Now;
-         _ParkedAxisPosition = Settings.AxisParkPosition;
-         _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
-         _previousAxisPosition = _ParkedAxisPosition;
-      }
 
 
 

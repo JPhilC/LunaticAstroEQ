@@ -5,10 +5,11 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
+using System.Windows;
 
 namespace ASCOM.LunaticAstroEQ
 {
-   public class TelescopeSettingsProvider : ISettingsProvider<TelescopeSettings>
+   public class TelescopeSettingsProvider : ISettingsProvider<TelescopeSettings>, IDisposable
    {
 
       #region Singleton implimentation
@@ -26,6 +27,10 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
       #endregion
+
+      private FileSystemWatcher _Watcher = null;
+
+      private string _SettingsFile = string.Empty;
 
       private static TelescopeSettings _Settings = null;
 
@@ -136,10 +141,28 @@ namespace ASCOM.LunaticAstroEQ
 
       private TelescopeSettingsProvider()
       {
+         _SettingsFile = Path.Combine(UserSettingsFolder, CONFIG_SETTINGS_FILENAME);
+
          if (_Settings == null)
          {
             LoadSettings();
+
+            // Add file watcher
+            _Watcher = new FileSystemWatcher();
+            _Watcher.Path = UserSettingsFolder;
+            _Watcher.Filter = CONFIG_SETTINGS_FILENAME;
+            // _Watcher.Changed += _Config_Changed;
+            WeakEventManager<FileSystemWatcher, FileSystemEventArgs>.AddHandler(_Watcher, "Changed", _Config_Changed);
+            _Watcher.EnableRaisingEvents = true;
+
          }
+
+      }
+
+      private void _Config_Changed(object sender, FileSystemEventArgs e)
+      {
+         // Refresh settings from file.
+         LoadSettings();
       }
 
       public TelescopeSettings Settings
@@ -158,10 +181,9 @@ namespace ASCOM.LunaticAstroEQ
       {
          lock (_Lock)
          {
-            string settingsFile = Path.Combine(UserSettingsFolder, CONFIG_SETTINGS_FILENAME);
-            if (File.Exists(settingsFile))
+            if (File.Exists(_SettingsFile))
             {
-               using (StreamReader sr = new StreamReader(settingsFile))
+               using (StreamReader sr = new StreamReader(_SettingsFile))
                {
                   JsonSerializer serializer = new JsonSerializer();
                   _Settings = (TelescopeSettings)serializer.Deserialize(sr, typeof(TelescopeSettings));
@@ -170,6 +192,7 @@ namespace ASCOM.LunaticAstroEQ
             if (_Settings == null)
             {
                _Settings = new TelescopeSettings();   // Initilise with default values.
+               SaveSettings();                        // Create a new file
             }
          }
       }
@@ -182,11 +205,11 @@ namespace ASCOM.LunaticAstroEQ
       {
          lock (_Lock)
          {
-            string settingsFile = Path.Combine(UserSettingsFolder, CONFIG_SETTINGS_FILENAME);
+            _Watcher.EnableRaisingEvents = false;
             JsonSerializer serializer = new JsonSerializer();
             serializer.NullValueHandling = NullValueHandling.Ignore;
             serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-            using (StreamWriter sw = new StreamWriter(settingsFile))
+            using (StreamWriter sw = new StreamWriter(_SettingsFile))
             using (JsonWriter writer = new JsonTextWriter(sw))
             {
                {
@@ -194,9 +217,30 @@ namespace ASCOM.LunaticAstroEQ
                   serializer.Serialize(writer, _Settings);
                }
             }
+            _Watcher.EnableRaisingEvents = true;
          }
       }
 
+      #region IDisposable ...
+      public void Dispose()
+      {
+         Dispose(true);
+         GC.SuppressFinalize(this);
+      }
 
+      protected virtual void Dispose(bool disposing)
+      {
+         if (disposing)
+         {
+            if (_Watcher != null)
+            {
+               _Watcher.EnableRaisingEvents = false;
+               WeakEventManager<FileSystemWatcher, FileSystemEventArgs>.RemoveHandler(_Watcher, "Changed", _Config_Changed);
+               _Watcher.Dispose();
+               _Watcher = null;
+            }
+         }
+      }
+      #endregion
    }
 }

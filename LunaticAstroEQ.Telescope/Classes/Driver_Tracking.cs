@@ -31,6 +31,21 @@ namespace ASCOM.LunaticAstroEQ
       private TimeSpan _minRefreshInterval = new TimeSpan(0, 0, 0, 0, 500);
       private double _axisPositionTolerance = 0.00001;
 
+      private PierSide _previousPointingSOP = PierSide.pierUnknown;
+      private AxisPosition _previousAxisPosition;
+
+      private void InitialiseCurrentPosition()
+      {
+         DateTime now = DateTime.Now;
+         _ParkedAxisPosition = Settings.AxisParkPosition;
+         _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
+         _previousAxisPosition = _ParkedAxisPosition;
+         lock (Controller)
+         {
+            Controller.MCSetAxisPosition(_ParkedAxisPosition);
+         }
+      }
+
 
       /// <summary>
       /// Refreshes the NCP and current positions if more than 500ms have elapsed since the last refresh.

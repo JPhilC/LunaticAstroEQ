@@ -793,6 +793,18 @@ namespace ASCOM.LunaticAstroEQ.Controller
          _AxisStatus[(int)Axis].SetFullStop();
       }
 
+
+      /// <summary>
+      /// Sets an axis position
+      /// </summary>
+      /// <param name="Axis"></param>
+      /// <param name="NewValue">The current axis position in radians</param>
+      public void MCSetAxisPosition(AxisPosition newPositions)
+      {
+         MCSetAxisPosition(AXISID.AXIS1, newPositions.RAAxis.Radians);
+         MCSetAxisPosition(AXISID.AXIS2, newPositions.DecAxis.Radians);
+      }
+
       /// <summary>
       /// Sets an axis position
       /// </summary>
