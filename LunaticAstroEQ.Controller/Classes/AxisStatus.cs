@@ -21,11 +21,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
       public bool SlewingForward;
       public bool HighSpeed;
       public bool NotInitialized;
+      public bool Tracking;
+      public int TrackingRate;
 
       public void SetFullStop()
       {
          FullStop = true;
          SlewingTo = Slewing = false;
+         Tracking = false;
       }
       public void SetSlewing(bool forward, bool highspeed)
       {
@@ -42,6 +45,12 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
          SlewingForward = forward;
          HighSpeed = highspeed;
+      }
+
+      public void SetTracking(bool tracking, int trackingRate)
+      {
+         Tracking = tracking;
+         TrackingRate = trackingRate;
       }
 
       //// Mask for axis status

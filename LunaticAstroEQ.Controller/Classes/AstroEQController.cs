@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using TA.Ascom.ReactiveCommunications;
 using ASCOM.LunaticAstroEQ.Core.Geometry;
 using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
+using ASCOM.DeviceInterface;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
@@ -39,6 +40,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       private double[] _SlewingSpeed = new double[2] { 0, 0 };        // Operating speed in radians per second                
       private AxisStatus[] _AxisStatus = new AxisStatus[2];           // The two-axis status of the carriage should be referenced by AxesStatus[AXIS1] and AxesStatus[AXIS2]
+      private long[] GridPerRevolution = new long[2];                  // Number of steps for 360 degree
 
       // special charactor for communication.
       const char cStartChar_Out = ':';       // Leading charactor of a command 
@@ -55,10 +57,10 @@ namespace ASCOM.LunaticAstroEQ.Controller
       private const double AXIS_ERROR_TOLERANCE = 3.5E-5;
 
 
-      private char dir = '0'; // direction
-                              // Mount code: 0x00=EQ6, 0x01=HEQ5, 0x02=EQ5, 0x03=EQ3
-                              //             0x80=GT,  0x81=MF,   0x82=114GT
-                              //             0x90=DOB
+      //private char dir = '0'; // direction
+      //                        // Mount code: 0x00=EQ6, 0x01=HEQ5, 0x02=EQ5, 0x03=EQ3
+      //                        //             0x80=GT,  0x81=MF,   0x82=114GT
+      //                        //             0x90=DOB
       private long MountCode;
       private long[] StepTimerFreq = new long[2];        // Frequency of stepping timer.
       private long[] PESteps = new long[2];
@@ -67,6 +69,9 @@ namespace ASCOM.LunaticAstroEQ.Controller
       private long[] BreakSteps = new long[2];           // Break steps from slewing to stop.
       private long[] LowSpeedGotoMargin = new long[2];      // If slewing steps exceeds this LowSpeedGotoMargin, 
                                                             // GOTO is in high speed slewing.
+      private double[] LowSpeedSlewRate = new double[2];    // Low speed slew rate
+      private double[] HighSpeedSlewRate = new double[2];   // High speed slew rate
+
 
       private bool InstantStop;              // Use InstantStop command for MCAxisStop
       #endregion
@@ -200,8 +205,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
          MCVersion = 0;
 
-         _AxisStatus[0] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false };
-         _AxisStatus[1] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false };
+         _AxisStatus[0] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false, Tracking = false, TrackingRate = 0 };
+         _AxisStatus[1] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false, Tracking = false, TrackingRate = 0 };
 
       }
 
@@ -399,7 +404,6 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       #endregion
 
-      private object portLock = new object();
       /// <summary>
       /// One communication between mount and client
       /// </summary>
@@ -407,9 +411,9 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <param name="Command">The comamnd char set</param>
       /// <param name="cmdDataStr">The data need to send</param>
       /// <returns>The response string from mount</returns>
-      private String TalkWithAxis(AXISID axis, char cmd, string cmdDataStr)
+      private String TalkWithAxis(AxisId axis, char cmd, string cmdDataStr)
       {
-         lock (portLock)
+         lock (lockObject)
          {
             //System.Diagnostics.Debug.WriteLine(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
             string response = string.Empty;
@@ -430,7 +434,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             //System.Diagnostics.Debug.WriteLine($" - > Command: {cmdString}");
             //string.Format("{0}{1}{2}{3}{4}",
             //cStartChar_Out,
-            //command,
+            //cmd,
             //(int)axis,
             //(cmdDataStr ?? "."),
             //cEndChar);
@@ -527,13 +531,13 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   try
                   {
                      System.Diagnostics.Debug.WriteLine("InquireMotorBoardVersion");
-                     InquireMotorBoardVersion(AXISID.AXIS1);
+                     InquireMotorBoardVersion(AxisId.Axis1_RA);
                   }
                   catch
                   {
                      // try again
                      System.Threading.Thread.Sleep(200);
-                     InquireMotorBoardVersion(AXISID.AXIS1);
+                     InquireMotorBoardVersion(AxisId.Axis1_RA);
                   }
 
                   MountCode = MCVersion & 0xFF;
@@ -541,40 +545,46 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   //// NOTE: Simulator settings, Mount dependent Settings
 
                   // Inquire Gear Rate
-                  System.Diagnostics.Debug.WriteLine("InquireGridPerRevolution");
-                  InquireGridPerRevolution(AXISID.AXIS1);
-                  InquireGridPerRevolution(AXISID.AXIS2);
+                  // System.Diagnostics.Debug.WriteLine("InquireGridPerRevolution");
+                  InquireGridPerRevolution(AxisId.Axis1_RA);
+                  InquireGridPerRevolution(AxisId.Axis2_Dec);
 
                   // Inquire motor timer interrup frequency
-                  System.Diagnostics.Debug.WriteLine("InquireTimerInterruptFreq");
-                  InquireTimerInterruptFreq(AXISID.AXIS1);
-                  InquireTimerInterruptFreq(AXISID.AXIS2);
+                  // System.Diagnostics.Debug.WriteLine("InquireTimerInterruptFreq");
+                  InquireTimerInterruptFreq(AxisId.Axis1_RA);
+                  InquireTimerInterruptFreq(AxisId.Axis2_Dec);
 
                   // Inquire motor high speed ratio
-                  System.Diagnostics.Debug.WriteLine("InquireHighSpeedRatio");
-                  InquireHighSpeedRatio(AXISID.AXIS1);
-                  InquireHighSpeedRatio(AXISID.AXIS2);
+                  // System.Diagnostics.Debug.WriteLine("InquireHighSpeedRatio");
+                  InquireHighSpeedRatio(AxisId.Axis1_RA);
+                  InquireHighSpeedRatio(AxisId.Axis2_Dec);
 
                   // Inquire PEC period
-                  System.Diagnostics.Debug.WriteLine("InquirePECPeriod");
-                  InquirePECPeriod(AXISID.AXIS1);
-                  InquirePECPeriod(AXISID.AXIS2);
+                  // System.Diagnostics.Debug.WriteLine("InquirePECPeriod");
+                  InquirePECPeriod(AxisId.Axis1_RA);
+                  InquirePECPeriod(AxisId.Axis2_Dec);
 
                   //// Inquire Axis Position
                   //System.Diagnostics.Debug.WriteLine("MCGetAxisPosition");
                   //_AxisPosition[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
                   //_AxisPosition[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
 
-                  System.Diagnostics.Debug.WriteLine("InitializeMC");
+                  // System.Diagnostics.Debug.WriteLine("InitializeMC");
                   InitializeMC();
 
                   // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
-                  LowSpeedGotoMargin[(int)AXISID.AXIS1] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AXISID.AXIS1]);
-                  LowSpeedGotoMargin[(int)AXISID.AXIS2] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AXISID.AXIS2]);
+                  LowSpeedGotoMargin[(int)AxisId.Axis1_RA] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AxisId.Axis1_RA]);
+                  LowSpeedGotoMargin[(int)AxisId.Axis2_Dec] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AxisId.Axis2_Dec]);
+
+
+                  LowSpeedSlewRate[(int)AxisId.Axis1_RA] = ((double)StepTimerFreq[(int)AxisId.Axis1_RA] / ((double)GridPerRevolution[(int)AxisId.Axis1_RA] / CoreConstants.SECONDS_PER_SIDERIAL_DAY));
+                  LowSpeedSlewRate[(int)AxisId.Axis2_Dec] = ((double)StepTimerFreq[(int)AxisId.Axis2_Dec] / ((double)GridPerRevolution[(int)AxisId.Axis2_Dec] / CoreConstants.SECONDS_PER_SIDERIAL_DAY));
+                  HighSpeedSlewRate[(int)AxisId.Axis1_RA] = ((double)HighSpeedRatio[(int)AxisId.Axis1_RA] * ((double)StepTimerFreq[(int)AxisId.Axis1_RA] / ((double)GridPerRevolution[(int)AxisId.Axis1_RA] / CoreConstants.SECONDS_PER_SIDERIAL_DAY)));
+                  HighSpeedSlewRate[(int)AxisId.Axis2_Dec] = ((double)HighSpeedRatio[(int)AxisId.Axis2_Dec] * ((double)StepTimerFreq[(int)AxisId.Axis2_Dec] / ((double)GridPerRevolution[(int)AxisId.Axis2_Dec] / CoreConstants.SECONDS_PER_SIDERIAL_DAY)));
 
                   // Default break steps
-                  BreakSteps[(int)AXISID.AXIS1] = 3500;
-                  BreakSteps[(int)AXISID.AXIS2] = 3500;
+                  BreakSteps[(int)AxisId.Axis1_RA] = 3500;
+                  BreakSteps[(int)AxisId.Axis2_Dec] = 3500;
 
                   ControllerActive = true;
 
@@ -593,204 +603,226 @@ namespace ASCOM.LunaticAstroEQ.Controller
          return result;
       }
 
-      public void MCAxisSlew(AXISID axis, double speed)
+      public void MCAxisSlew(AxisId axis, double speed, HemisphereOption hemisphere)
       {
-         // Limit maximum speed
-         if (speed > MAX_SLEW_SPEED_RADIANS)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
-            speed = MAX_SLEW_SPEED_RADIANS;
-         else if (speed < -MAX_SLEW_SPEED_RADIANS)
-            speed = -MAX_SLEW_SPEED_RADIANS;
-
-         double internalSpeed = speed;
-         bool forward = false, highspeed = false;
-
-         // InternalSpeed lower than 1/1000 of sidereal rate?
-         if (Math.Abs(internalSpeed) <= Constants.SIDEREALRATE_RADIANS / 1000.0)
+         lock (lockObject)
          {
-            MCAxisStop(axis);
-            return;
+            // Limit maximum speed
+            if (speed > MAX_SLEW_SPEED_RADIANS)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
+               speed = MAX_SLEW_SPEED_RADIANS;
+            else if (speed < -MAX_SLEW_SPEED_RADIANS)
+               speed = -MAX_SLEW_SPEED_RADIANS;
+
+            double internalSpeed = speed;
+            bool forward = false, highspeed = false;
+
+            // InternalSpeed lower than 1/1000 of sidereal rate?
+            if (Math.Abs(internalSpeed) <= Constants.SIDEREALRATE_RADIANS / 1000.0)
+            {
+               MCAxisStop(axis);
+               return;
+            }
+
+            // Stop motor and set motion mode if necessary.
+            PrepareForSlewing(axis, internalSpeed, hemisphere);
+
+            if (internalSpeed > 0.0)
+               forward = true;
+            else
+            {
+               internalSpeed = -internalSpeed;
+               forward = false;
+            }
+
+            // TODO: ask the details
+
+            // Calculate and set step period. 
+            if (internalSpeed > LOW_SPEED_MARGIN)
+            {                 // High speed adjustment
+               internalSpeed = internalSpeed / (double)HighSpeedRatio[(int)axis];
+               highspeed = true;
+            }
+            internalSpeed = 1 / internalSpeed;                    // For using function RadSpeedToInt(), change to unit Senonds/Rad.
+            long SpeedInt = RadSpeedToInt(axis, internalSpeed);
+            if ((MCVersion == 0x010600) || (MCVersion == 0x010601))  // For special MC version.
+               SpeedInt -= 3;
+            if (SpeedInt < 6) SpeedInt = 6;
+            SetStepPeriod(axis, SpeedInt);
+
+            // Start motion
+            // if (AxesStatus[Axis] & AXIS_FULL_STOPPED)				// It must be remove for the latest DC motor board.
+            StartMotion(axis);
+
+            // _AxisStatus[(int)axis].SetSlewing(forward, highspeed);
+            _SlewingSpeed[(int)axis] = speed;
          }
-
-         // Stop motor and set motion mode if necessary.
-         PrepareForSlewing(axis, internalSpeed);
-
-         if (internalSpeed > 0.0)
-            forward = true;
-         else
-         {
-            internalSpeed = -internalSpeed;
-            forward = false;
-         }
-
-         // TODO: ask the details
-
-         // Calculate and set step period. 
-         if (internalSpeed > LOW_SPEED_MARGIN)
-         {                 // High speed adjustment
-            internalSpeed = internalSpeed / (double)HighSpeedRatio[(int)axis];
-            highspeed = true;
-         }
-         internalSpeed = 1 / internalSpeed;                    // For using function RadSpeedToInt(), change to unit Senonds/Rad.
-         long SpeedInt = RadSpeedToInt(axis, internalSpeed);
-         if ((MCVersion == 0x010600) || (MCVersion == 0x010601))  // For special MC version.
-            SpeedInt -= 3;
-         if (SpeedInt < 6) SpeedInt = 6;
-         SetStepPeriod(axis, SpeedInt);
-
-         // Start motion
-         // if (AxesStatus[Axis] & AXIS_FULL_STOPPED)				// It must be remove for the latest DC motor board.
-         StartMotion(axis);
-
-         _AxisStatus[(int)axis].SetSlewing(forward, highspeed);
-         _SlewingSpeed[(int)axis] = speed;
       }
 
-      public void MCAxisSlewTo(AxisPosition targetPosition)
+      public void MCAxisSlewTo(AxisPosition targetPosition, HemisphereOption hemisphere)
       {
-         MCAxisSlewTo(AXISID.AXIS1, targetPosition.RAAxis.Radians);
-         MCAxisSlewTo(AXISID.AXIS2, targetPosition.DecAxis.Radians);
+         lock (lockObject)
+         {
+            MCAxisSlewTo(AxisId.Axis1_RA, targetPosition.RAAxis.Radians, hemisphere);
+            MCAxisSlewTo(AxisId.Axis2_Dec, targetPosition.DecAxis.Radians, hemisphere);
+         }
       }
 
       /// <summary>
       /// Slew one axis to a position given in Radians
       /// </summary>
-      /// <param name="Axis">Axis to slew</param>
-      /// <param name="TargetPosition">Target position in Radians</param>
-      public void MCAxisSlewTo(AXISID Axis, double TargetPosition)
+      /// <param name="axis">Axis to slew</param>
+      /// <param name="targetPosition">Target position in Radians</param>
+      public void MCAxisSlewTo(AxisId axis, double targetPosition, HemisphereOption hemisphere)
       {
-         // Get current position of the axis.
-         var CurPosition = MCGetAxisPosition(Axis);
-         double MovingAngle;
-         // If Current Position < 180 and target is < 180 simple move
-         if (CurPosition < Math.PI && TargetPosition > Math.PI)
+         lock (lockObject)
          {
-            MovingAngle = TargetPosition - CurPosition - CoreConstants.TWO_PI;
-         }
-         // If current position >180 and target < 180 must move through zero
-         else if (CurPosition > Math.PI && TargetPosition < Math.PI)
-         {
-            MovingAngle = CoreConstants.TWO_PI - (CurPosition - TargetPosition);
-         }
-         // If current position < 180 and target > 180 must move through zero
-         else
-         {
-            MovingAngle = TargetPosition - CurPosition;
-         }
-         // Calculate slewing distance.
-         //// Note: For EQ mount, Positions[AXIS1] is offset( -PI/2 ) adjusted in UpdateAxisPosition().
-         //var MovingAngle = TargetPosition - CurPosition;
-         System.Diagnostics.Debug.WriteLine($"Current Position = {Angle.RadiansToDegrees(CurPosition)}");
-         System.Diagnostics.Debug.WriteLine($"Target Position = {Angle.RadiansToDegrees(TargetPosition)}");
-         System.Diagnostics.Debug.WriteLine($"MovingAngle = {Angle.RadiansToDegrees(MovingAngle)}");
-         // Convert distance in radian into steps.
-         var MovingSteps = AngleToStep(Axis, MovingAngle);
+            System.Diagnostics.Debug.WriteLine($"MCAxisSlewTo - {axis}, {targetPosition}");
 
-         bool forward = false, highspeed = false;
+            // Get current position of the axis.
+            var CurPosition = MCGetAxisPosition(axis);
+            double movingAngle;
+            // If Current Position < 180 and target is < 180 simple move
+            if (CurPosition < Math.PI && targetPosition > Math.PI)
+            {
+               movingAngle = targetPosition - CurPosition - CoreConstants.TWO_PI;
+            }
+            // If current position >180 and target < 180 must move through zero
+            else if (CurPosition > Math.PI && targetPosition < Math.PI)
+            {
+               movingAngle = CoreConstants.TWO_PI - (CurPosition - targetPosition);
+            }
+            // If current position < 180 and target > 180 must move through zero
+            else
+            {
+               movingAngle = targetPosition - CurPosition;
+            }
+            // Calculate slewing distance.
+            //// Note: For EQ mount, Positions[AXIS1] is offset( -PI/2 ) adjusted in UpdateAxisPosition().
+            //var MovingAngle = TargetPosition - CurPosition;
+            //System.Diagnostics.Debug.WriteLine($"Current Position = {Angle.RadiansToDegrees(CurPosition)}");
+            //System.Diagnostics.Debug.WriteLine($"Target Position = {Angle.RadiansToDegrees(TargetPosition)}");
+            //System.Diagnostics.Debug.WriteLine($"MovingAngle = {Angle.RadiansToDegrees(MovingAngle)}");
+            // Convert distance in radian into steps.
+            var movingSteps = AngleToStep(axis, movingAngle);
 
-         // If there is no increment, return directly.
-         if (MovingSteps == 0)
-         {
-            return;
+            bool forward = true, highspeed = false;
+            AxisDirection direction = AxisDirection.Forward;
+
+            // If there is no increment, return directly.
+            if (movingSteps == 0)
+            {
+               return;
+            }
+
+            // Set moving direction
+            if (movingSteps < 0)
+            {
+               direction = AxisDirection.Reverse;
+               movingSteps = -movingSteps;
+               forward = false;
+            }
+
+            // Might need to check whether motor has stopped.
+            MCAxisStop(axis);
+
+            // Check if the distance is long enough to trigger a high speed GOTO.
+            if (movingSteps > LowSpeedGotoMargin[(int)axis])
+            {
+               SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.HighSpeed);  // high speed GOTO slewing 
+               highspeed = true;
+            }
+            else
+            {
+               SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.LowSpeed);  // low speed GOTO slewing
+               highspeed = false;
+            }
+
+            SetGotoTargetIncrement(axis, movingSteps);
+            SetBreakPointIncrement(axis, BreakSteps[(int)axis]);
+            StartMotion(axis);
+
+            // _TargetPosition[(int)Axis] = TargetPosition;
+            // _AxisStatus[(int)axis].SetSlewingTo(forward, highspeed);
          }
-
-         // Set moving direction
-         if (MovingSteps > 0)
-         {
-            dir = '0';
-            forward = true;
-         }
-         else
-         {
-            dir = '1';
-            MovingSteps = -MovingSteps;
-            forward = false;
-         }
-
-         // Might need to check whether motor has stopped.
-
-         // Check if the distance is long enough to trigger a high speed GOTO.
-         if (MovingSteps > LowSpeedGotoMargin[(int)Axis])
-         {
-            SetMotionMode(Axis, '0', dir);      // high speed GOTO slewing 
-            highspeed = true;
-         }
-         else
-         {
-            SetMotionMode(Axis, '2', dir);      // low speed GOTO slewing
-            highspeed = false;
-         }
-
-         SetGotoTargetIncrement(Axis, MovingSteps);
-         SetBreakPointIncrement(Axis, BreakSteps[(int)Axis]);
-         StartMotion(Axis);
-
-         // _TargetPosition[(int)Axis] = TargetPosition;
-         _AxisStatus[(int)Axis].SetSlewingTo(forward, highspeed);
       }
 
-      public void MCAxisSlewBy(AXISID Axis, double movingAngle)
+      public void MCAxisSlewBy(AxisId axis, double movingAngle, HemisphereOption hemisphere)
       {
-         //var MovingAngle = TargetPosition - CurPosition;
-         // Convert distance in radian into steps.
-         var movingSteps = AngleToStep(Axis, movingAngle);
-
-         bool forward = false, highspeed = false;
-
-         // If there is no increment, return directly.
-         if (movingSteps == 0)
+         System.Diagnostics.Debug.WriteLine($"MCAxisSlewBy - {axis}, {movingAngle}");
+         lock (lockObject)
          {
-            return;
-         }
+            //var MovingAngle = TargetPosition - CurPosition;
+            // Convert distance in radian into steps.
+            var movingSteps = AngleToStep(axis, movingAngle);
 
-         // Set moving direction
-         if (movingSteps > 0)
-         {
-            dir = '0';
-            forward = true;
-         }
-         else
-         {
-            dir = '1';
-            movingSteps = -movingSteps;
-            forward = false;
-         }
+            AxisDirection direction = AxisDirection.Forward;
+            bool forward = false, highspeed = false;
 
-         // Might need to check whether motor has stopped.
+            // If there is no increment, return directly.
+            if (movingSteps == 0)
+            {
+               return;
+            }
 
-         // Check if the distance is long enough to trigger a high speed GOTO.
-         if (movingSteps > LowSpeedGotoMargin[(int)Axis])
-         {
-            SetMotionMode(Axis, '0', dir);      // high speed GOTO slewing 
-            highspeed = true;
+            // Set moving direction
+            if (movingSteps < 0)
+            {
+               direction = AxisDirection.Reverse;
+               forward = false;
+            }
+
+            // Might need to check whether motor has stopped.
+
+            // Check if the distance is long enough to trigger a high speed GOTO.
+            if (movingSteps > LowSpeedGotoMargin[(int)axis])
+            {
+               SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.HighSpeed);  // high speed GOTO slewing 
+               highspeed = true;
+            }
+            else
+            {
+               SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.LowSpeed);  // low speed GOTO slewing 
+               highspeed = false;
+            }
+
+            SetGotoTargetIncrement(axis, movingSteps);
+            SetBreakPointIncrement(axis, BreakSteps[(int)axis]);
+            StartMotion(axis);
+
+            // _TargetPosition[(int)Axis] = TargetPosition;
+            // _AxisStatus[(int)axis].SetSlewingTo(forward, highspeed);
          }
-         else
-         {
-            SetMotionMode(Axis, '2', dir);      // low speed GOTO slewing
-            highspeed = false;
-         }
-
-         SetGotoTargetIncrement(Axis, movingSteps);
-         SetBreakPointIncrement(Axis, BreakSteps[(int)Axis]);
-         StartMotion(Axis);
-
-         // _TargetPosition[(int)Axis] = TargetPosition;
-         _AxisStatus[(int)Axis].SetSlewingTo(forward, highspeed);
       }
 
-      public void MCAxisSlewBy(Angle[] deltaAngle)
+      public void MCAxisSlewBy(Angle[] deltaAngle, HemisphereOption hemisphere)
       {
-         MCAxisSlewBy(AXISID.AXIS1, deltaAngle[0].Radians);
-         MCAxisSlewBy(AXISID.AXIS2, deltaAngle[1].Radians);
+         lock (lockObject)
+         {
+            MCAxisSlewBy(AxisId.Axis1_RA, deltaAngle[0].Radians, hemisphere);
+            MCAxisSlewBy(AxisId.Axis2_Dec, deltaAngle[1].Radians, hemisphere);
+         }
       }
 
-      public void MCAxisStop(AXISID Axis)
-      {
-         if (InstantStop)
-            TalkWithAxis(Axis, 'L', null);
-         else
-            TalkWithAxis(Axis, 'K', null);
 
-         _AxisStatus[(int)Axis].SetFullStop();
+      public void MCAxisStop(AxisId axis)
+      {
+         System.Diagnostics.Debug.WriteLine($"MCAxisStop - {axis}");
+         lock (lockObject)
+         {
+            if (axis == AxisId.Both_Axes)
+            {
+               MCAxisStop(AxisId.Axis1_RA);
+               MCAxisStop(AxisId.Axis2_Dec);
+               return;
+            }
+
+            if (InstantStop)
+               TalkWithAxis(axis, 'L', null);
+            else
+               TalkWithAxis(axis, 'K', null);
+
+            _AxisStatus[(int)axis].SetFullStop();
+         }
       }
 
 
@@ -801,8 +833,11 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <param name="NewValue">The current axis position in radians</param>
       public void MCSetAxisPosition(AxisPosition newPositions)
       {
-         MCSetAxisPosition(AXISID.AXIS1, newPositions.RAAxis.Radians);
-         MCSetAxisPosition(AXISID.AXIS2, newPositions.DecAxis.Radians);
+         lock (lockObject)
+         {
+            MCSetAxisPosition(AxisId.Axis1_RA, newPositions.RAAxis.Radians);
+            MCSetAxisPosition(AxisId.Axis2_Dec, newPositions.DecAxis.Radians);
+         }
       }
 
       /// <summary>
@@ -810,78 +845,146 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// </summary>
       /// <param name="Axis"></param>
       /// <param name="NewValue">The current axis position in radians</param>
-      public void MCSetAxisPosition(AXISID Axis, double NewValue)
+      public void MCSetAxisPosition(AxisId Axis, double NewValue)
       {
-         long NewStepIndex = AngleToStep(Axis, NewValue);
-         NewStepIndex += 0x800000;
+         lock (lockObject)
+         {
+            long NewStepIndex = AngleToStep(Axis, NewValue);
+            NewStepIndex += 0x800000;
 
-         string szCmd = LongTo6BitHEX(NewStepIndex);
-         TalkWithAxis(Axis, 'E', szCmd);
+            string szCmd = LongTo6BitHEX(NewStepIndex);
+            TalkWithAxis(Axis, 'E', szCmd);
 
-         // _AxisPosition[(int)Axis] = NewValue;
+            // _AxisPosition[(int)Axis] = NewValue;
+         }
       }
 
       /// <summary>
       /// Returns the current axis position in radians
       /// </summary>
-      /// <param name="Axis"></param>
+      /// <param name="axis"></param>
       /// <returns></returns>
-      public double MCGetAxisPosition(AXISID Axis)
+      public double MCGetAxisPosition(AxisId axis)
       {
-         string response = TalkWithAxis(Axis, 'j', null);
-         long iPosition = BCDstr2long(response);
-         iPosition -= 0x00800000;
-         return StepToAngle(Axis, iPosition);
+         lock (lockObject)
+         {
+            string response = TalkWithAxis(axis, 'j', null);
+            long iPosition = BCDstr2long(response);
+            iPosition -= 0x00800000;
+            return StepToAngle(axis, iPosition);
+         }
       }
 
       public AxisPosition MCGetAxisPositions()
       {
-         return new AxisPosition(MCGetAxisPosition(AXISID.AXIS1), MCGetAxisPosition(AXISID.AXIS2), false, true);
+         lock (lockObject)
+         {
+            return new AxisPosition(MCGetAxisPosition(AxisId.Axis1_RA), MCGetAxisPosition(AxisId.Axis2_Dec), false, true);
+         }
       }
 
-      public AxisStatus MCGetAxisStatus(AXISID Axis)
+      public AxisStatus[] MCGetAxesStatus()
       {
-
-         var response = TalkWithAxis(Axis, 'f', null);
-
-         if ((response[2] & 0x01) != 0)
+         lock (lockObject)
          {
-            // Axis is running
-            if ((response[1] & 0x01) != 0)
-               _AxisStatus[(int)Axis].Slewing = true;     // Axis in slewing(AstroMisc speed) mode.
+            return new AxisStatus[] {
+            MCGetAxisStatus(AxisId.Axis1_RA),
+            MCGetAxisStatus(AxisId.Axis2_Dec)
+         };
+         }
+      }
+
+      public AxisStatus MCGetAxisStatus(AxisId axis)
+      {
+         lock (lockObject)
+         {
+            var response = TalkWithAxis(axis, 'f', null);
+
+            if ((response[2] & 0x01) != 0)
+            {
+               // Axis is running
+               if ((response[1] & 0x01) != 0)
+                  _AxisStatus[(int)axis].Slewing = true;     // Axis in slewing(AstroMisc speed) mode.
+               else
+                  _AxisStatus[(int)axis].SlewingTo = true;      // Axis in SlewingTo mode.
+            }
             else
-               _AxisStatus[(int)Axis].SlewingTo = true;      // Axis in SlewingTo mode.
+            {
+               _AxisStatus[(int)axis].FullStop = true; // FullStop = 1;	// Axis is fully stop.
+            }
+
+            if ((response[1] & 0x02) == 0)
+               _AxisStatus[(int)axis].SlewingForward = true; // Angle increase = 1;
+            else
+               _AxisStatus[(int)axis].SlewingForward = false;
+
+            if ((response[1] & 0x04) != 0)
+               _AxisStatus[(int)axis].HighSpeed = true; // HighSpeed running mode = 1;
+            else
+               _AxisStatus[(int)axis].HighSpeed = false;
+
+            if ((response[3] & 1) == 0)
+               _AxisStatus[(int)axis].NotInitialized = true; // MC is not initialized.
+            else
+               _AxisStatus[(int)axis].NotInitialized = false;
+
          }
-         else
-         {
-            _AxisStatus[(int)Axis].FullStop = true; // FullStop = 1;	// Axis is fully stop.
-         }
-
-         if ((response[1] & 0x02) == 0)
-            _AxisStatus[(int)Axis].SlewingForward = true; // Angle increase = 1;
-         else
-            _AxisStatus[(int)Axis].SlewingForward = false;
-
-         if ((response[1] & 0x04) != 0)
-            _AxisStatus[(int)Axis].HighSpeed = true; // HighSpeed running mode = 1;
-         else
-            _AxisStatus[(int)Axis].HighSpeed = false;
-
-         if ((response[3] & 1) == 0)
-            _AxisStatus[(int)Axis].NotInitialized = true; // MC is not initialized.
-         else
-            _AxisStatus[(int)Axis].NotInitialized = false;
-
-
-         return _AxisStatus[(int)Axis];
+         return _AxisStatus[(int)axis];
       }
 
       public void MCSetSwitch(bool OnOff)
       {
-         if (OnOff)
-            TalkWithAxis(AXISID.AXIS1, 'O', "1");
-         else
-            TalkWithAxis(AXISID.AXIS1, 'O', "0");
+         lock (lockObject)
+         {
+            if (OnOff)
+               TalkWithAxis(AxisId.Axis1_RA, 'O', "1");
+            else
+               TalkWithAxis(AxisId.Axis1_RA, 'O', "0");
+         }
+      }
+
+
+      public void MCStartRATrack(DriveRates trackRate, HemisphereOption hemisphere, AxisDirection direction)
+      {
+         lock (lockObject)
+         {
+            System.Diagnostics.Debug.WriteLine($"MCStartRATrack - {trackRate}");
+
+            int stepPeriod;
+
+            switch (trackRate)
+            {
+               case DriveRates.driveSolar:
+                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0016129032258064516129032258065);
+                  break;
+
+               case DriveRates.driveLunar:
+                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0370967741935483870967741935484);
+                  break;
+
+               case DriveRates.driveSidereal:
+                  stepPeriod = (int)LowSpeedSlewRate[0];
+                  break;
+
+               default:
+                  throw new ASCOM.InvalidValueException("Unexpected tracking drive rate");
+
+            }
+
+            MCAxisStop(AxisId.Axis1_RA);
+
+            // Set the motor hemisphere, mode, direction and speed
+            SetMotionMode(AxisId.Axis1_RA, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);
+
+            // Set step period
+            SetStepPeriod(AxisId.Axis1_RA, stepPeriod);
+
+            // Start RA Motor
+            StartMotion(AxisId.Axis1_RA);
+
+            _AxisStatus[(int)AxisId.Axis1_RA].SetTracking(true, (int)trackRate);
+
+         }
       }
 
       // Skywaterch Helper function
@@ -889,6 +992,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          return ((tmpChar >= '0') && (tmpChar <= '9')) || ((tmpChar >= 'A') && (tmpChar <= 'F'));
       }
+
       protected long HEX2Int(char HEX)
       {
          long tmp;
@@ -897,6 +1001,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             tmp -= 7;
          return tmp;
       }
+
       protected long BCDstr2long(string str)
       {
          // =020782 => 8521474
@@ -920,9 +1025,9 @@ namespace ASCOM.LunaticAstroEQ.Controller
          // + Integer.parseInt(response.substring(2, 4), 16) * 256
          // + Integer.parseInt(response.substring(4, 6), 16) * 256 * 256;
       }
+
       protected string LongTo6BitHEX(long number)
       {
-         // 31 -> 0F0000
          String A = ((int)number & 0xFF).ToString("X").ToUpper();
          String B = (((int)number & 0xFF00) / 256).ToString("X").ToUpper();
          String C = (((int)number & 0xFF0000) / 256 / 256).ToString("X").ToUpper();
@@ -933,18 +1038,23 @@ namespace ASCOM.LunaticAstroEQ.Controller
             B = "0" + B;
          if (C.Length == 1)
             C = "0" + C;
-
-         // if (D)
-         // Log.d(TAG, "longTo6BitHex " + number + "," + A + "," + B + "," + C);
-
          return A + B + C;
       }
 
-      private void PrepareForSlewing(AXISID Axis, double speed)
+      protected string LongTo2BitHEX(long number)
       {
-         char cDirection;
+         String A = ((int)number & 0xFF).ToString("X").ToUpper();
 
-         var axesstatus = MCGetAxisStatus(Axis);
+         if (A.Length == 1)
+            A = "0" + A;
+         return A;
+      }
+
+      private void PrepareForSlewing(AxisId axis, double speed, HemisphereOption hemisphere)
+      {
+         AxisDirection direction = (speed > 0.0 ? AxisDirection.Forward : AxisDirection.Reverse);
+
+         var axesstatus = MCGetAxisStatus(axis);
          if (!axesstatus.FullStop)
          {
             if ((axesstatus.SlewingTo) ||                               // GOTO in action
@@ -955,7 +1065,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
                 )
             {
                // We need to stop the motor first to change Motion Mode, etc.
-               MCAxisStop(Axis);
+               MCAxisStop(axis);
             }
             else
             {
@@ -968,7 +1078,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             while (true)
             {
                // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
-               axesstatus = MCGetAxisStatus(Axis);
+               axesstatus = MCGetAxisStatus(axis);
 
                // Return if the axis has stopped.
                if (axesstatus.FullStop)
@@ -984,42 +1094,38 @@ namespace ASCOM.LunaticAstroEQ.Controller
             }
 
          }
-         if (speed > 0.0)
+
+         if (direction == AxisDirection.Reverse)
          {
-            cDirection = '0';
-         }
-         else
-         {
-            cDirection = '1';
             speed = -speed;                     // Get absolute value of Speed.
          }
 
          if (speed > LOW_SPEED_MARGIN)
          {
-            SetMotionMode(Axis, '3', cDirection);              // Set HIGH speed slewing mode.
+            SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.HighSpeed);  // Set HIGH speed slewing mode.
          }
          else
-            SetMotionMode(Axis, '1', cDirection);              // Set LOW speed slewing mode.
+         SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);   // Set LOW speed slewing mode.
 
       }
 
       // Convert the arc angle to "step"
       protected double[] FactorRadToStep = new double[] { 0, 0 };     // Multiply the value of the radians by the factor to get the position value of the motor board (24 digits will discard the highest byte)
-      protected long AngleToStep(AXISID Axis, double AngleInRad)
+      protected long AngleToStep(AxisId Axis, double AngleInRad)
       {
          return (long)(AngleInRad * FactorRadToStep[(int)Axis]);
       }
 
       // Convert "step" to a radian angle
       protected double[] FactorStepToRad = new double[] { 0, 0 };    // Multiply the position value of the motor board (after the symbol problem needs to be processed) by the coefficient to get the radians value.
-      protected double StepToAngle(AXISID Axis, long Steps)
+      protected double StepToAngle(AxisId axis, long steps)
       {
-         return Steps * FactorStepToRad[(int)Axis];
+         return steps * FactorStepToRad[(int)axis];
       }
 
       // Converts the radians/second speed to the integer used to set the speed
       protected double[] FactorRadRateToInt = new double[] { 0, 0 };           // Multiply the value of radians/second by this factor to get a 32-bit integer for the set speed used by the motor board.
-      protected long RadSpeedToInt(AXISID Axis, double RateInRad)
+      protected long RadSpeedToInt(AxisId Axis, double RateInRad)
       {
          return (long)(RateInRad * FactorRadRateToInt[(int)Axis]);
       }
@@ -1027,7 +1133,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       /************************ MOTOR COMMAND SET ***************************/
       // Inquire Motor Board Version ":e(*1)", where *1: '1'= CH1, '2'= CH2, '3'= Both.
-      protected void InquireMotorBoardVersion(AXISID Axis)
+      protected void InquireMotorBoardVersion(AxisId Axis)
       {
          string response = TalkWithAxis(Axis, 'e', null);
 
@@ -1037,28 +1143,32 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       }
       // Inquire Grid Per Revolution ":a(*2)", where *2: '1'= CH1, '2' = CH2.
-      protected void InquireGridPerRevolution(AXISID Axis)
+      protected void InquireGridPerRevolution(AxisId axis)
       {
-         string response = TalkWithAxis(Axis, 'a', null);
+         string response = TalkWithAxis(axis, 'a', null);
 
-         long GearRatio = BCDstr2long(response);
+         long gearRatio = BCDstr2long(response);
 
          // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
          // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
          if ((MCVersion & 0x0000FF) == 0x80)
          {
-            GearRatio = 0x162B97;      // for 80GT mount
+            gearRatio = 0x162B97;      // for 80GT mount
          }
          if ((MCVersion & 0x0000FF) == 0x82)
          {
-            GearRatio = 0x205318;      // for 114GT mount
+            gearRatio = 0x205318;      // for 114GT mount
          }
-
-         FactorRadToStep[(int)Axis] = GearRatio / (2 * Math.PI);
-         FactorStepToRad[(int)Axis] = 2 * Math.PI / GearRatio;
+         if (gearRatio == 0)
+         {
+            gearRatio++;
+         }
+         GridPerRevolution[(int)axis] = gearRatio;
+         FactorRadToStep[(int)axis] = gearRatio / (2 * Math.PI);
+         FactorStepToRad[(int)axis] = 2 * Math.PI / gearRatio;
       }
       // Inquire Timer Interrupt Freq ":b1".
-      protected void InquireTimerInterruptFreq(AXISID Axis)
+      protected void InquireTimerInterruptFreq(AxisId Axis)
       {
          string response = TalkWithAxis(Axis, 'b', null);
 
@@ -1068,7 +1178,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          FactorRadRateToInt[(int)Axis] = (double)(StepTimerFreq[(int)Axis]) / FactorRadToStep[(int)Axis];
       }
       // Inquire high speed ratio ":g(*2)", where *2: '1'= CH1, '2' = CH2.
-      protected void InquireHighSpeedRatio(AXISID Axis)
+      protected void InquireHighSpeedRatio(AxisId Axis)
       {
          string response = TalkWithAxis(Axis, 'g', null);
 
@@ -1076,7 +1186,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          HighSpeedRatio[(int)Axis] = highSpeedRatio;
       }
       // Inquire PEC Period ":s(*1)", where *1: '1'= CH1, '2'= CH2, '3'= Both.
-      protected void InquirePECPeriod(AXISID Axis)
+      protected void InquirePECPeriod(AxisId Axis)
       {
          string response = TalkWithAxis(Axis, 's', null);
 
@@ -1086,39 +1196,102 @@ namespace ASCOM.LunaticAstroEQ.Controller
       // Set initialization done ":F3", where '3'= Both CH1 and CH2.
       protected virtual void InitializeMC()
       {
-         TalkWithAxis(AXISID.AXIS1, 'F', null);
-         TalkWithAxis(AXISID.AXIS2, 'F', null);
+         TalkWithAxis(AxisId.Axis1_RA, 'F', null);
+         TalkWithAxis(AxisId.Axis2_Dec, 'F', null);
       }
-      protected void SetMotionMode(AXISID Axis, char func, char direction)
+
+
+      protected void SetMotionMode(AxisId axis, HemisphereOption hemisphere, AxisMode mode, AxisDirection direction, AxisSpeed speed)
       {
-         string szCmd = "" + func + direction;
-         TalkWithAxis(Axis, 'G', szCmd);
+         byte ch;
+         ch = 0;
+
+         // Set Direction bit	(Bit 0)
+         if (direction == AxisDirection.Reverse)
+         {
+            ch |= 0x01;
+         }
+
+         // Set Hemisphere bit	(Bit 1)
+         if (hemisphere == HemisphereOption.Southern)
+         {
+            ch |= 0x02;
+         }
+
+         // 0 = high speed GOTO mode
+         // 1 = low speed SLEW mode
+         // 2 = low speed GOTO mode
+         // 3 = high speed SLEW mode 
+
+         // Set Mode and speed bits
+         if (mode == AxisMode.Goto)
+         {
+            //goto
+            if (speed == AxisSpeed.LowSpeed)
+            {
+               // Low speed goto = 2
+               ch |= 0x20;
+            }
+            else
+            {
+               //high speed goto = 0
+
+            }
+         }
+         else
+         {
+            // slew
+            if (speed == AxisSpeed.HighSpeed)
+            {
+               // High speed slew= 3
+               ch |= 0x30;
+            }
+            else
+            {
+               // low speed slew= 1
+               ch |= 0x10;
+            }
+         }
+
+
+         string szCmd = LongTo2BitHEX(ch);
+         TalkWithAxis(axis, 'G', szCmd);
       }
-      protected void SetGotoTargetIncrement(AXISID Axis, long StepsCount)
+
+      //protected void SetMotionMode(AxisId axis, char func, char direction)
+      //{
+      //   string szCmd = "" + func + direction;
+      //   TalkWithAxis(axis, 'G', szCmd);
+      //}
+
+
+
+      protected void SetGotoTargetIncrement(AxisId Axis, long StepsCount)
       {
          string cmd = LongTo6BitHEX(StepsCount);
 
          TalkWithAxis(Axis, 'H', cmd);
       }
-      protected void SetBreakPointIncrement(AXISID Axis, long StepsCount)
+      protected void SetBreakPointIncrement(AxisId Axis, long StepsCount)
       {
          string szCmd = LongTo6BitHEX(StepsCount);
 
          TalkWithAxis(Axis, 'M', szCmd);
       }
-      protected void SetBreakSteps(AXISID Axis, long NewBrakeSteps)
+      protected void SetBreakSteps(AxisId Axis, long NewBrakeSteps)
       {
          string szCmd = LongTo6BitHEX(NewBrakeSteps);
          TalkWithAxis(Axis, 'U', szCmd);
       }
-      protected void SetStepPeriod(AXISID Axis, long StepsCount)
+      protected void SetStepPeriod(AxisId Axis, long StepsCount)
       {
          string szCmd = LongTo6BitHEX(StepsCount);
          TalkWithAxis(Axis, 'I', szCmd);
       }
-      protected void StartMotion(AXISID Axis)
+      protected void StartMotion(AxisId axis)
       {
-         TalkWithAxis(Axis, 'J', null);
+         System.Diagnostics.Debug.WriteLine($"StartMotion - {axis}");
+         TalkWithAxis(axis, 'J', null);
       }
 
       #endregion

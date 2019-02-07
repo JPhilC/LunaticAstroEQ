@@ -1,4 +1,5 @@
-﻿using ASCOM.LunaticAstroEQ.Core;
+﻿using ASCOM.DeviceInterface;
+using ASCOM.LunaticAstroEQ.Core;
 using ASCOM.LunaticAstroEQ.Core.Geometry;
 using System;
 using System.Collections.Generic;
@@ -28,7 +29,20 @@ namespace ASCOM.LunaticAstroEQ
 
       public AxisPosition AxisUnparkPosition { get; set; }
       public AxisPosition AxisParkPosition { get; set; }
+
+
+      #region Tracking related ...
       public double[] CustomTrackingRate { get; set; } = new double[2];
+
+      public TrackingStatus TrackingState { get; set; }
+      public DriveRates TrackingRate { get; set; }
+
+      public string CustomTrackName { get; set; }
+
+      public double RightAscensionRate { get; set; }
+
+      public double DeclinationRate { get; set; }
+      #endregion
 
       public AscomCompliance AscomCompliance { get; set; }
 
@@ -48,6 +62,10 @@ namespace ASCOM.LunaticAstroEQ
          AscomCompliance = new AscomCompliance();
          AxisParkPosition = new AxisPosition(0.0, 0.0);
          AxisUnparkPosition = new AxisPosition(0.0, 0.0);
+         CustomTrackingRate = new double[] { 0.0, 0.0 };
+         TrackingState = TrackingStatus.Off;
+         TrackingRate = DriveRates.driveSidereal;
+
 
       }
    }

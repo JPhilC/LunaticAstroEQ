@@ -5,11 +5,9 @@ using System.Text;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
-   public enum AXISID { AXIS1 = 0, AXIS2 = 1 }; // ID unsed in ASTRO.DLL for axis 1 and axis 2 of a mount.
 
 
-
-   public enum MOUNTID
+   public enum MountID
    {
       // Telescope ID, they must be started from 0 and coded continuously.
       ID_CELESTRON_AZ = 0,          // Celestron Alt/Az Mount

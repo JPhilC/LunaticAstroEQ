@@ -20,9 +20,5 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       public double ObservatoryElevation { get; set; }
 
-      /// <summary>
-      /// The last recorded AltAz of the mount
-      /// </summary>
-      public AltAzCoordinate LastKnownPosition { get; set; } = new AltAzCoordinate();
    }
 }

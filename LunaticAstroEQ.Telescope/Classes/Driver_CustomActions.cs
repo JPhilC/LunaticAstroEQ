@@ -59,6 +59,7 @@ namespace ASCOM.LunaticAstroEQ
             case "Lunatic:SetCustomTrackingRates":
                Settings.CustomTrackingRate[0] = Convert.ToDouble(values[0]);
                Settings.CustomTrackingRate[1] = Convert.ToDouble(values[1]);
+               TelescopeSettingsProvider.Current.SaveSettings();
                break;
 
             case "Lunatic:SetSiteTemperature":

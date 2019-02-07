@@ -82,6 +82,9 @@ namespace ASCOM.LunaticAstroEQ
       internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ.";
       internal string driverName = "AstroEQ ASCOM Driver";
 
+      private const int RA_AXIS = 0;
+      private const int DEC_AXIS = 1;
+
       private AstroEQController Controller
       {
          get
@@ -484,6 +487,8 @@ namespace ASCOM.LunaticAstroEQ
          AbortSlewInternal();
       }
 
+
+      private AlignmentModes _AlignmentMode = AlignmentModes.algGermanPolar;
       public AlignmentModes AlignmentMode
       {
          get
@@ -585,14 +590,21 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private bool _CanPark = true;
       public bool CanPark
       {
          get
          {
-            tl.LogMessage("CanPark", "Get - " + false.ToString());
-            return false;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanPark", "Get - {0}", _CanPark);
+            return _CanPark;
          }
       }
+
+
 
       public bool CanPulseGuide
       {
@@ -603,12 +615,17 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private bool _CanSetDeclinationRate = true;
       public bool CanSetDeclinationRate
       {
          get
          {
-            LogMessage("CanSetDeclinationRate", "Get - {0}", true);
-            return true;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanSetDeclinationRate", "Get - {0}", _CanSetDeclinationRate);
+            return _CanSetDeclinationRate;
          }
       }
 
@@ -622,12 +639,17 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private bool _CanSetPark = true;
       public bool CanSetPark
       {
          get
          {
-            LogMessage("CanSetPark", "Get - {0}", true);
-            return true;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanSetPark", "Get - {0}", _CanSetPark);
+            return _CanSetPark;
          }
       }
 
@@ -636,20 +658,26 @@ namespace ASCOM.LunaticAstroEQ
          get
          {
             //TODO: CanSetPierSide - Needs functionality to force a meridian flip.
-            tl.LogMessage("CanSetPierSide", "Get - " + false.ToString());
+            LogMessage("CanSetPierSide", "Get - " + false.ToString());
             return false;
          }
       }
 
+      private bool _CanSetRightAscensionRate = true;
       public bool CanSetRightAscensionRate
       {
          get
          {
-            tl.LogMessage("CanSetRightAscensionRate", "Get - " + false.ToString());
-            return false;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanSetRightAscensionRate", "Get - {0}", _CanSetRightAscensionRate);
+            return _CanSetRightAscensionRate;
          }
       }
 
+      private bool _CanSetTracking = true;
       public bool CanSetTracking
       {
          get
@@ -658,71 +686,90 @@ namespace ASCOM.LunaticAstroEQ
             {
                throw new NotConnectedException("Astro EQ is not connected.");
             }
-            LogMessage("CanSetTracking", "Get - {0}",  true);
-            return true;
+            LogMessage("CanSetTracking", "Get - {0}", _CanSetTracking);
+            return _CanSetTracking;
          }
       }
 
+      private bool _CanSlew = true;
       public bool CanSlew
       {
          get
          {
-            LogMessage("CanSlew", "Get - {0}", true);
-            return true;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanSlew", "Get - {0}", _CanSlew);
+            return _CanSlew;
          }
       }
 
+      private bool _CanSlewAltAz = false;
       public bool CanSlewAltAz
       {
          get
          {
-            tl.LogMessage("CanSlewAltAz", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanSlewAltAz", "Get - {0}", _CanSlewAltAz);
+            return _CanSlewAltAz;
          }
       }
 
+      private bool _CanSlewAltAzAsync = false;
       public bool CanSlewAltAzAsync
       {
          get
          {
-            tl.LogMessage("CanSlewAltAzAsync", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanSlewAltAzAsync", "Get - {0}", _CanSlewAltAzAsync);
+            return _CanSlewAltAzAsync;
          }
       }
 
+
+      private bool _CanSlewAsync = true;
       public bool CanSlewAsync
       {
          get
          {
-            tl.LogMessage("CanSlewAsync", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanSlewAsync", "Get - {0}", _CanSlewAsync);
+            return _CanSlewAsync;
          }
       }
 
+
+      // TODO: Enable Synching
+      private bool _CanSync = false;
       public bool CanSync
       {
          get
          {
-            tl.LogMessage("CanSync", "Get - " + false.ToString());
-            return false;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanSync", "Get - {0}", _CanSync);
+            return _CanSync;
          }
       }
 
+
+      private bool _CanSyncAltAz = false;
       public bool CanSyncAltAz
       {
          get
          {
-            tl.LogMessage("CanSyncAltAz", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanSyncAltAz", "Get - {0}", _CanSyncAltAz);
+            return _CanSyncAltAz;
          }
       }
 
+      private bool _CanUnpark = false;
       public bool CanUnpark
       {
          get
          {
-            tl.LogMessage("CanUnpark", "Get - " + false.ToString());
-            return false;
+            LogMessage("CanUnpark", "Get - {0}", _CanUnpark);
+            return _CanUnpark;
          }
       }
 
@@ -742,18 +789,47 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private double _DecRateAdjustment = 0.0;
+
       public double DeclinationRate
       {
          get
          {
-            double declination = 0.0;
-            tl.LogMessage("DeclinationRate", "Get - " + declination.ToString());
-            return declination;
+            LogMessage("DeclinationRate", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(Settings.DeclinationRate, ":", ":"));
+            return Settings.DeclinationRate;
          }
          set
          {
-            tl.LogMessage("DeclinationRate Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("DeclinationRate", true);
+            LogMessage("DeclinationRate", "Set - {0}" + _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
+            _DecRateAdjustment = value;
+            if (Settings.ParkStatus == ParkStatus.Unparked)
+            {
+               if (value == 0 && _RaRateAdjustment == 0)
+               {
+                  StartSiderealTracking();
+               }
+               else
+               {
+                  if (TrackingState != TrackingStatus.Off)
+                  {
+                     if ((Settings.DeclinationRate * value) <= 0)
+                     {
+                        StartDecTrackingByRate(value);
+                     }
+                     else
+                     {
+                        ChangeDecTrackingByRate(value);
+                     }
+                     TrackingState = TrackingStatus.Custom;
+                  }
+               }
+               Settings.DeclinationRate = value;
+               TelescopeSettingsProvider.Current.SaveSettings();
+            }
+            else
+            {
+               throw new ASCOM.InvalidOperationException("Invalid while the telescope is parked");
+            }
          }
       }
 
@@ -864,16 +940,20 @@ namespace ASCOM.LunaticAstroEQ
             {
                case TelescopeAxes.axisPrimary:
                   isRASlewing = (rate > 0);
-                  Controller.MCAxisSlew((AXISID)AxisId.Axis1_RA, rate);
+                  Controller.MCAxisSlew(AxisId.Axis1_RA, rate, Hemisphere);
                   break;
                case TelescopeAxes.axisSecondary:
                   isDecSlewing = (rate > 0);
-                  Controller.MCAxisSlew((AXISID)AxisId.Axis2_DEC, rate);
+                  Controller.MCAxisSlew(AxisId.Axis2_Dec, rate, Hemisphere);
                   break;
                default:
                   throw new ASCOM.InvalidValueException("Tertiary axis is not supported by MoveAxis command");
             }
             _IsMoveAxisSlewing = (isRASlewing || isDecSlewing);
+            if (_IsMoveAxisSlewing)
+            {
+               TrackingState = TrackingStatus.Custom;
+            }
          }
       }
 
@@ -904,18 +984,68 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+
+      private double _RaRateAdjustment = 0.0;
+
       public double RightAscensionRate
       {
          get
          {
-            double rightAscensionRate = 0.0;
-            tl.LogMessage("RightAscensionRate", "Get - " + rightAscensionRate.ToString());
-            return rightAscensionRate;
+            double value;
+            if (Hemisphere == HemisphereOption.Northern)
+            {
+               value = Settings.RightAscensionRate - CoreConstants.SIDEREAL_RATE_ARCSECS;
+            }
+            else
+            {
+               value = Settings.RightAscensionRate + CoreConstants.SIDEREAL_RATE_ARCSECS;
+            }
+            LogMessage("RightAscensionRate", "Get - {0}", value);
+            return value;
          }
          set
          {
-            tl.LogMessage("RightAscensionRate Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("RightAscensionRate", true);
+            LogMessage("RightAscensionRate", "Set - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
+            _RaRateAdjustment = value;
+            // don't action this if we're parked!
+            if (Settings.ParkStatus == ParkStatus.Unparked)
+            {
+               if (value == 0 && _DecRateAdjustment == 0)
+               {
+                  StartSiderealTracking();
+               }
+               else
+               {
+                  if (Hemisphere == HemisphereOption.Northern)
+                  {
+                     value = CoreConstants.SIDEREAL_RATE_ARCSECS + value;      // Treat newval as an offset
+                  }
+                  else
+                  {
+                     value = value - CoreConstants.SIDEREAL_RATE_ARCSECS;      // Treat newval as an offset
+                  }
+                  // if we're already tracking then apply the new rate.
+                  if (TrackingState != TrackingStatus.Off)
+                  {
+                     if ((Settings.RightAscensionRate * value) <= 0)
+                     {
+                        StartRATrackingByRate(value);
+                     }
+                     else
+                     {
+                        ChangeRATrackingByRate(value);
+                     }
+                     TrackingState = TrackingStatus.Custom;
+                  }
+               }
+               Settings.RightAscensionRate = value;
+               TelescopeSettingsProvider.Current.SaveSettings();
+            }
+            else
+            {
+               _RaRateAdjustment = 0;
+               throw new ASCOM.InvalidOperationException("Invalid operation while the telescope is parked");
+            }
          }
       }
 
@@ -1072,24 +1202,16 @@ namespace ASCOM.LunaticAstroEQ
          {
             throw new ASCOM.ParkedException("The mount is currently parked.");
          }
-
-         lock (Controller)
-         {
-            LogMessage("SlewToCoordinates", "RA:{0}/Dec:{1}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension, "h", "m", "s"), _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
-            DateTime currentTime = DateTime.Now;
-            AxisPosition targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition);
-            _TargetPosition = new MountCoordinate(targetAxisPosition, _AscomToolsTargetPosition, currentTime);
-            System.Diagnostics.Debug.WriteLine($"Physical SOP: { targetAxisPosition.PhysicalSideOfPier}\t\tPointing SOP: {_TargetPosition.GetPointingSideOfPier(false)}");
-            _IsSlewing = true;
-            Controller.MCAxisSlewTo(targetAxisPosition);
-
-         }
+         SlewToEquatorialCoordinate(rightAscension, declination);
       }
 
-      public void SlewToCoordinatesAsync(double RightAscension, double Declination)
+      public void SlewToCoordinatesAsync(double rightAscension, double declination)
       {
-         tl.LogMessage("SlewToCoordinatesAsync", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SlewToCoordinatesAsync");
+         if (AtPark)
+         {
+            throw new ASCOM.ParkedException("The mount is currently parked.");
+         }
+         SlewToEquatorialCoordinate(rightAscension, declination);
       }
 
       public void SlewToTarget()
@@ -1140,10 +1262,37 @@ namespace ASCOM.LunaticAstroEQ
          throw new ASCOM.MethodNotImplementedException("SyncToAltAz");
       }
 
-      public void SyncToCoordinates(double RightAscension, double Declination)
+      public void SyncToCoordinates(double rightAscension, double declination)
       {
-         tl.LogMessage("SyncToCoordinates", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SyncToCoordinates");
+         LogMessage("COMMAND - ", "SyncToCoordinate({0},{1}", rightAscension, declination);
+         if (Settings.ParkStatus == ParkStatus.Unparked)
+         {
+            if (TrackingState == TrackingStatus.Off)
+            {
+               throw new ASCOM.InvalidOperationException("RaDec sync is not permitted if moumt is not Tracking.");
+            }
+            else
+            {
+               throw new ASCOM.MethodNotImplementedException("SyncToCoordinates");
+               //if (ValidateRADEC(rightAscension, declination))
+               //{
+               //   // TODO: HC.Add_Message("SynCoor: " & oLangDll.GetLangString(105) & "[ " & FmtSexa(RightAscension, False) & "] " & oLangDll.GetLangString(106) & "[ " & FmtSexa(Declination, True) & " ]")
+               //   if (SyncToRADEC(rightAscension, declination, SiteLongitude, Hemisphere))
+               //   {
+               //      // EQ_Beep(4)
+               //   }
+               //}
+               //else
+               //{
+               //   throw new ASCOM.InvalidValueException("Invalid value passed to SyncToCoordinates()");
+               //}
+            }
+         }
+         else
+         {
+            throw new ASCOM.InvalidOperationException("SyncToCoordinates() is not valid whilst the scope is parked.");
+         }
+
       }
 
       public void SyncToTarget()
@@ -1152,32 +1301,33 @@ namespace ASCOM.LunaticAstroEQ
          throw new ASCOM.MethodNotImplementedException("SyncToTarget");
       }
 
+      private double _TargetDeclination;
       public double TargetDeclination
       {
          get
          {
-            tl.LogMessage("TargetDeclination Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("TargetDeclination", false);
+            LogMessage("TargetDeclination",  " - Get {0}", _TargetDeclination);
+            return _TargetDeclination;
          }
          set
          {
-            tl.LogMessage("TargetDeclination Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("TargetDeclination", true);
+            LogMessage("TargetDeclination", " - Set {0}", value);
+            _TargetDeclination = value;
          }
       }
 
+      private double _TargetRightAscension;
       public double TargetRightAscension
       {
          get
          {
-            LogMessage("TargetRightAscension", " - Get {0}", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("TargetRightAscension", false);
+            LogMessage("TargetRightAscension", " - Get {0}", _TargetRightAscension);
+            return _TargetRightAscension;
          }
          set
          {
-            LogMessage("TargetRightAscension", " - Set {0} Not implemented", value);
-            tl.LogMessage("TargetRightAscension Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("TargetRightAscension", true);
+            LogMessage("TargetRightAscension", " - Set {0}", value);
+            _TargetRightAscension = value;
          }
       }
 
@@ -1185,14 +1335,54 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            bool tracking = true;
-            tl.LogMessage("Tracking", "Get - " + tracking.ToString());
+            bool tracking = (TrackingState != TrackingStatus.Off);
+            LogMessage("Tracking", "Get - {0}", tracking);
             return tracking;
          }
          set
          {
-            tl.LogMessage("Tracking Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("Tracking", true);
+            LogMessage("Tracking", "Set - {0}", value);
+            if (Settings.ParkStatus == ParkStatus.Unparked || (Settings.ParkStatus == ParkStatus.Parked && value))
+            {
+               lock (Controller)
+               {
+                  if (value)
+                  {
+                     if (_RaRateAdjustment == 0 && _DecRateAdjustment == 0)
+                     {
+                        // track at sidereal
+                        StartSiderealTracking();
+                     }
+                     else
+                     {
+                        // track at custom rate
+                        Settings.DeclinationRate = _DecRateAdjustment;
+                        Settings.RightAscensionRate = Core.Constants.SIDEREAL_RATE_ARCSECS + _RaRateAdjustment;
+                        //if (PECEnabled)
+                        //{
+                        //   PECStopTracking();
+                        //}
+                        // Call CustomMoveAxis(0, gRightAscensionRate, True, oLangDll.GetLangString(189))
+                        // Call CustomMoveAxis(1, gDeclinationRate, True, oLangDll.GetLangString(189))
+                        TelescopeSettingsProvider.Current.SaveSettings();
+                     }
+                  }
+                  else
+                  {
+                     Controller.MCAxisStop(AxisId.Both_Axes);
+                     // Announce tracking stopped
+                     Settings.TrackingState = TrackingStatus.Off;
+                     // not sure that we should be clearing the rate offests ASCOM Spec is no help
+                     Settings.DeclinationRate = 0;
+                     Settings.RightAscensionRate = 0;
+                     TelescopeSettingsProvider.Current.SaveSettings();
+                  }
+               }
+            }
+            else
+            {
+               throw new ASCOM.ParkedException("Tracking change not allowed when mount is parked.");
+            }
          }
       }
 
@@ -1200,25 +1390,43 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("TrackingRate Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("TrackingRate", false);
+            LogMessage("TrackingRate", "Get - {0}", Settings.TrackingRate);
+            return Settings.TrackingRate;
          }
          set
          {
-            tl.LogMessage("TrackingRate Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("TrackingRate", true);
+            LogMessage("TrackingRate", "Set - {0}", value);
+            if (Tracking && value == Settings.TrackingRate)
+            {
+               return;
+            }
+            switch (value)
+            {
+               case DriveRates.driveSidereal:
+                  StartSiderealTracking();
+                  break;
+               case DriveRates.driveLunar:
+                  StartLunarTracking();
+                  break;
+               case DriveRates.driveSolar:
+                  StartSolarTracking();
+                  break;
+               default:
+                  throw new ASCOM.InvalidValueException("TrackingRate");
+            }
          }
       }
+
 
       public ITrackingRates TrackingRates
       {
          get
          {
             ITrackingRates trackingRates = new TrackingRates();
-            tl.LogMessage("TrackingRates", "Get - ");
+            LogMessage("TrackingRates", "Get - ");
             foreach (DriveRates driveRate in trackingRates)
             {
-               tl.LogMessage("TrackingRates", "Get - " + driveRate.ToString());
+               LogMessage("TrackingRates", "Get - {0}", driveRate);
             }
             return trackingRates;
          }

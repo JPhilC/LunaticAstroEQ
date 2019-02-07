@@ -23,11 +23,23 @@ namespace ASCOM.LunaticAstroEQ.Core
    public enum AxisId
    {
       Axis1_RA,
-      Axis2_DEC,
+      Axis2_Dec,
       Both_Axes,
       Aux_RA_Encoder,
       Aux_DEC_Encoder
    };
+
+   public enum AxisSpeed
+   {
+      LowSpeed,
+      HighSpeed
+   }
+
+   public enum AxisMode
+   {
+      Slew,
+      Goto
+   }
 
 
    [TypeConverter(typeof(EnumTypeConverter))]
