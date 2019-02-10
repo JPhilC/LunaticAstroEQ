@@ -217,13 +217,7 @@ namespace LunaticAstroEQ.Tests
          return response;
       }
 
-      [TestMethod]
-      public void TestSetMotionMode()
-      {
-         string EQresult = EQ_SendGCode(AxisId.Axis1_RA, HemisphereOption.Northern, AxisMode.Slew, AxisDirection.Forward, AxisSpeed.LowSpeed);
-         string MCresult = MCSetMotionMode(AxisId.Axis1_RA, HemisphereOption.Northern, AxisMode.Slew, AxisDirection.Forward, AxisSpeed.LowSpeed);
-         Assert.AreEqual(EQresult, MCresult);
-      }
+
 
 
       #region MC code

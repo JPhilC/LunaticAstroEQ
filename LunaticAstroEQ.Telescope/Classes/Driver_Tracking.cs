@@ -50,6 +50,14 @@ namespace ASCOM.LunaticAstroEQ
          lock (Controller)
          {
             Controller.MCSetAxisPosition(_ParkedAxisPosition);
+            AxisState raAxisState = Controller.MCGetAxisStatus(AxisId.Axis1_RA);
+            if (TrackingState != TrackingStatus.Off)
+            {
+               if ((!raAxisState.Slewing))
+               {
+                  InitialiseTracking(DriveRates.driveSidereal);
+               }
+            }
          }
 
       }
@@ -62,7 +70,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          DateTime now = DateTime.Now;
          bool axisHasMoved = false;
-         AxisStatus[] axesStatus;
+         AxisState[] axesStatus;
          if (now - _lastRefresh > _minRefreshInterval)
          {
             AxisPosition axisPosition = _previousAxisPosition;
@@ -72,10 +80,13 @@ namespace ASCOM.LunaticAstroEQ
                axisPosition = Controller.MCGetAxisPositions();
             }
 #if DEBUG
-            AxisStatus raStatus = axesStatus[RA_AXIS];
-            AxisStatus decStatus = axesStatus[DEC_AXIS];
-            System.Diagnostics.Debug.WriteLine($"\nRA : Slewing-{raStatus.Slewing}, SlewingTo-{raStatus.SlewingTo}, Forward-{raStatus.SlewingForward}, FullStop-{raStatus.FullStop}, Tracking-{raStatus.Tracking}");
-            System.Diagnostics.Debug.WriteLine($"Dec: Slewing-{decStatus.Slewing}, SlewingTo-{decStatus.SlewingTo}, Forward-{decStatus.SlewingForward}, FullStop-{decStatus.FullStop}, Tracking-{decStatus.Tracking}");
+            //string raStatus = Convert.ToString(axesStatus[RA_AXIS], 2);
+            //string decStatus = Convert.ToString(axesStatus[DEC_AXIS], 2); ;
+            //System.Diagnostics.Debug.WriteLine($"\nAxis states - RA: {raStatus}, Dec : {decStatus}\n");
+            //long raStatus = axesStatus[RA_AXIS];
+            //long decStatus = axesStatus[DEC_AXIS];
+            //System.Diagnostics.Debug.WriteLine($"\nRA : Slewing-{raStatus.Slewing}, SlewingTo-{raStatus.SlewingTo}, Forward-{raStatus.SlewingForward}, FullStop-{raStatus.FullStop}, Tracking-{raStatus.Tracking}");
+            //System.Diagnostics.Debug.WriteLine($"Dec: Slewing-{decStatus.Slewing}, SlewingTo-{decStatus.SlewingTo}, Forward-{decStatus.SlewingForward}, FullStop-{decStatus.FullStop}, Tracking-{decStatus.Tracking}");
 #endif
             if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
             {

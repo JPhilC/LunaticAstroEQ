@@ -108,7 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\AstroEQController.cs" />
-    <Compile Include="Classes\AxisStatus.cs" />
+    <Compile Include="Classes\AxisState.cs" />
     <Compile Include="Classes\BasicMath.cs" />
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\ControllerSettings.cs" />

@@ -18,6 +18,14 @@ using ASCOM.DeviceInterface;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
+   internal class FFlags
+   {
+      internal const int Initialised = 0x001;
+      internal const int SlewingTo = 0x010;
+      internal const int Stopped = 0x100;
+      internal const int Reversed = 0x200;
+   }
+
    /// <summary>
    /// Skeleton of a hardware class, all this does is hold a count of the connections,
    /// in reality extra code will be needed to handle the hardware in some way
@@ -39,7 +47,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// 1. Positions may not represent the mount's position while it is slewing, or user manually update by hand
 
       private double[] _SlewingSpeed = new double[2] { 0, 0 };        // Operating speed in radians per second                
-      private AxisStatus[] _AxisStatus = new AxisStatus[2];           // The two-axis status of the carriage should be referenced by AxesStatus[AXIS1] and AxesStatus[AXIS2]
+      private AxisState[] _AxisStatus = new AxisState[2];           // The two-axis status of the carriage should be referenced by AxesStatus[AXIS1] and AxesStatus[AXIS2]
       private long[] GridPerRevolution = new long[2];                  // Number of steps for 360 degree
 
       // special charactor for communication.
@@ -205,8 +213,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
          MCVersion = 0;
 
-         _AxisStatus[0] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false, Tracking = false, TrackingRate = 0 };
-         _AxisStatus[1] = new AxisStatus { FullStop = false, NotInitialized = true, HighSpeed = false, Slewing = false, SlewingForward = false, SlewingTo = false, Tracking = false, TrackingRate = 0 };
+         _AxisStatus[0] = new AxisState { FullStop = false, NotInitialized = true, Slewing = false, SlewingTo = false, MeshedForReverse = false };
+         _AxisStatus[1] = new AxisState { FullStop = false, NotInitialized = true, Slewing = false, SlewingTo = false, MeshedForReverse = false };
 
       }
 
@@ -404,6 +412,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
       #endregion
 
+
+      private bool echoResponse = false;
       /// <summary>
       /// One communication between mount and client
       /// </summary>
@@ -411,11 +421,10 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <param name="Command">The comamnd char set</param>
       /// <param name="cmdDataStr">The data need to send</param>
       /// <returns>The response string from mount</returns>
-      private String TalkWithAxis(AxisId axis, char cmd, string cmdDataStr)
+      public String TalkWithAxis(AxisId axis, char cmd, string cmdDataStr)
       {
          lock (lockObject)
          {
-            //System.Diagnostics.Debug.WriteLine(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
             string response = string.Empty;
 
             const int BufferSize = 20;
@@ -431,14 +440,13 @@ namespace ASCOM.LunaticAstroEQ.Controller
             sb.Append(cEndChar);    // CR Character            
 
             string cmdString = sb.ToString();
-            //System.Diagnostics.Debug.WriteLine($" - > Command: {cmdString}");
-            //string.Format("{0}{1}{2}{3}{4}",
-            //cStartChar_Out,
-            //cmd,
-            //(int)axis,
-            //(cmdDataStr ?? "."),
-            //cEndChar);
-
+            echoResponse = false;
+            // send the request
+            if ((axis == 0) && ((cmd == 'G') || (cmd == 'f')))
+            {
+               echoResponse = true;
+               System.Diagnostics.Debug.Write(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
+            }
             var cmdTransaction = new EQTransaction(cmdString) { Timeout = TimeSpan.FromSeconds(TimeOut) };
 
 
@@ -459,7 +467,12 @@ namespace ASCOM.LunaticAstroEQ.Controller
                      cmdTransaction.WaitForCompletionOrTimeout();
                      if (!cmdTransaction.Failed)
                      {
-                        response = cmdTransaction.Value;
+                        response = cmdTransaction.Value.ToString();
+                        if (echoResponse)
+                        {
+                           System.Diagnostics.Debug.WriteLine($" -> {response}");
+                           echoResponse = false;
+                        }
                         break;
                      }
                      else
@@ -491,6 +504,135 @@ namespace ASCOM.LunaticAstroEQ.Controller
             //System.Diagnostics.Debug.WriteLine($" -> Response: {response} (0x{response:X})");
             return response;
          }
+      }
+
+      /// <summary>
+      /// Send the command to the correct mount
+      /// </summary>
+      /// <param name="motorId">motor_id (0 RA, 1 DEC)</param>
+      /// <param name="command">command (ASCII command to send to mount)</param>
+      /// <param name="parameters">parameter (Binary parameter or 0)</param>
+      /// <param name="count">count (# parameter bytes)</param>
+      /// <returns>Driver Return Value
+      ///   -	EQ_OK			0x2000000 - Success with no return values
+      ///   -	EQ_COMTIMEOUT	0x1000005 - COM TIMEOUT
+      ///   -	EQ_INVALID		0x3000000 - Invalid Parameter</returns>
+      /// <remarks></remarks>
+      public int EQ_SendCommand(int motorId, char command, int parameters, short count)
+      {
+         if (motorId == (int)AxisId.Both_Axes)
+         {
+            return Constants.MOUNT_BADPARAM;
+         }
+         System.Diagnostics.Debug.Write(String.Format("EQ_SendCommand({0}, {1}, {2}, {3})", motorId, command, Convert.ToString(parameters, 16), count));
+         int response = Constants.EQ_OK;
+         char[] hex_str = "0123456789ABCDEF     ".ToCharArray();   // Hexadecimal translation
+         const int BufferSize = 20;
+         StringBuilder sb = new StringBuilder(BufferSize);
+         sb.Append(cStartChar_Out);
+         sb.Append(command);
+         sb.Append((motorId + 1).ToString());
+         switch (count)
+         {
+            case 0:
+               // Do nothing
+               break;
+            case 1:
+               // nibble 1
+               sb.Append(hex_str[(parameters & 0x00000f)]);
+               break;
+            case 2:
+               // Byte 1
+               sb.Append(hex_str[(parameters & 0x0000f0) >> 4]);
+               sb.Append(hex_str[(parameters & 0x00000f)]);
+               break;
+            case 3:
+               // Byte 1
+               sb.Append(hex_str[(parameters & 0x0000f0) >> 4]);
+               sb.Append(hex_str[(parameters & 0x00000f)]);
+               // Nibble 3
+               sb.Append(hex_str[(parameters & 0x000f00) >> 8]);
+               break;
+            case 4:
+               // Byte 1
+               sb.Append(hex_str[(parameters & 0x0000f0) >> 4]);
+               sb.Append(hex_str[(parameters & 0x00000f)]);
+               // Byte 2
+               sb.Append(hex_str[(parameters & 0x00f000) >> 12]);
+               sb.Append(hex_str[(parameters & 0x000f00) >> 8]);
+               break;
+            case 5:
+               // Byte 1
+               sb.Append(hex_str[(parameters & 0x0000f0) >> 4]);
+               sb.Append(hex_str[(parameters & 0x00000f)]);
+               // Byte 2
+               sb.Append(hex_str[(parameters & 0x00f000) >> 12]);
+               sb.Append(hex_str[(parameters & 0x000f00) >> 8]);
+               // nibble
+               sb.Append(hex_str[(parameters & 0x0f0000) >> 16]);
+               break;
+            case 6:
+               // Byte 1
+               sb.Append(hex_str[(parameters & 0x0000f0) >> 4]);
+               sb.Append(hex_str[(parameters & 0x00000f)]);
+               // Byte 2
+               sb.Append(hex_str[(parameters & 0x00f000) >> 12]);
+               sb.Append(hex_str[(parameters & 0x000f00) >> 8]);
+               // Byte 3
+               sb.Append(hex_str[(parameters & 0xf00000) >> 20]);
+               sb.Append(hex_str[(parameters & 0x0f0000) >> 16]);
+               break;
+            default:
+               return Constants.EQ_INVALID;
+         }
+         sb.Append(cEndChar);
+         string cmdString = sb.ToString();
+         var cmdTransaction = new EQContrlTransaction(cmdString) { Timeout = TimeSpan.FromSeconds(TimeOut) };
+
+
+         using (ICommunicationChannel channel = new SerialCommunicationChannel(EndPoint))
+         using (var processor = new ReactiveTransactionProcessor())
+         {
+            var transactionObserver = new TransactionObserver(channel);
+            processor.SubscribeTransactionObserver(transactionObserver);
+            try
+            {
+               channel.Open();
+
+               // prepare to communicate
+               for (int i = 0; i < Retry; i++)
+               {
+
+                  Task.Run(() => processor.CommitTransaction(cmdTransaction));
+                  cmdTransaction.WaitForCompletionOrTimeout();
+                  if (!cmdTransaction.Failed)
+                  {
+                     response = cmdTransaction.Value;
+                     break;
+                  }
+                  else
+                  {
+                     Trace.TraceError(cmdTransaction.ErrorMessage.Single());
+                  }
+               }
+            }
+            catch (Exception ex)
+            {
+               Trace.TraceError("Connnection Lost");
+               throw new Exception("Connection lost", ex);
+            }
+            finally
+            {
+               // To clean up, we just need to dispose the TransactionObserver and the channel is closed automatically.
+               // Not strictly necessary, but good practice.
+               transactionObserver.OnCompleted(); // There will be no more transactions.
+               transactionObserver = null; // not necessary, but good practice.
+            }
+
+         }
+
+         System.Diagnostics.Debug.WriteLine(string.Format("    -> Response: {0}", Convert.ToString(response, 16)));
+         return response;
       }
 
       public int MCInit(string comportname, int baud, int timeout, int retry)
@@ -527,10 +669,11 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   Retry = retry;
                   #endregion
 
+
                   ControllerActive = false;
                   try
                   {
-                     System.Diagnostics.Debug.WriteLine("InquireMotorBoardVersion");
+                     // System.Diagnostics.Debug.WriteLine("InquireMotorBoardVersion");
                      InquireMotorBoardVersion(AxisId.Axis1_RA);
                   }
                   catch
@@ -563,14 +706,20 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   // System.Diagnostics.Debug.WriteLine("InquirePECPeriod");
                   InquirePECPeriod(AxisId.Axis1_RA);
                   InquirePECPeriod(AxisId.Axis2_Dec);
+                  // System.Diagnostics.Debug.WriteLine($"Raw state 1: {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
 
                   //// Inquire Axis Position
                   //System.Diagnostics.Debug.WriteLine("MCGetAxisPosition");
                   //_AxisPosition[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
                   //_AxisPosition[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
 
+                  //TODO Remove the next line
+                  EQ_SendCommand(0, 'f', 0, 0);
+
                   // System.Diagnostics.Debug.WriteLine("InitializeMC");
                   InitializeMC();
+                  // System.Diagnostics.Debug.WriteLine($"Raw state 2: {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
+                  EQ_SendCommand(0, 'f', 0, 0);
 
                   // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
                   LowSpeedGotoMargin[(int)AxisId.Axis1_RA] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AxisId.Axis1_RA]);
@@ -650,10 +799,9 @@ namespace ASCOM.LunaticAstroEQ.Controller
             SetStepPeriod(axis, SpeedInt);
 
             // Start motion
-            // if (AxesStatus[Axis] & AXIS_FULL_STOPPED)				// It must be remove for the latest DC motor board.
             StartMotion(axis);
 
-            // _AxisStatus[(int)axis].SetSlewing(forward, highspeed);
+            _AxisStatus[(int)axis].SetSlewing(forward, highspeed);
             _SlewingSpeed[(int)axis] = speed;
          }
       }
@@ -676,7 +824,6 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          lock (lockObject)
          {
-            System.Diagnostics.Debug.WriteLine($"MCAxisSlewTo - {axis}, {targetPosition}");
 
             // Get current position of the axis.
             var CurPosition = MCGetAxisPosition(axis);
@@ -737,12 +884,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
                highspeed = false;
             }
 
+
             SetGotoTargetIncrement(axis, movingSteps);
+
             SetBreakPointIncrement(axis, BreakSteps[(int)axis]);
             StartMotion(axis);
 
             // _TargetPosition[(int)Axis] = TargetPosition;
-            // _AxisStatus[(int)axis].SetSlewingTo(forward, highspeed);
+            _AxisStatus[(int)axis].SetSlewingTo(forward, highspeed);
          }
       }
 
@@ -767,6 +916,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             // Set moving direction
             if (movingSteps < 0)
             {
+               movingSteps = -movingSteps;
                direction = AxisDirection.Reverse;
                forward = false;
             }
@@ -790,7 +940,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             StartMotion(axis);
 
             // _TargetPosition[(int)Axis] = TargetPosition;
-            // _AxisStatus[(int)axis].SetSlewingTo(forward, highspeed);
+            _AxisStatus[(int)axis].SetSlewingTo(forward, highspeed);
          }
       }
 
@@ -804,9 +954,61 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
 
 
+      public void MCStartRATrack(DriveRates trackRate, HemisphereOption hemisphere, AxisDirection direction)
+      {
+         lock (lockObject)
+         {
+            System.Diagnostics.Debug.WriteLine($"MCStartRATrack - {trackRate}");
+
+            int stepPeriod;
+
+            switch (trackRate)
+            {
+               case DriveRates.driveSolar:
+                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0016129032258064516129032258065);
+                  break;
+
+               case DriveRates.driveLunar:
+                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0370967741935483870967741935484);
+                  break;
+
+               case DriveRates.driveSidereal:
+                  stepPeriod = (int)LowSpeedSlewRate[0];
+                  break;
+
+               default:
+                  throw new ASCOM.InvalidValueException("Unexpected tracking drive rate");
+
+            }
+
+            System.Diagnostics.Debug.WriteLine($"MCStartRATrack   i): {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
+
+            MCAxisStop(AxisId.Axis1_RA);
+
+            System.Diagnostics.Debug.WriteLine($"MCStartRATrack  ii): {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
+
+            // Set the motor hemisphere, mode, direction and speed
+            // SetMotionMode(AxisId.Axis1_RA, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed); // 101 -> 001
+            SetMotionMode(AxisId.Axis1_RA, hemisphere, AxisMode.Slew, AxisDirection.Reverse, AxisSpeed.LowSpeed); // 101 -> 301
+
+            System.Diagnostics.Debug.WriteLine($"MCStartRATrack iii): {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
+            // Set step period
+            SetStepPeriod(AxisId.Axis1_RA, stepPeriod);
+
+            // Start RA Motor
+            System.Diagnostics.Debug.WriteLine($"MCStartRATrack  iv): {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
+
+            StartMotion(AxisId.Axis1_RA);    // 301 -> 201
+
+            System.Diagnostics.Debug.WriteLine($"MCStartRATrack   v): {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
+
+
+         }
+      }
+
       public void MCAxisStop(AxisId axis)
       {
-         System.Diagnostics.Debug.WriteLine($"MCAxisStop - {axis}");
+
          lock (lockObject)
          {
             if (axis == AxisId.Both_Axes)
@@ -817,11 +1019,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
             }
 
             if (InstantStop)
+            {
                TalkWithAxis(axis, 'L', null);
+            }
             else
+            {
                TalkWithAxis(axis, 'K', null);
-
-            _AxisStatus[(int)axis].SetFullStop();
+            }
+            _AxisStatus[(int)axis].SetStopped();
          }
       }
 
@@ -883,54 +1088,93 @@ namespace ASCOM.LunaticAstroEQ.Controller
          }
       }
 
-      public AxisStatus[] MCGetAxesStatus()
+      public AxisState[] MCGetAxesStatus()
       {
          lock (lockObject)
          {
-            return new AxisStatus[] {
+            return new AxisState[] {
             MCGetAxisStatus(AxisId.Axis1_RA),
             MCGetAxisStatus(AxisId.Axis2_Dec)
          };
          }
       }
 
-      public AxisStatus MCGetAxisStatus(AxisId axis)
+
+      
+      public AxisState MCGetAxisStatus(AxisId axis)
       {
          lock (lockObject)
          {
             var response = TalkWithAxis(axis, 'f', null);
+            int state = int.Parse(response);
 
-            if ((response[2] & 0x01) != 0)
+            if ((state & FFlags.Stopped) != FFlags.Stopped)
             {
                // Axis is running
-               if ((response[1] & 0x01) != 0)
-                  _AxisStatus[(int)axis].Slewing = true;     // Axis in slewing(AstroMisc speed) mode.
+               if ((state & FFlags.SlewingTo) == FFlags.SlewingTo)
+               {
+                  _AxisStatus[(int)axis].SlewingTo = true;              // Axis is slewing to a target (i.e. GOTO).
+                  _AxisStatus[(int)axis].Slewing = false;
+               }
                else
-                  _AxisStatus[(int)axis].SlewingTo = true;      // Axis in SlewingTo mode.
+               {
+                  _AxisStatus[(int)axis].Slewing = true;                // Not stopped and not slewing GOTO so must be just slewing..
+                  _AxisStatus[(int)axis].SlewingTo = false;              
+               }
             }
             else
             {
                _AxisStatus[(int)axis].FullStop = true; // FullStop = 1;	// Axis is fully stop.
+               _AxisStatus[(int)axis].Slewing = false;  
+               _AxisStatus[(int)axis].SlewingTo = false;
             }
 
-            if ((response[1] & 0x02) == 0)
-               _AxisStatus[(int)axis].SlewingForward = true; // Angle increase = 1;
+            if ((state & FFlags.Reversed) == FFlags.Reversed)
+            {
+               _AxisStatus[(int)axis].MeshedForReverse = true; // Gears are meshed for reverse running
+            }
             else
-               _AxisStatus[(int)axis].SlewingForward = false;
+            {
+               _AxisStatus[(int)axis].MeshedForReverse = false;
+            }
 
-            if ((response[1] & 0x04) != 0)
-               _AxisStatus[(int)axis].HighSpeed = true; // HighSpeed running mode = 1;
-            else
-               _AxisStatus[(int)axis].HighSpeed = false;
 
-            if ((response[3] & 1) == 0)
-               _AxisStatus[(int)axis].NotInitialized = true; // MC is not initialized.
-            else
+            if ((state & FFlags.Initialised) == FFlags.Initialised)
+            {
                _AxisStatus[(int)axis].NotInitialized = false;
+            }
+            else
+            {
+               _AxisStatus[(int)axis].NotInitialized = true;      // MC is not initialized.
+            }
 
          }
          return _AxisStatus[(int)axis];
       }
+
+      //public long MCGetAxisStatus(AxisId axis)
+      //{
+      //   long state = 0;
+      //   lock (lockObject)
+      //   {
+      //      var response = TalkWithAxis(axis, 'f', null);
+      //      state = BCDstr2long(response);
+
+      //   }
+      //   return state;
+      //}
+
+      public string MCGetRawAxisStatus(AxisId axis)
+      {
+         string response = "=!";
+         lock (lockObject)
+         {
+            response = TalkWithAxis(axis, 'f', null);
+
+         }
+         return response;
+      }
+
 
       public void MCSetSwitch(bool OnOff)
       {
@@ -944,48 +1188,6 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
 
 
-      public void MCStartRATrack(DriveRates trackRate, HemisphereOption hemisphere, AxisDirection direction)
-      {
-         lock (lockObject)
-         {
-            System.Diagnostics.Debug.WriteLine($"MCStartRATrack - {trackRate}");
-
-            int stepPeriod;
-
-            switch (trackRate)
-            {
-               case DriveRates.driveSolar:
-                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0016129032258064516129032258065);
-                  break;
-
-               case DriveRates.driveLunar:
-                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0370967741935483870967741935484);
-                  break;
-
-               case DriveRates.driveSidereal:
-                  stepPeriod = (int)LowSpeedSlewRate[0];
-                  break;
-
-               default:
-                  throw new ASCOM.InvalidValueException("Unexpected tracking drive rate");
-
-            }
-
-            MCAxisStop(AxisId.Axis1_RA);
-
-            // Set the motor hemisphere, mode, direction and speed
-            SetMotionMode(AxisId.Axis1_RA, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);
-
-            // Set step period
-            SetStepPeriod(AxisId.Axis1_RA, stepPeriod);
-
-            // Start RA Motor
-            StartMotion(AxisId.Axis1_RA);
-
-            _AxisStatus[(int)AxisId.Axis1_RA].SetTracking(true, (int)trackRate);
-
-         }
-      }
 
       // Skywaterch Helper function
       protected bool IsHEXChar(char tmpChar)
@@ -1054,14 +1256,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          AxisDirection direction = (speed > 0.0 ? AxisDirection.Forward : AxisDirection.Reverse);
 
-         var axesstatus = MCGetAxisStatus(axis);
-         if (!axesstatus.FullStop)
+         var axesstate = MCGetAxisStatus(axis);
+         if (!axesstate.FullStop)
          {
-            if ((axesstatus.SlewingTo) ||                               // GOTO in action
-                 (axesstatus.HighSpeed) ||                              // Currently high speed slewing
+            if ((axesstate.SlewingTo) ||                               // GOTO in action
+                 (axesstate.HighSpeed) ||                              // Currently high speed slewing
                  (Math.Abs(speed) >= LOW_SPEED_MARGIN) ||               // Will be high speed slewing
-                 ((axesstatus.SlewingForward) && (speed < 0)) ||        // Different direction
-                 (!(axesstatus.SlewingForward) && (speed > 0))          // Different direction
+                 ((axesstate.MeshedForReverse) && (speed > 0)) ||        // Different direction
+                 ((!axesstate.MeshedForReverse) && (speed < 0))          // Different direction
                 )
             {
                // We need to stop the motor first to change Motion Mode, etc.
@@ -1078,10 +1280,10 @@ namespace ASCOM.LunaticAstroEQ.Controller
             while (true)
             {
                // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
-               axesstatus = MCGetAxisStatus(axis);
+               axesstate = MCGetAxisStatus(axis);
 
                // Return if the axis has stopped.
-               if (axesstatus.FullStop)
+               if (axesstate.FullStop)
                {
                   break;
                }
@@ -1105,7 +1307,9 @@ namespace ASCOM.LunaticAstroEQ.Controller
             SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.HighSpeed);  // Set HIGH speed slewing mode.
          }
          else
-         SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);   // Set LOW speed slewing mode.
+         {
+            SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);   // Set LOW speed slewing mode.
+         }
 
       }
 
@@ -1200,6 +1404,16 @@ namespace ASCOM.LunaticAstroEQ.Controller
          TalkWithAxis(AxisId.Axis2_Dec, 'F', null);
       }
 
+      [Flags]
+      public enum MotionMode
+      {
+         Reverse = 0x01,
+         Southern = 0x02,
+         Slew = 0x04,
+         Lowspeed = 0x08,
+
+
+      }
 
       protected void SetMotionMode(AxisId axis, HemisphereOption hemisphere, AxisMode mode, AxisDirection direction, AxisSpeed speed)
       {
@@ -1226,36 +1440,23 @@ namespace ASCOM.LunaticAstroEQ.Controller
          // Set Mode and speed bits
          if (mode == AxisMode.Goto)
          {
-            //goto
-            if (speed == AxisSpeed.LowSpeed)
-            {
-               // Low speed goto = 2
-               ch |= 0x20;
-            }
-            else
-            {
-               //high speed goto = 0
-
-            }
+            // Nothing to do for GOTO
          }
          else
          {
             // slew
-            if (speed == AxisSpeed.HighSpeed)
-            {
-               // High speed slew= 3
-               ch |= 0x30;
-            }
-            else
-            {
-               // low speed slew= 1
-               ch |= 0x10;
-            }
+            ch |= 0x10;
          }
 
 
+         if (speed == AxisSpeed.LowSpeed)
+         {
+            ch |= 0x20;
+         }
+
          string szCmd = LongTo2BitHEX(ch);
          TalkWithAxis(axis, 'G', szCmd);
+
       }
 
       //protected void SetMotionMode(AxisId axis, char func, char direction)
@@ -1290,7 +1491,6 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
       protected void StartMotion(AxisId axis)
       {
-         System.Diagnostics.Debug.WriteLine($"StartMotion - {axis}");
          TalkWithAxis(axis, 'J', null);
       }
 
