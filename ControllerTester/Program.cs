@@ -24,13 +24,11 @@ namespace ControllerTester
          if (result == CoreConstants.MOUNT_SUCCESS)
          {
 
-            //Console.WriteLine("Press any key to start tracking");
-            //Console.ReadKey(true);
-            //_controller.MCStartRATrack(DriveRates.driveSidereal, HemisphereOption.Northern, AxisDirection.Forward);
+            RunTracking();
 
             // RunGOTO();
 
-            RunSlew();
+            // RunSlew();
 
             // GCodes(0x0);
 
@@ -43,6 +41,32 @@ namespace ControllerTester
             Console.ReadKey(true);
             _controller.Disconnect();
          }
+      }
+
+      static private void RunTracking()
+      {
+         HemisphereOption hemisphere = HemisphereOption.Northern;
+
+         Console.WriteLine("Press any key to start tracking");
+         Console.ReadKey(true);
+         _controller.MCStartRATrack(DriveRates.driveSidereal, hemisphere, AxisDirection.Forward);
+         int ct = 0;
+         while (ct < 3)
+         {
+            Thread.Sleep(2000);
+            _controller.TalkWithAxis(0, 'f', null);
+            ct++;
+         }
+         System.Diagnostics.Debug.WriteLine("\n=== Tracking Stop ====");
+         _controller.MCAxisStop(AxisId.Axis1_RA);
+         ct = 0;
+         while (ct < 3)
+         {
+            Thread.Sleep(2000);
+            _controller.TalkWithAxis(0, 'f', null);
+            ct++;
+         }
+
       }
 
       static private void RunGOTO()
@@ -59,7 +83,7 @@ namespace ControllerTester
          _controller.MCAxisSlewTo(AxisId.Axis1_RA, slowPosition, hemisphere);
          // Wait for stop
          _controller.TalkWithAxis(0, 'f', null);
-         AxisState status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+         AxisState status = _controller.MCGetAxisState(AxisId.Axis1_RA);
          // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
          double ppos = double.MaxValue;
          double pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
@@ -68,7 +92,7 @@ namespace ControllerTester
             ppos = pos;
             Thread.Sleep(2000);
             _controller.TalkWithAxis(0, 'f', null);
-            status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+            status = _controller.MCGetAxisState(AxisId.Axis1_RA);
             // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
             pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
          }
@@ -78,7 +102,7 @@ namespace ControllerTester
          System.Diagnostics.Debug.WriteLine("\n=== GOTO Slow (reversed) ====");
          _controller.MCAxisSlewTo(AxisId.Axis1_RA, 0.0, hemisphere);
          _controller.TalkWithAxis(0, 'f', null);
-         status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+         status = _controller.MCGetAxisState(AxisId.Axis1_RA);
          // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
          ppos = double.MaxValue;
          pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
@@ -87,7 +111,7 @@ namespace ControllerTester
             ppos = pos;
             Thread.Sleep(2000);
             _controller.TalkWithAxis(0, 'f', null);
-            status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+            status = _controller.MCGetAxisState(AxisId.Axis1_RA);
             // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
             pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
          }
@@ -99,7 +123,7 @@ namespace ControllerTester
          _controller.MCAxisSlewTo(AxisId.Axis1_RA, fastPosition, hemisphere);
          // Wait for stop
          _controller.TalkWithAxis(0, 'f', null);
-         status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+         status = _controller.MCGetAxisState(AxisId.Axis1_RA);
          // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
          ppos = double.MaxValue;
          pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
@@ -108,7 +132,7 @@ namespace ControllerTester
             ppos = pos;
             Thread.Sleep(2000);
             _controller.TalkWithAxis(0, 'f', null);
-            status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+            status = _controller.MCGetAxisState(AxisId.Axis1_RA);
             // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
             pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
          }
@@ -118,7 +142,7 @@ namespace ControllerTester
          System.Diagnostics.Debug.WriteLine("\n=== GOTO Fast (reversed) ====");
          _controller.MCAxisSlewTo(AxisId.Axis1_RA, 0.0, hemisphere);
          _controller.TalkWithAxis(0, 'f', null);
-         status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+         status = _controller.MCGetAxisState(AxisId.Axis1_RA);
          // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
          ppos = double.MaxValue;
          pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
@@ -127,7 +151,7 @@ namespace ControllerTester
             ppos = pos;
             Thread.Sleep(2000);
             _controller.TalkWithAxis(0, 'f', null);
-            status = _controller.MCGetAxisStatus(AxisId.Axis1_RA);
+            status = _controller.MCGetAxisState(AxisId.Axis1_RA);
             // System.Diagnostics.Debug.WriteLine($"Fwd-{status.SlewingForward}\tSpd-{status.HighSpeed}\tStpd-{status.FullStop}\tSlwg-{status.Slewing}\tSlwgT-{status.SlewingTo}\tInit-{!status.NotInitialized}");
             pos = _controller.MCGetAxisPosition(AxisId.Axis1_RA);
          }

@@ -21,11 +21,15 @@ namespace ASCOM.LunaticAstroEQ.Controller
       public bool MeshedForReverse;
       public bool NotInitialized;
       public bool HighSpeed;
+      public bool Tracking;
+      public double TrackingRate;
 
       public void SetSlewingTo(bool forward, bool highspeed)
       {
          SlewingTo = true;
          Slewing = false;
+         Tracking = false;
+         TrackingRate = 0.0;
          HighSpeed = highspeed;
          MeshedForReverse = !forward;
       }
@@ -34,6 +38,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          Slewing = true;
          SlewingTo = false;
+         Tracking = false;
+         TrackingRate = 0.0;
          HighSpeed = highspeed;
          MeshedForReverse = !forward;
       }
@@ -44,7 +50,22 @@ namespace ASCOM.LunaticAstroEQ.Controller
          HighSpeed = false;
          Slewing = false;
          SlewingTo = false;
+         Tracking = false;
+         TrackingRate = 0.0;
+      }
 
+
+      public void SetTracking(bool tracking, double trackingRate)
+      {
+         Tracking = tracking;
+         if (tracking)
+         {
+            TrackingRate = trackingRate;
+         }
+         else
+         {
+            TrackingRate = 0.0;
+         }
       }
 
       //// Mask for axis status
