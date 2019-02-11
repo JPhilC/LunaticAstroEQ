@@ -7,12 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunaticAstroEQ", "LunaticAs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunaticAstroEQ.Telescope", "LunaticAstroEQ.Telescope\LunaticAstroEQ.Telescope.csproj", "{64308775-BD4A-469C-BCAB-3ED830B811AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelescopeTester", "TelescopeTester\TelescopeTester.csproj", "{8E8D406C-1838-4914-867D-AB602D0EAF3E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{64308775-BD4A-469C-BCAB-3ED830B811AF} = {64308775-BD4A-469C-BCAB-3ED830B811AF}
-		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143} = {3689A2CB-94C5-4012-A5CF-7E7D1DD27143}
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunaticAstroEQ.Tests", "LunaticAstroEQ.Tests\LunaticAstroEQ.Tests.csproj", "{0CE35AF1-03DD-42EA-B8DA-6E806178E283}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunaticAstroEQ.Core", "LunaticAstroEQ.Core\LunaticAstroEQ.Core.csproj", "{BAB4E803-5772-42F2-8843-059074BAB448}"
@@ -22,8 +16,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TA.Ascom.ReactiveCommunications", "TA.Ascom.ReactiveCommunications\TA.Ascom.ReactiveCommunications.csproj", "{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lunatic.TelescopeController", "Lunatic.TelescopeController\Lunatic.TelescopeController.csproj", "{05F298A9-5C49-4D75-B457-BAC1CECB0A64}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControllerTester", "ControllerTester\ControllerTester.csproj", "{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,12 +41,6 @@ Global
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Release|x86.ActiveCfg = Release|Any CPU
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Release|x86.Build.0 = Release|Any CPU
-		{8E8D406C-1838-4914-867D-AB602D0EAF3E}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{8E8D406C-1838-4914-867D-AB602D0EAF3E}.Debug|x86.ActiveCfg = Debug|x86
-		{8E8D406C-1838-4914-867D-AB602D0EAF3E}.Debug|x86.Build.0 = Debug|x86
-		{8E8D406C-1838-4914-867D-AB602D0EAF3E}.Release|Any CPU.ActiveCfg = Release|x86
-		{8E8D406C-1838-4914-867D-AB602D0EAF3E}.Release|x86.ActiveCfg = Release|x86
-		{8E8D406C-1838-4914-867D-AB602D0EAF3E}.Release|x86.Build.0 = Release|x86
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -95,14 +81,6 @@ Global
 		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Release|Any CPU.Build.0 = Release|Any CPU
 		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Release|x86.ActiveCfg = Release|Any CPU
 		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Release|x86.Build.0 = Release|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Debug|x86.Build.0 = Debug|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Release|x86.ActiveCfg = Release|Any CPU
-		{FF5C9AFF-ADB4-4060-83C6-06C185974F7F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
