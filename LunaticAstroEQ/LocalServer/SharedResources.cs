@@ -11,7 +11,7 @@
 //	* ALL DECLARATIONS MUST BE STATIC HERE!! INSTANCES OF THIS CLASS MUST NEVER BE CREATED!
 //
 // Written by:	Bob Denny	29-May-2007
-// Modified by Chris Rowland and Peter Simpson to hamdle multiple hardware devices March 2011
+// Modified by Chris Rowland and Peter Simpson to handle multiple hardware devices March 2011
 //
 
 using ASCOM.LunaticAstroEQ.Controller;
