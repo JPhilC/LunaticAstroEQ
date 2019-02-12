@@ -34,6 +34,17 @@ namespace LunaticAstroEQ.Tests
          _Tools.Dispose();
       }
 
+
+      [TestMethod]
+      public void LASTTest()
+      {
+         DateTime now = DateTime.Now;
+         MountCoordinate mount = new MountCoordinate(new AxisPosition(0.0, 0.0), _Tools, now);
+         double ASCOMLast = (18.697374558 + 24.065709824419081 * (_Tools.Util.DateLocalToJulian(now) - 2451545.0) + (_Tools.Transform.SiteLongitude / 15.0)) % 24.0;
+         Assert.AreEqual(ASCOMLast, mount.LocalApparentSiderialTime.Value, 1/3600.00);
+
+      }
+
       [TestMethod]
       public void MountCoordinateRAToAltAz()
       {

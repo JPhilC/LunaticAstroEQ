@@ -550,10 +550,14 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      public IAxisRates AxisRates(TelescopeAxes Axis)
+      public IAxisRates AxisRates(TelescopeAxes axis)
       {
-         tl.LogMessage("AxisRates", "Get - " + Axis.ToString());
-         return new AxisRates(Axis);
+         if (axis == TelescopeAxes.axisTertiary)
+         {
+            throw new ASCOM.InvalidValueException("Driver does not support tertiary axis.");
+         }
+         LogMessage("Command", "AxisRates");
+         return _AxisRates[(int)axis];
       }
 
       public double Azimuth
@@ -616,7 +620,7 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private bool _CanSetDeclinationRate = true;
+      private bool _CanSetDeclinationRate = false;
       public bool CanSetDeclinationRate
       {
          get
@@ -664,7 +668,7 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private bool _CanSetRightAscensionRate = true;
+      private bool _CanSetRightAscensionRate = false;
       public bool CanSetRightAscensionRate
       {
          get
@@ -764,7 +768,7 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private bool _CanUnpark = false;
+      private bool _CanUnpark = true;
       public bool CanUnpark
       {
          get
@@ -801,6 +805,7 @@ namespace ASCOM.LunaticAstroEQ
          }
          set
          {
+            throw new ASCOM.PropertyNotImplementedException("DeclinationRate");
             LogMessage("DeclinationRate", "Set - {0}" + _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
             _DecRateAdjustment = value;
             if (Settings.ParkStatus == ParkStatus.Unparked)
@@ -920,16 +925,21 @@ namespace ASCOM.LunaticAstroEQ
       {
          bool isRASlewing = false;
          bool isDecSlewing = false;
-         double deltaMax = AstroEQController.MAX_SLEW_SPEED_DEGREES - rate;
+         if (axis == TelescopeAxes.axisTertiary)
+         {
+            throw new ASCOM.InvalidValueException("Driver does not support tertiary axis.");
+         }
 
          if (AtPark)
          {
             throw new ASCOM.ParkedException("The mount is currently parked.");
          }
 
-         if (deltaMax < -0.000001)
+         IRate limits = _AxisRates[(int)axis][0];
+         double absRate = Math.Abs(rate);
+         if (absRate < limits.Minimum || absRate > limits.Maximum)
          {
-            throw new ASCOM.InvalidValueException("Method MoveAxis() rate exceed maximum allowed.");
+            throw new ASCOM.InvalidValueException($"Method MoveAxis() rate must be in the range ±{limits.Minimum} to ±{limits.Maximum}.");
          }
 
          lock (Controller)
@@ -951,10 +961,6 @@ namespace ASCOM.LunaticAstroEQ
                   throw new ASCOM.InvalidValueException("Tertiary axis is not supported by MoveAxis command");
             }
             _IsMoveAxisSlewing = (isRASlewing || isDecSlewing);
-            if (_IsMoveAxisSlewing)
-            {
-               TrackingState = TrackingStatus.Custom;
-            }
          }
       }
 
@@ -1006,6 +1012,7 @@ namespace ASCOM.LunaticAstroEQ
          }
          set
          {
+            throw new ASCOM.PropertyNotImplementedException("RightAscensionRate");
             LogMessage("RightAscensionRate", "Set - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
             _RaRateAdjustment = value;
             // don't action this if we're parked!
@@ -1080,7 +1087,7 @@ namespace ASCOM.LunaticAstroEQ
             lock (Controller)
             {
                RefreshCurrentPosition();
-               double lst = _CurrentPosition.LocalApparentSiderialTime.Value;
+               double lst = _CurrentPosition.LocalApparentSiderialTime;
                tl.LogMessage("SiderealTime", "Get - " + _AscomToolsCurrentPosition.Util.HoursToHMS(lst));
                return lst;
             }
@@ -1102,13 +1109,16 @@ namespace ASCOM.LunaticAstroEQ
             lock (Controller)
             {
                LogMessage("SiteElevation", "Set {0}", value);
+               if (value < -300.0 || value > 10000.0)
+               {
+                  throw new ASCOM.InvalidValueException("SiteElevation must be between -300m and 10,000m");
+               }
                if (Controller.ObservatoryElevation == value)
                {
                   return;
                }
-               _AscomToolsCurrentPosition.Transform.SiteElevation = value;
                Controller.ObservatoryElevation = value;
-               _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
+               RelocateMounts(SiteLatitude, SiteLongitude, value);
             }
          }
       }
@@ -1128,14 +1138,16 @@ namespace ASCOM.LunaticAstroEQ
             lock (Controller)
             {
                LogMessage("SiteLatitude", "Set {0}", value);
+               if (value < -90.0 || value > 90.0)
+               {
+                  throw new ASCOM.InvalidValueException("Site Latitude must be in the range -90 to 90.");
+               }
                if (Controller.ObservatoryLocation.Latitude.Value == value)
                {
                   return;
                }
-               _AscomToolsCurrentPosition.Transform.SiteLatitude = value;
                Controller.ObservatoryLocation.Latitude = value;
-               // See if the controller is at it's park position and if so set RA/Dec
-               _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
+               RelocateMounts(value, SiteLongitude, SiteElevation);
             }
          }
       }
@@ -1156,13 +1168,16 @@ namespace ASCOM.LunaticAstroEQ
             lock (Controller)
             {
                LogMessage("SiteLongitude", "Set {0}", value);
+               if (value < -180.0 || value > 180.0)
+               {
+                  throw new ASCOM.InvalidValueException("Site Longitude must be in the range -180.0 to 180.0.");
+               }
                if (Controller.ObservatoryLocation.Longitude.Value == value)
                {
                   return;
                }
-               _AscomToolsCurrentPosition.Transform.SiteLongitude = value;
                Controller.ObservatoryLocation.Longitude = value;
-               _CurrentPosition.Refresh(_AscomToolsCurrentPosition, DateTime.Now);
+               RelocateMounts(SiteLatitude, value, SiteElevation);
             }
          }
       }
@@ -1302,32 +1317,48 @@ namespace ASCOM.LunaticAstroEQ
          throw new ASCOM.MethodNotImplementedException("SyncToTarget");
       }
 
-      private double _TargetDeclination;
+      private double? _TargetDeclination = null;
       public double TargetDeclination
       {
          get
          {
-            LogMessage("TargetDeclination",  " - Get {0}", _TargetDeclination);
-            return _TargetDeclination;
+            if (!_TargetDeclination.HasValue)
+            {
+               throw new ASCOM.InvalidOperationException("Target declination has not been set.");
+            }
+            LogMessage("TargetDeclination",  " - Get {0}", _TargetDeclination.Value);
+            return _TargetDeclination.Value;
          }
          set
          {
             LogMessage("TargetDeclination", " - Set {0}", value);
+            if (value < -90.0 || value > 90.0)
+            {
+               throw new ASCOM.InvalidValueException("Target declination must be in the range -90.0 to 90.0.");
+            }
             _TargetDeclination = value;
          }
       }
 
-      private double _TargetRightAscension;
+      private double? _TargetRightAscension;
       public double TargetRightAscension
       {
          get
          {
-            LogMessage("TargetRightAscension", " - Get {0}", _TargetRightAscension);
-            return _TargetRightAscension;
+            if (!_TargetRightAscension.HasValue)
+            {
+               throw new ASCOM.InvalidOperationException("Target right ascention has not been set.");
+            }
+            LogMessage("TargetRightAscension", " - Get {0}", _TargetRightAscension.Value);
+            return _TargetRightAscension.Value;
          }
          set
          {
             LogMessage("TargetRightAscension", " - Set {0}", value);
+            if (value < 0.0 || value > 24.0)
+            {
+               throw new ASCOM.InvalidValueException("Target right ascention must be in the range 0.0 to 24.0 hours.");
+            }
             _TargetRightAscension = value;
          }
       }
@@ -1503,9 +1534,29 @@ namespace ASCOM.LunaticAstroEQ
       /// <param name="identifier"></param>
       /// <param name="message"></param>
       /// <param name="args"></param>
+      internal static void LogMessage(string identifier, string message)
+      {
+         tl.LogMessage(identifier, message);
+         // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
+      }
+
+      /// <summary>
+      /// Log helper function that takes formatted strings and arguments
+      /// </summary>
+      /// <param name="identifier"></param>
+      /// <param name="message"></param>
+      /// <param name="args"></param>
       internal static void LogMessage(string identifier, string message, params object[] args)
       {
-         var msg = string.Format(message, args);
+         string msg;
+         if (args != null && args.Length > 0)
+         {
+            msg = string.Format(message, args);
+         }
+         else
+         {
+            msg = message;
+         }
          tl.LogMessage(identifier, msg);
          // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
       }

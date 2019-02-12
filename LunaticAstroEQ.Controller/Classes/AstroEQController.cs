@@ -43,6 +43,7 @@ using TA.Ascom.ReactiveCommunications;
 using ASCOM.LunaticAstroEQ.Core.Geometry;
 using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
 using ASCOM.DeviceInterface;
+using ASCOM.DriverAccess;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
@@ -1204,6 +1205,20 @@ namespace ASCOM.LunaticAstroEQ.Controller
          return response;
       }
 
+
+      /// <summary>
+      /// Return the maximum slew rates in degrees per second.
+      /// This should come from the mount but the highspeedratio 
+      /// appears to be incorrect at the time of writing.
+      /// </summary>
+      /// <returns></returns>
+      public double[] MCGetMaxRates()
+      {
+         // TODO: Fix this once confirmation comes back from Tom
+         // return HighSpeedSlewRate;
+         return new double[] { 800 * CoreConstants.SIDEREAL_RATE_DEGREES, 800 * CoreConstants.SIDEREAL_RATE_DEGREES };
+         
+      }
 
       public void MCSetSwitch(bool OnOff)
       {

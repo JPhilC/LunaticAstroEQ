@@ -61,6 +61,7 @@ namespace ASCOM.LunaticAstroEQ
 
       private PierSide _previousPointingSOP = PierSide.pierUnknown;
       private AxisPosition _previousAxisPosition;
+      private AxisRates[] _AxisRates = new AxisRates[2];
       private AxisState[] _AxisState = new AxisState[2];
 
       private string CustomTrackFile = string.Empty;           // 
@@ -70,14 +71,32 @@ namespace ASCOM.LunaticAstroEQ
 
       private void InitialiseCurrentPosition()
       {
-         DateTime now = DateTime.Now;
-         _ParkedAxisPosition = Settings.AxisParkPosition;
-         _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
-         _previousAxisPosition = _ParkedAxisPosition;
-
-
          lock (Controller)
          {
+            DateTime now = DateTime.Now;
+            _ParkedAxisPosition = Settings.AxisParkPosition;
+            _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
+            _previousAxisPosition = _ParkedAxisPosition;
+
+            // Set the axis rates.
+            AxisRates raAxisRates = new AxisRates(TelescopeAxes.axisPrimary);
+            AxisRates decAxisRates = new AxisRates(TelescopeAxes.axisSecondary);
+
+            double[] maxRates = Controller.MCGetMaxRates();
+
+            raAxisRates[0].Minimum = 0;
+            raAxisRates[0].Maximum = maxRates[RA_AXIS];
+            decAxisRates[0].Minimum = 0;
+            decAxisRates[0].Maximum = maxRates[DEC_AXIS];
+
+            // Form the time being the maximum rate is not coming back from 
+            _AxisRates = new AxisRates[]
+            {
+            new AxisRates(TelescopeAxes.axisPrimary),
+            new AxisRates(TelescopeAxes.axisTertiary)
+            };
+
+
             Controller.MCSetAxisPosition(_ParkedAxisPosition);
             _AxisState = Controller.MCGetAxesStates();
             if (TrackingState != TrackingStatus.Off)
@@ -160,6 +179,10 @@ namespace ASCOM.LunaticAstroEQ
                         _IsSlewing = false;
                         // Announce("Slew complete.");
                      }
+                     if (_IsMoveAxisSlewing)
+                     {
+                        _IsMoveAxisSlewing = false;
+                     }
                      if (TrackingState != TrackingStatus.Off)
                      {
                         RestartTracking(TrackingRate);
@@ -224,7 +247,23 @@ namespace ASCOM.LunaticAstroEQ
 
       }
 
+      private void RelocateMounts(double latitude, double longitude, double elevation)
+      {
+         _AscomToolsCurrentPosition.Transform.SiteLongitude = longitude;
+         _AscomToolsTargetPosition.Transform.SiteLongitude = longitude;
+         _AscomToolsCurrentPosition.Transform.SiteLatitude = latitude;
+         _AscomToolsTargetPosition.Transform.SiteLatitude = latitude;
+         _AscomToolsCurrentPosition.Transform.SiteElevation = elevation;
+         _AscomToolsTargetPosition.Transform.SiteElevation = elevation;
 
+         // Refresh the current positiona using the new longitude
+         _CurrentPosition = new MountCoordinate(_CurrentPosition.ObservedAxes, _AscomToolsCurrentPosition, _CurrentPosition.SyncTime);
+         if (_TargetPosition != null)
+         {
+            _TargetPosition = new MountCoordinate(_TargetPosition.ObservedAxes, _AscomToolsTargetPosition, _TargetPosition.SyncTime);
+         }
+         RefreshCurrentPosition();
+      }
 
       private void AbortSlewInternal()
       {
@@ -261,14 +300,14 @@ namespace ASCOM.LunaticAstroEQ
                if (Settings.AscomCompliance.UseSynchronousParking)
                {
                   // Block until the park completes
-                  AxisPosition currentPosition = Controller.MCGetAxisPositions();
-                  while (!currentPosition.Equals(_ParkedAxisPosition, _axisPositionTolerance))
+                  while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
                   {
                      System.Diagnostics.Debug.Write("Waiting for 5 seconds");
                      // wait 5 seconds
                      Thread.Sleep(5000);
-                     currentPosition = Controller.MCGetAxisPositions();
+                     _AxisState = Controller.MCGetAxesStates();
                   }
+                  RefreshCurrentPosition();
                }
                // If not using synchronous parking the usual refresh current possition handles everything.
             }
