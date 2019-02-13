@@ -98,6 +98,8 @@ namespace ASCOM.LunaticAstroEQ.Core
       Lunar,
       [Description("Solar")]
       Solar,
+      [Description("King")]
+      King,
       [Description("Custom")]
       Custom
    }

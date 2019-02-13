@@ -40,15 +40,26 @@ namespace ASCOM.LunaticAstroEQ.Core
       /// <summary>
       /// Sidereal rate in Arc Seconds.
       /// </summary>
-      public const double SIDEREAL_RATE_ARCSECS = 15.0410686403;               // arcsecs/sec  (60*60*360) / 86164.090530833;
+      public const double SIDEREAL_RATE_ARCSECS = 15.0410686403;             // arcsecs/sec  (60*60*360) / 86164.090530833;
       /// <summary>
       /// Solar rate in Arc Seconds.
       /// </summary>
-      public const double SOLAR_RATE = 15;
+      public const double SOLAR_RATE_ARCSECS = 15.0;
       /// <summary>
       /// Lunar rate in Arc Seconds.
       /// </summary>
-      public const double LUNAR_RATE = 14.511415;
+      public const double LUNAR_RATE_ARCSECS = 14.511415;                  // Modified from ASCOM settings (as per EQMOD)
+
+
+      /// <summary>
+      /// King rate in Arc Seconds.
+      /// </summary>
+      public const double KING_RATE_ARCSECS = 15.0369;                     // ASCOM list value acsseconds per second
+
+      /// <summary>
+      /// Ratio of from synodic (solar) to sidereal (stellar) rate used with RightAscensionRate property.
+      /// </summary>
+      public const double SIDEREAL_RATE = 0.9972695677;      // Use to convert from sideral seconds to S seconds.
 
       /// <summary>
       /// Radians per degree

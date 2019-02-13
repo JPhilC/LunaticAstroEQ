@@ -982,44 +982,35 @@ namespace ASCOM.LunaticAstroEQ.Controller
          }
       }
 
-
-      public void MCStartRATrack(DriveRates trackRate, HemisphereOption hemisphere, AxisDirection direction)
+      /// <summary>
+      /// Start the RA axis tracking at a given rate of seconds of RA per SI second.
+      /// </summary>
+      /// <param name="trackingRate"></param>
+      /// <param name="hemisphere"></param>
+      /// <param name="direction"></param>
+      public void MCStartAxisTracking(AxisId axis, double trackingRate, HemisphereOption hemisphere, AxisDirection direction)
       {
          lock (lockObject)
          {
-            int stepPeriod;
+            int ax = (int)axis;
 
-            switch (trackRate)
-            {
-               case DriveRates.driveSolar:
-                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0016129032258064516129032258065);
-                  break;
+            // LowSpeedSlewRate[0] is the Sidereal step rate so we need to work out the multiplier.
+            double lowSpeedMultiplier = trackingRate / CoreConstants.SIDEREAL_RATE_ARCSECS;
 
-               case DriveRates.driveLunar:
-                  stepPeriod = (int)(LowSpeedSlewRate[0] * 1.0370967741935483870967741935484);
-                  break;
+            int stepPeriod = (int)(LowSpeedSlewRate[ax] * lowSpeedMultiplier);
 
-               case DriveRates.driveSidereal:
-                  stepPeriod = (int)LowSpeedSlewRate[0];
-                  break;
-
-               default:
-                  throw new ASCOM.InvalidValueException("Unexpected tracking drive rate");
-
-            }
-
-            MCAxisStop(AxisId.Axis1_RA);
+            MCAxisStop(axis);
 
             // Set the motor hemisphere, mode, direction and speed
-            SetMotionMode(AxisId.Axis1_RA, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);
+            SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);
 
             // Set step period
-            SetStepPeriod(AxisId.Axis1_RA, stepPeriod);
+            SetStepPeriod(axis, stepPeriod);
 
             // Start RA Motor
-            StartMotion(AxisId.Axis1_RA);    // 301 -> 201
+            StartMotion(axis);    // 301 -> 201
 
-            _AxisState[(int)AxisId.Axis1_RA].SetTracking(true, stepPeriod);
+            _AxisState[ax].SetTracking(true, stepPeriod);
          }
       }
 

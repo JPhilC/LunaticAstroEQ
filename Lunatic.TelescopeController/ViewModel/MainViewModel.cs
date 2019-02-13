@@ -1332,10 +1332,10 @@ End Property
                               baseRATrackingRate = Constants.SIDEREAL_RATE_ARCSECS;
                               break;
                            case DriveRates.driveLunar:
-                              baseRATrackingRate = Constants.LUNAR_RATE;
+                              baseRATrackingRate = Constants.LUNAR_RATE_ARCSECS;
                               break;
                            case DriveRates.driveSolar:
-                              baseRATrackingRate = Constants.SOLAR_RATE;
+                              baseRATrackingRate = Constants.SOLAR_RATE_ARCSECS;
                               break;
                            default:
                               throw new ArgumentOutOfRangeException("Unexpected Driver Tracking rate");

@@ -34,6 +34,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
 
 namespace ASCOM.LunaticAstroEQ
 {
@@ -72,6 +73,8 @@ namespace ASCOM.LunaticAstroEQ
       public double DeclinationRate { get; set; }
       #endregion
 
+      public Dictionary<DriveRates, double> DriveRateValue { get; set; } = new Dictionary<DriveRates, double>();
+
       public AscomCompliance AscomCompliance { get; set; }
 
       public TelescopeSettings()
@@ -94,7 +97,11 @@ namespace ASCOM.LunaticAstroEQ
          TrackingState = TrackingStatus.Off;
          TrackingRate = DriveRates.driveSidereal;
 
-
+         DriveRateValue = new Dictionary<DriveRates, double>{
+         { DriveRates.driveSidereal, CoreConstants.SIDEREAL_RATE_ARCSECS},
+         { DriveRates.driveLunar, CoreConstants.LUNAR_RATE_ARCSECS},
+         { DriveRates.driveSolar, CoreConstants.SOLAR_RATE_ARCSECS},
+         { DriveRates.driveKing, CoreConstants.KING_RATE_ARCSECS}};
       }
    }
 }

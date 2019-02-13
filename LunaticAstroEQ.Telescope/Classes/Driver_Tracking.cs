@@ -77,37 +77,47 @@ namespace ASCOM.LunaticAstroEQ
             _ParkedAxisPosition = Settings.AxisParkPosition;
             _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
             _previousAxisPosition = _ParkedAxisPosition;
-
-            // Set the axis rates.
-            AxisRates raAxisRates = new AxisRates(TelescopeAxes.axisPrimary);
-            AxisRates decAxisRates = new AxisRates(TelescopeAxes.axisSecondary);
-
-            double[] maxRates = Controller.MCGetMaxRates();
-
-            raAxisRates[0].Minimum = 0;
-            raAxisRates[0].Maximum = maxRates[RA_AXIS];
-            decAxisRates[0].Minimum = 0;
-            decAxisRates[0].Maximum = maxRates[DEC_AXIS];
-
-            // Form the time being the maximum rate is not coming back from 
-            _AxisRates = new AxisRates[]
-            {
-            new AxisRates(TelescopeAxes.axisPrimary),
-            new AxisRates(TelescopeAxes.axisTertiary)
-            };
-
-
             Controller.MCSetAxisPosition(_ParkedAxisPosition);
+
+            // Get the MoveAxis value limits.
+            InitialiseAxisRates();
+
+            // Get the controllers current axis states and see if we need to 
+            // start tracking.
             _AxisState = Controller.MCGetAxesStates();
             if (TrackingState != TrackingStatus.Off)
             {
-               if ((!_AxisState[RA_AXIS].Slewing))
+               if ((!_AxisState[RA_AXIS].Slewing && !_AxisState[DEC_AXIS].Slewing))
                {
-                  InitialiseTracking(DriveRates.driveSidereal);
+                  StartTracking();
                }
             }
          }
 
+      }
+
+      /// <summary>
+      /// Initialised the axis rates used to validate MoveAxis values.
+      /// </summary>
+      private void InitialiseAxisRates()
+      {
+         // Set the axis rates (used with the MoveAxis command).
+         AxisRates raAxisRates = new AxisRates(TelescopeAxes.axisPrimary);
+         AxisRates decAxisRates = new AxisRates(TelescopeAxes.axisSecondary);
+
+         double[] maxRates = Controller.MCGetMaxRates();
+
+         raAxisRates[0].Minimum = 0;
+         raAxisRates[0].Maximum = maxRates[RA_AXIS];
+         decAxisRates[0].Minimum = 0;
+         decAxisRates[0].Maximum = maxRates[DEC_AXIS];
+
+         // Form the time being the maximum rate is not coming back from 
+         _AxisRates = new AxisRates[]
+         {
+            new AxisRates(TelescopeAxes.axisPrimary),
+            new AxisRates(TelescopeAxes.axisTertiary)
+         };
       }
 
 
@@ -166,7 +176,7 @@ namespace ASCOM.LunaticAstroEQ
                   _ParkedAxisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
                   Settings.ParkStatus = ParkStatus.Parked;
                   Settings.AxisParkPosition = _ParkedAxisPosition;
-                  TelescopeSettingsProvider.Current.SaveSettings();
+                  SaveSettings();
 
                }
                else
@@ -185,7 +195,9 @@ namespace ASCOM.LunaticAstroEQ
                      }
                      if (TrackingState != TrackingStatus.Off)
                      {
-                        RestartTracking(TrackingRate);
+                        System.Diagnostics.Debug.WriteLine("Restarting tracking");
+                        LogMessage("Command", "Restarting tracking {0}", TrackingState);
+                        StartTracking();
                      }
                   }
                }
@@ -295,7 +307,7 @@ namespace ASCOM.LunaticAstroEQ
 
                // Set status to Parking
                Settings.ParkStatus = ParkStatus.Parking;
-               TelescopeSettingsProvider.Current.SaveSettings();
+               SaveSettings();
                Controller.MCAxisSlewTo(_ParkedAxisPosition, Hemisphere);
                if (Settings.AscomCompliance.UseSynchronousParking)
                {
@@ -353,30 +365,11 @@ namespace ASCOM.LunaticAstroEQ
                return;
             }
             Settings.TrackingState = value;
-            TelescopeSettingsProvider.Current.SaveSettings();
+            SaveSettings();
 
          }
       }
 
-      // Called to initialise tracking (After loading settings, if the mount isn't already tracking)
-      private void InitialiseTracking(DriveRates trackingRate)
-      {
-         switch (trackingRate)
-         {
-            case DriveRates.driveSidereal:
-               StartSiderealTracking();
-               break;
-            case DriveRates.driveLunar:
-               StartLunarTracking();
-               break;
-            case DriveRates.driveSolar:
-               StartSolarTracking();
-               break;
-            default:
-               throw new ASCOM.InvalidValueException("TrackingRate");
-         }
-
-      }
 
       private void StopTracking()
       {
@@ -407,23 +400,12 @@ namespace ASCOM.LunaticAstroEQ
             Settings.DeclinationRate = 0;
             Settings.RightAscensionRate = 0;
 
-            TelescopeSettingsProvider.Current.SaveSettings();
+            SaveSettings();
          }
       }
 
-      /// <summary>
-      /// Restart tracking after goto etc.
-      /// </summary>
-      /// <param name="trackingRate"></param>
-      private void RestartTracking(DriveRates trackingRate)
-      {
-         System.Diagnostics.Debug.WriteLine("Restarting tracking");
-         LogMessage("Command", "Restarting tracking {0}", TrackingRate);
-         Controller.MCStartRATrack(trackingRate, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
-         Controller.MCAxisStop(AxisId.Axis2_Dec);
-      }
 
-      private void StartSiderealTracking()
+      private void StartTracking()
       {
          lock (Controller)
          {
@@ -434,19 +416,53 @@ namespace ASCOM.LunaticAstroEQ
             }
             else
             {
-               //  Stop DEC motor
-               Controller.MCAxisStop(AxisId.Axis2_Dec);
-               Settings.DeclinationRate = 0;
+               double raRate = 0.0;
+               double decRate = 0.0;
+               double adjustedRaRate = 0.0;
+               if (Settings.DeclinationRate == 0.0)
+               {
+                  //  Stop DEC motor
+                  Controller.MCAxisStop(AxisId.Axis2_Dec);
+                  switch (Settings.TrackingRate)
+                  {
+                     case DriveRates.driveKing:
+                        Settings.TrackingState = TrackingStatus.King;
+                        break;
+                     case DriveRates.driveLunar:
+                        Settings.TrackingState = TrackingStatus.Lunar;
+                        break;
+                     case DriveRates.driveSidereal:
+                        Settings.TrackingState = TrackingStatus.Sidereal;
+                        break;
+                     case DriveRates.driveSolar:
+                        Settings.TrackingState = TrackingStatus.Solar;
+                        break;
+                     default:
+                        throw new ASCOM.InvalidValueException("Unexpected tracking rate set.");
+                  }
+               }
+               else
+               {
+                  decRate = Settings.DeclinationRate;
+                  Controller.MCStartAxisTracking(AxisId.Axis2_Dec, decRate, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
+                  Settings.TrackingState = TrackingStatus.Custom;
+               }
+
+               raRate = Settings.DriveRateValue[Settings.TrackingRate];
+               if (Settings.RightAscensionRate == 0)
+               {
+                  adjustedRaRate = raRate;
+               }
+               else
+               {
+                  // RightAscensionRate is in seconds or RA per sidereal second. The divisor below
+                  // converts this to seconds of RA per SI second as expected by the controller
+                  adjustedRaRate = raRate + (Settings.RightAscensionRate / CoreConstants.SIDEREAL_RATE);
+               }
+               Controller.MCStartAxisTracking(AxisId.Axis1_RA, adjustedRaRate, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
 
 
-               //  start RA motor at sidereal
-
-               Controller.MCStartRATrack(DriveRates.driveSidereal, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
-               Settings.TrackingState = TrackingStatus.Sidereal;
-               Settings.TrackingRate = DriveRates.driveSidereal;    // ASCOM TrackingRate backing variable
-               Settings.RightAscensionRate = Core.Constants.SIDEREAL_RATE_ARCSECS;
-
-               TelescopeSettingsProvider.Current.SaveSettings();
+               SaveSettings();
                //if (Settings.TrackUsingPEC)
                //{
                //   //  track using PEC
@@ -470,59 +486,6 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private void StartLunarTracking()
-      {
-         //LastPECRate = 0;
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            // HC.Add_Message(oLangDll.GetLangString(5013))
-            return;
-         }
-
-
-         //if (PECEnabled)
-         //{
-         //   PECStopTracking();
-         //}
-         Controller.MCAxisStop(AxisId.Axis2_Dec);
-         Settings.DeclinationRate = 0;
-
-         Controller.MCStartRATrack(DriveRates.driveLunar, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
-         Settings.TrackingState = TrackingStatus.Lunar;                 // Lunar rate tracking'
-         Settings.TrackingRate = DriveRates.driveLunar;                // Backing variable for ASCOM TrackingRate member.
-         Settings.RightAscensionRate = Core.Constants.LUNAR_RATE;
-
-         TelescopeSettingsProvider.Current.SaveSettings();
-
-      }
-
-
-      private void StartSolarTracking()
-      {
-         //LastPECRate = 0;
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            // HC.Add_Message(oLangDll.GetLangString(5013))
-            return;
-         }
-
-
-         //if (PECEnabled)
-         //{
-         //   PECStopTracking();
-         //}
-         Controller.MCAxisStop(AxisId.Axis2_Dec);
-         Settings.DeclinationRate = 0;
-
-
-         Controller.MCStartRATrack(DriveRates.driveSolar, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
-         Settings.TrackingState = TrackingStatus.Solar;                 // Lunar rate tracking'
-         Settings.TrackingRate = DriveRates.driveSolar;                // Backing variable for ASCOM TrackingRate member.
-         Settings.RightAscensionRate = Core.Constants.SOLAR_RATE;
-
-         TelescopeSettingsProvider.Current.SaveSettings();
-
-      }
 
       private void StartCustomTracking(bool mute)
       {
@@ -650,7 +613,7 @@ namespace ASCOM.LunaticAstroEQ
          }
          if (saveSettings)
          {
-            TelescopeSettingsProvider.Current.SaveSettings();
+            SaveSettings();
          }
       }
 

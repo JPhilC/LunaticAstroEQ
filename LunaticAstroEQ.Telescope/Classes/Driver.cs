@@ -150,6 +150,9 @@ namespace ASCOM.LunaticAstroEQ
       private MountCoordinate _CurrentPosition;
       private MountCoordinate _TargetPosition;
 
+
+      private Dictionary<DriveRates, double> _TrackingRate = null;
+
       /// <summary>
       /// Initializes a new instance of the <see cref="LunaticAstroEQ"/> class.
       /// Must be public for COM registration.
@@ -158,6 +161,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          driverID = Marshal.GenerateProgIdForType(this.GetType());
          driverDescription = GetDriverDescription();
+
 
 
          tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
@@ -239,7 +243,7 @@ namespace ASCOM.LunaticAstroEQ
             var result = F.ShowDialog();
             if (result == System.Windows.Forms.DialogResult.OK)
             {
-               TelescopeSettingsProvider.Current.SaveSettings();
+               SaveSettings();
             }
          }
       }
@@ -620,7 +624,7 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private bool _CanSetDeclinationRate = false;
+      private bool _CanSetDeclinationRate = true;
       public bool CanSetDeclinationRate
       {
          get
@@ -668,7 +672,7 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private bool _CanSetRightAscensionRate = false;
+      private bool _CanSetRightAscensionRate = true;
       public bool CanSetRightAscensionRate
       {
          get
@@ -794,8 +798,6 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      private double _DecRateAdjustment = 0.0;
-
       public double DeclinationRate
       {
          get
@@ -805,36 +807,16 @@ namespace ASCOM.LunaticAstroEQ
          }
          set
          {
-            throw new ASCOM.PropertyNotImplementedException("DeclinationRate");
             LogMessage("DeclinationRate", "Set - {0}" + _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
-            _DecRateAdjustment = value;
-            if (Settings.ParkStatus == ParkStatus.Unparked)
+            if (value == Settings.DeclinationRate)
             {
-               if (value == 0 && _RaRateAdjustment == 0)
-               {
-                  StartSiderealTracking();
-               }
-               else
-               {
-                  if (TrackingState != TrackingStatus.Off)
-                  {
-                     if ((Settings.DeclinationRate * value) <= 0)
-                     {
-                        StartDecTrackingByRate(value);
-                     }
-                     else
-                     {
-                        ChangeDecTrackingByRate(value);
-                     }
-                     TrackingState = TrackingStatus.Custom;
-                  }
-               }
-               Settings.DeclinationRate = value;
-               TelescopeSettingsProvider.Current.SaveSettings();
+               return;
             }
-            else
+            Settings.DeclinationRate = value;
+            SaveSettings();
+            if (Tracking)
             {
-               throw new ASCOM.InvalidOperationException("Invalid while the telescope is parked");
+               StartTracking();  // Force tracking to refresh with the new rate.
             }
          }
       }
@@ -992,67 +974,27 @@ namespace ASCOM.LunaticAstroEQ
       }
 
 
-      private double _RaRateAdjustment = 0.0;
 
       public double RightAscensionRate
       {
          get
          {
-            double value;
-            if (Hemisphere == HemisphereOption.Northern)
-            {
-               value = Settings.RightAscensionRate - CoreConstants.SIDEREAL_RATE_ARCSECS;
-            }
-            else
-            {
-               value = Settings.RightAscensionRate + CoreConstants.SIDEREAL_RATE_ARCSECS;
-            }
-            LogMessage("RightAscensionRate", "Get - {0}", value);
-            return value;
+            LogMessage("RightAscensionRate", "Get - {0}", Settings.RightAscensionRate);
+            return Settings.RightAscensionRate;
          }
          set
          {
-            throw new ASCOM.PropertyNotImplementedException("RightAscensionRate");
+            // throw new ASCOM.PropertyNotImplementedException("RightAscensionRate");
             LogMessage("RightAscensionRate", "Set - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
-            _RaRateAdjustment = value;
-            // don't action this if we're parked!
-            if (Settings.ParkStatus == ParkStatus.Unparked)
+            if (value == Settings.RightAscensionRate)
             {
-               if (value == 0 && _DecRateAdjustment == 0)
-               {
-                  StartSiderealTracking();
-               }
-               else
-               {
-                  if (Hemisphere == HemisphereOption.Northern)
-                  {
-                     value = CoreConstants.SIDEREAL_RATE_ARCSECS + value;      // Treat newval as an offset
-                  }
-                  else
-                  {
-                     value = value - CoreConstants.SIDEREAL_RATE_ARCSECS;      // Treat newval as an offset
-                  }
-                  // if we're already tracking then apply the new rate.
-                  if (TrackingState != TrackingStatus.Off)
-                  {
-                     if ((Settings.RightAscensionRate * value) <= 0)
-                     {
-                        StartRATrackingByRate(value);
-                     }
-                     else
-                     {
-                        ChangeRATrackingByRate(value);
-                     }
-                     TrackingState = TrackingStatus.Custom;
-                  }
-               }
-               Settings.RightAscensionRate = value;
-               TelescopeSettingsProvider.Current.SaveSettings();
+               return;
             }
-            else
+            Settings.RightAscensionRate = value;
+            SaveSettings();
+            if (Tracking)
             {
-               _RaRateAdjustment = 0;
-               throw new ASCOM.InvalidOperationException("Invalid operation while the telescope is parked");
+               StartTracking();  // Restart tracking with the new rate.
             }
          }
       }
@@ -1062,7 +1004,7 @@ namespace ASCOM.LunaticAstroEQ
          LogMessage("Command", "SetPark");
          _ParkedAxisPosition = _CurrentPosition.ObservedAxes;
          Settings.AxisParkPosition = _ParkedAxisPosition;
-         TelescopeSettingsProvider.Current.SaveSettings();
+         SaveSettings();
       }
 
       public PierSide SideOfPier
@@ -1326,7 +1268,7 @@ namespace ASCOM.LunaticAstroEQ
             {
                throw new ASCOM.InvalidOperationException("Target declination has not been set.");
             }
-            LogMessage("TargetDeclination",  " - Get {0}", _TargetDeclination.Value);
+            LogMessage("TargetDeclination", " - Get {0}", _TargetDeclination.Value);
             return _TargetDeclination.Value;
          }
          set
@@ -1380,24 +1322,23 @@ namespace ASCOM.LunaticAstroEQ
                {
                   if (value)
                   {
-                     if (_RaRateAdjustment == 0 && _DecRateAdjustment == 0)
-                     {
-                        // track at sidereal
-                        StartSiderealTracking();
-                     }
-                     else
-                     {
-                        // track at custom rate
-                        Settings.DeclinationRate = _DecRateAdjustment;
-                        Settings.RightAscensionRate = Core.Constants.SIDEREAL_RATE_ARCSECS + _RaRateAdjustment;
-                        //if (PECEnabled)
-                        //{
-                        //   PECStopTracking();
-                        //}
-                        // Call CustomMoveAxis(0, gRightAscensionRate, True, oLangDll.GetLangString(189))
-                        // Call CustomMoveAxis(1, gDeclinationRate, True, oLangDll.GetLangString(189))
-                        TelescopeSettingsProvider.Current.SaveSettings();
-                     }
+                     //if (Settings.DeclinationRate == 0)
+                     //{
+                     // track at sidereal
+                     StartTracking();   // This method takes into account RightAscensionRate as well.
+                     //}
+                     //else
+                     //{
+                     //   // DeclinationRate != 0.0 so tracking with both axes (i.e. custom tracking)
+                     //   StartCustomTracking();
+                     //   // track at custom rate
+                     //   //if (PECEnabled)
+                     //   //{
+                     //   //   PECStopTracking();
+                     //   //}
+                     //   // Call CustomMoveAxis(0, gRightAscensionRate, True, oLangDll.GetLangString(189))
+                     //   // Call CustomMoveAxis(1, gDeclinationRate, True, oLangDll.GetLangString(189))
+                     //}
                   }
                   else
                   {
@@ -1405,9 +1346,7 @@ namespace ASCOM.LunaticAstroEQ
                      // Announce tracking stopped
                      Settings.TrackingState = TrackingStatus.Off;
                      // not sure that we should be clearing the rate offests ASCOM Spec is no help
-                     Settings.DeclinationRate = 0;
-                     Settings.RightAscensionRate = 0;
-                     TelescopeSettingsProvider.Current.SaveSettings();
+                     SaveSettings();
                   }
                }
             }
@@ -1435,13 +1374,11 @@ namespace ASCOM.LunaticAstroEQ
             switch (value)
             {
                case DriveRates.driveSidereal:
-                  StartSiderealTracking();
-                  break;
                case DriveRates.driveLunar:
-                  StartLunarTracking();
-                  break;
                case DriveRates.driveSolar:
-                  StartSolarTracking();
+               case DriveRates.driveKing:
+                  Settings.TrackingRate = value;
+                  SaveSettings();
                   break;
                default:
                   throw new ASCOM.InvalidValueException("TrackingRate");
@@ -1497,7 +1434,7 @@ namespace ASCOM.LunaticAstroEQ
             {
                //TODO: Sort out whether tracking should be restarted and restart if necessary.
                Settings.ParkStatus = ParkStatus.Unparked;
-               TelescopeSettingsProvider.Current.SaveSettings();
+               SaveSettings();
             }
          }
       }
@@ -1527,6 +1464,10 @@ namespace ASCOM.LunaticAstroEQ
       }
 
 
+      private void SaveSettings()
+      {
+         TelescopeSettingsProvider.Current.SaveSettings();
+      }
 
       /// <summary>
       /// Log helper function that takes formatted strings and arguments
