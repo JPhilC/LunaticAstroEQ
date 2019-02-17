@@ -182,33 +182,33 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             {
                if (swapSideOfPier)
                {
-                  pointingSOP = PierSide.pierWest;
+                  pointingSOP = PierSide.pierEast;
                }
                else
                {
-                  pointingSOP = PierSide.pierEast;
+                  pointingSOP = PierSide.pierWest; 
                }
             }
             else
             {
                if (swapSideOfPier)
                {
-                  pointingSOP = PierSide.pierEast;
+                  pointingSOP = PierSide.pierWest;
                }
                else
                {
-                  pointingSOP = PierSide.pierWest;
+                  pointingSOP = PierSide.pierEast; 
                }
             }
             if (Hemisphere == HemisphereOption.Southern)
             {
                if (pointingSOP == PierSide.pierWest)
                {
-                  pointingSOP = PierSide.pierEast;
+                  pointingSOP = PierSide.pierWest;
                }
                else
                {
-                  pointingSOP = PierSide.pierWest;
+                  pointingSOP = PierSide.pierEast; 
                }
             }
          }
@@ -377,7 +377,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       private double GetHourAngleFromAngle(Angle raAxisAngle)
       {
-         double hours = HourAngle.DegreesToHours(raAxisAngle.Value);
+         double hours = HourAngle.DegreesToHours(AstroConvert.Range360Degrees(360.0 - raAxisAngle.Value));
          if (Hemisphere == HemisphereOption.Northern)
          {
             return AstroConvert.RangeRA(hours + 6.0);
@@ -404,7 +404,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
             ha = AstroConvert.RangeRA((24 - hourAngle) - 6.0); // Renormalise from a perpendicular position
             degrees = HourAngle.HoursToDegrees(ha);
          }
-         return AstroConvert.Range360Degrees(degrees);
+         return AstroConvert.Range360Degrees(360.0 - degrees);
       }
 
       #endregion

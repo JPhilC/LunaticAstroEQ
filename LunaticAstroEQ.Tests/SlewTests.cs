@@ -235,8 +235,9 @@ namespace LunaticAstroEQ.Tests
          double ha = currentPosition.LocalApparentSiderialTime;
 
          AxisPosition targetAxisPosition = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha - 3.0), 10.0, _Tools);
-         currentPosition.MoveRADec(targetAxisPosition, _Tools, _Now);
-         Assert.AreEqual(PierSide.pierWest, currentPosition.GetPointingSideOfPier(false), "Point A");
+         MountCoordinate targetCoordinate = new MountCoordinate(targetAxisPosition, _Tools, _Now);
+         // currentPosition.MoveRADec(targetAxisPosition, _Tools, _Now);
+         Assert.AreEqual(PierSide.pierWest, targetCoordinate.GetPointingSideOfPier(false), "Point A");
 
          targetAxisPosition = currentPosition.GetAxisPositionForRADec(AstroConvert.RangeRA(ha + 9.0), 60.0, _Tools);
          currentPosition.MoveRADec(targetAxisPosition, _Tools, _Now);
