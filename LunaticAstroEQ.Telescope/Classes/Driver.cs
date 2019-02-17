@@ -498,8 +498,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("AlignmentMode Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("AlignmentMode", false);
+            LogMessage("AlignmentMode", "Get - {0}", _AlignmentMode);
+            return _AlignmentMode;
          }
       }
 
@@ -548,6 +548,7 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
+            RefreshCurrentPosition();
             bool atPark = (Settings.ParkStatus == ParkStatus.Parked);
             LogMessage("AtPark", "Get - {0}", atPark);
             return atPark;
@@ -556,10 +557,6 @@ namespace ASCOM.LunaticAstroEQ
 
       public IAxisRates AxisRates(TelescopeAxes axis)
       {
-         if (axis == TelescopeAxes.axisTertiary)
-         {
-            throw new ASCOM.InvalidValueException("Driver does not support tertiary axis.");
-         }
          LogMessage("Command", "AxisRates");
          return _AxisRates[(int)axis];
       }
@@ -589,14 +586,19 @@ namespace ASCOM.LunaticAstroEQ
 
       public bool CanMoveAxis(TelescopeAxes Axis)
       {
-         tl.LogMessage("CanMoveAxis", "Get - " + Axis.ToString());
+         bool canMove = false;
          switch (Axis)
          {
-            case TelescopeAxes.axisPrimary: return false;
-            case TelescopeAxes.axisSecondary: return false;
-            case TelescopeAxes.axisTertiary: return false;
+            case TelescopeAxes.axisPrimary: 
+            case TelescopeAxes.axisSecondary:
+               canMove = true;
+               break;
+            case TelescopeAxes.axisTertiary:
+               break;
             default: throw new InvalidValueException("CanMoveAxis", Axis.ToString(), "0 to 2");
          }
+         LogMessage("CanMoveAxis", "Get - {0}:{1}", Axis, canMove);
+         return canMove;
       }
 
       private bool _CanPark = true;
@@ -821,18 +823,20 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      public PierSide DestinationSideOfPier(double RightAscension, double Declination)
+      public PierSide DestinationSideOfPier(double rightAscension, double declination)
       {
-         tl.LogMessage("DestinationSideOfPier Get", "Not implemented");
-         throw new ASCOM.PropertyNotImplementedException("DestinationSideOfPier", false);
+         PierSide destinationSideOfPier = GetDestinationSideOfPier(rightAscension, declination);
+         LogMessage("DestinationSideOfPier", "Get - {0}", destinationSideOfPier);
+         return destinationSideOfPier;
       }
 
+      private bool _DoesRefraction = false;
       public bool DoesRefraction
       {
          get
          {
-            tl.LogMessage("DoesRefraction Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("DoesRefraction", false);
+            LogMessage("DoesRefraction", "Get - {0}", _DoesRefraction);
+            return _DoesRefraction;
          }
          set
          {
@@ -917,7 +921,7 @@ namespace ASCOM.LunaticAstroEQ
             throw new ASCOM.ParkedException("The mount is currently parked.");
          }
 
-         IRate limits = _AxisRates[(int)axis][0];
+         IRate limits = _AxisRates[(int)axis][1];  // IRate is 1 based.
          double absRate = Math.Abs(rate);
          if (absRate < limits.Minimum || absRate > limits.Maximum)
          {
@@ -926,17 +930,17 @@ namespace ASCOM.LunaticAstroEQ
 
          lock (Controller)
          {
-            System.Diagnostics.Debug.WriteLine(String.Format("MoveAxis({0}, {1})", axis, rate));
+            // System.Diagnostics.Debug.WriteLine(String.Format("MoveAxis({0}, {1})", axis, rate));
             LogMessage("MoveAxis", "({0}, {1})", axis, rate);
 
             switch (axis)
             {
                case TelescopeAxes.axisPrimary:
-                  isRASlewing = (rate > 0);
+                  isRASlewing = (rate != 0);
                   Controller.MCAxisSlew(AxisId.Axis1_RA, rate, Hemisphere);
                   break;
                case TelescopeAxes.axisSecondary:
-                  isDecSlewing = (rate > 0);
+                  isDecSlewing = (rate != 0);
                   Controller.MCAxisSlew(AxisId.Axis2_Dec, rate, Hemisphere);
                   break;
                default:
@@ -984,7 +988,6 @@ namespace ASCOM.LunaticAstroEQ
          }
          set
          {
-            // throw new ASCOM.PropertyNotImplementedException("RightAscensionRate");
             LogMessage("RightAscensionRate", "Set - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
             if (value == Settings.RightAscensionRate)
             {
@@ -1160,7 +1163,22 @@ namespace ASCOM.LunaticAstroEQ
          {
             throw new ASCOM.ParkedException("The mount is currently parked.");
          }
+         if (!Tracking)
+         {
+            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
+         }
+         LogMessage("Command", "SlewToCoordinates RA:{0}, Dec: {0}", rightAscension, declination);
          SlewToEquatorialCoordinate(rightAscension, declination);
+         // Block until the slew completes
+         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         {
+            System.Diagnostics.Debug.Write("Waiting for 5 seconds");
+            // wait 5 seconds
+            Thread.Sleep(5000);
+            _AxisState = Controller.MCGetAxesStates();
+         }
+         RefreshCurrentPosition();
+
       }
 
       public void SlewToCoordinatesAsync(double rightAscension, double declination)
@@ -1169,19 +1187,65 @@ namespace ASCOM.LunaticAstroEQ
          {
             throw new ASCOM.ParkedException("The mount is currently parked.");
          }
+         if (!Tracking)
+         {
+            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
+         }
+         LogMessage("Command", "SlewToCoordinatesAsync RA:{0}, Dec: {0}", rightAscension, declination);
          SlewToEquatorialCoordinate(rightAscension, declination);
       }
 
       public void SlewToTarget()
       {
-         tl.LogMessage("SlewToTarget", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SlewToTarget");
+         if (AtPark)
+         {
+            throw new ASCOM.ParkedException("The mount is currently parked.");
+         }
+         if (!Tracking)
+         {
+            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
+         }
+         if (!_TargetRightAscension.HasValue)
+         {
+            throw new ASCOM.InvalidValueException("Target Right Ascension is not set.");
+         }
+         if (!_TargetDeclination.HasValue)
+         {
+            throw new ASCOM.InvalidValueException("Target Declination is not set.");
+         }
+         LogMessage("Command", "SlewToTarget", TargetRightAscension, TargetDeclination);
+         SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+         // Block until the slew completes
+         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         {
+            System.Diagnostics.Debug.Write("Waiting for 5 seconds");
+            // wait 5 seconds
+            Thread.Sleep(5000);
+            _AxisState = Controller.MCGetAxesStates();
+         }
+         RefreshCurrentPosition();
       }
 
       public void SlewToTargetAsync()
       {
-         tl.LogMessage("SlewToTargetAsync", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SlewToTargetAsync");
+         if (AtPark)
+         {
+            throw new ASCOM.ParkedException("The mount is currently parked.");
+         }
+         if (!Tracking)
+         {
+            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
+         }
+         if (!_TargetRightAscension.HasValue)
+         {
+            throw new ASCOM.InvalidValueException("Target Right Ascension is not set.");
+         }
+         if (!_TargetDeclination.HasValue)
+         {
+            throw new ASCOM.InvalidValueException("Target Declination is not set.");
+         }
+         LogMessage("Command", "SlewToTargetAsync", TargetRightAscension, TargetDeclination);
+         SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
       }
 
       bool _IsSlewing;
@@ -1195,6 +1259,7 @@ namespace ASCOM.LunaticAstroEQ
             switch (Settings.ParkStatus)
             {
                case ParkStatus.Unparked:
+                  RefreshCurrentPosition();     // This will update the values of _IsSlewing and _IsMoveAxisSlewing
                   isSlewing = _IsSlewing;
                   if (!isSlewing)
                   {
@@ -1259,7 +1324,7 @@ namespace ASCOM.LunaticAstroEQ
          throw new ASCOM.MethodNotImplementedException("SyncToTarget");
       }
 
-      private double? _TargetDeclination = null;
+      private double? _TargetDeclination;
       public double TargetDeclination
       {
          get
@@ -1406,22 +1471,13 @@ namespace ASCOM.LunaticAstroEQ
          get
          {
             DateTime utcDate = DateTime.UtcNow;
-            tl.LogMessage("UTCDate", "Get - " + String.Format("MM/dd/yy HH:mm:ss", utcDate));
+            LogMessage("UTCDate", "Get - {0}", String.Format("MM/dd/yy HH:mm:ss", utcDate));
             return utcDate;
          }
          set
          {
-            tl.LogMessage("UTCDate Set", "Not implemented");
-            // throw new ASCOM.PropertyNotImplementedException("UTCDate", true);
-            /// TEMP CODE TO TEST PARKING AND UNPARKING
-            if (Settings.ParkStatus != ParkStatus.Parked)
-            {
-               Park();
-            }
-            else
-            {
-               Unpark();
-            }
+            LogMessage("UTCDate Set", "Not implemented");
+            throw new ASCOM.PropertyNotImplementedException("UTCDate", true);
          }
       }
 

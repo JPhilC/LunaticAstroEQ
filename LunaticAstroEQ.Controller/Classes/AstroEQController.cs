@@ -50,9 +50,10 @@ namespace ASCOM.LunaticAstroEQ.Controller
    internal class FFlags
    {
       internal const int Initialised = 0x001;
-      internal const int SlewingTo = 0x010;
-      internal const int Stopped = 0x100;
+      internal const int Running = 0x010;
+      internal const int SlewingTo = 0x100;
       internal const int Reversed = 0x200;
+      internal const int HighSpeed = 0x400;
    }
 
    /// <summary>
@@ -243,7 +244,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          MCVersion = 0;
 
          _AxisState[0] = new AxisState { FullStop = false, NotInitialized = true, Slewing = false, SlewingTo = false, MeshedForReverse = false, Tracking = false, TrackingRate = 0.0 };
-         _AxisState[1] = new AxisState { FullStop = false, NotInitialized = true, Slewing = false, SlewingTo = false, MeshedForReverse = false, Tracking = false, TrackingRate= 0.0 };
+         _AxisState[1] = new AxisState { FullStop = false, NotInitialized = true, Slewing = false, SlewingTo = false, MeshedForReverse = false, Tracking = false, TrackingRate = 0.0 };
 
       }
 
@@ -737,18 +738,31 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   InquirePECPeriod(AxisId.Axis2_Dec);
                   // System.Diagnostics.Debug.WriteLine($"Raw state 1: {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
 
+                  #region Mimic EQMOD ...
+                  // ==== This block is here simply because it was sent by EQMOD === //
+
+                  // Set polar scope brightness to zero
+
+                  MCSetPolarScopeBrightness(0);
+
+                  // Gearchange command? Picked from watching USB traffic from EQMOD
+                  SetGearChangeHCDetection();   // 'q' command
+
+                  // Set program mode switched 'O' command.
+                  MCSetSwitch(AxisId.Axis1_RA, false);
+                  MCSetSwitch(AxisId.Axis2_Dec, false);
+
+                  MCSetPolarScopeBrightness(125);
+                  // ==== This block is here simply because it was sent by EQMOD === //
+                  #endregion
+
                   //// Inquire Axis Position
                   //System.Diagnostics.Debug.WriteLine("MCGetAxisPosition");
                   //_AxisPosition[(int)AXISID.AXIS1] = MCGetAxisPosition(AXISID.AXIS1);
                   //_AxisPosition[(int)AXISID.AXIS2] = MCGetAxisPosition(AXISID.AXIS2);
 
-                  //TODO Remove the next line
-                  EQ_SendCommand(0, 'f', 0, 0);
-
                   // System.Diagnostics.Debug.WriteLine("InitializeMC");
                   InitializeMC();
-                  // System.Diagnostics.Debug.WriteLine($"Raw state 2: {MCGetRawAxisStatus(AxisId.Axis1_RA)}\n");
-                  EQ_SendCommand(0, 'f', 0, 0);
 
                   // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
                   LowSpeedGotoMargin[(int)AxisId.Axis1_RA] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AxisId.Axis1_RA]);
@@ -1002,7 +1016,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             MCAxisStop(axis);
 
             // Set the motor hemisphere, mode, direction and speed
-            SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);
+            SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.HighSpeed);  // Not sure why high speed is needed but it seems to be to get the correct codes out.
 
             // Set step period
             SetStepPeriod(axis, stepPeriod);
@@ -1120,55 +1134,64 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
 
 
-      
+
       public AxisState MCGetAxisState(AxisId axis)
       {
          lock (lockObject)
          {
+            int ax = (int)axis;
             var response = TalkWithAxis(axis, 'f', null);
             int state = Convert.ToInt32(response.Substring(1, response.Length - 2), 16);
 
-            if ((state & FFlags.Stopped) != FFlags.Stopped)
+            if ((state & FFlags.Running) == FFlags.Running)
             {
-               _AxisState[(int)axis].FullStop = false;
+               _AxisState[ax].FullStop = false;
                // Axis is running
                if ((state & FFlags.SlewingTo) == FFlags.SlewingTo)
                {
-                  _AxisState[(int)axis].SlewingTo = true;              // Axis is slewing to a target (i.e. GOTO).
-                  _AxisState[(int)axis].Slewing = false;
+                  _AxisState[ax].SlewingTo = true;              // Axis is slewing to a target (i.e. GOTO).
+                  _AxisState[ax].Slewing = false;
                }
                else
                {
-                  _AxisState[(int)axis].Slewing = true;                // Not stopped and not slewing GOTO so must be just slewing..
-                  _AxisState[(int)axis].SlewingTo = false;              
+                  _AxisState[ax].Slewing = true;                // Not stopped and not slewing GOTO so must be just slewing..
+                  _AxisState[ax].SlewingTo = false;
                }
             }
             else
             {
-               _AxisState[(int)axis].FullStop = true; // FullStop = 1;	// Axis is fully stop.
-               _AxisState[(int)axis].Slewing = false;  
-               _AxisState[(int)axis].SlewingTo = false;
+               _AxisState[ax].FullStop = true; // FullStop = 1;	// Axis is fully stop.
+               _AxisState[ax].Slewing = false;
+               _AxisState[ax].SlewingTo = false;
             }
 
             if ((state & FFlags.Reversed) == FFlags.Reversed)
             {
-               _AxisState[(int)axis].MeshedForReverse = true; // Gears are meshed for reverse running
+               _AxisState[ax].MeshedForReverse = true; // Gears are meshed for reverse running
             }
             else
             {
-               _AxisState[(int)axis].MeshedForReverse = false;
+               _AxisState[ax].MeshedForReverse = false;
             }
 
 
             if ((state & FFlags.Initialised) == FFlags.Initialised)
             {
-               _AxisState[(int)axis].NotInitialized = false;
+               _AxisState[ax].NotInitialized = false;
             }
             else
             {
-               _AxisState[(int)axis].NotInitialized = true;      // MC is not initialized.
+               _AxisState[ax].NotInitialized = true;      // MC is not initialized.
             }
 
+            if ((state & FFlags.HighSpeed) == FFlags.HighSpeed)
+            {
+               _AxisState[ax].HighSpeed = true;
+            }
+            else
+            {
+               _AxisState[ax].HighSpeed = false;
+            }
          }
          return _AxisState[(int)axis];
       }
@@ -1208,21 +1231,26 @@ namespace ASCOM.LunaticAstroEQ.Controller
          // TODO: Fix this once confirmation comes back from Tom
          // return HighSpeedSlewRate;
          return new double[] { 800 * CoreConstants.SIDEREAL_RATE_DEGREES, 800 * CoreConstants.SIDEREAL_RATE_DEGREES };
-         
+
       }
 
-      public void MCSetSwitch(bool OnOff)
+      public void MCSetSwitch(AxisId axis, bool OnOff)
       {
          lock (lockObject)
          {
             if (OnOff)
-               TalkWithAxis(AxisId.Axis1_RA, 'O', "1");
+               TalkWithAxis(axis, 'O', "1");
             else
-               TalkWithAxis(AxisId.Axis1_RA, 'O', "0");
+               TalkWithAxis(axis, 'O', "0");
          }
       }
 
+      public void MCSetPolarScopeBrightness(long brightness)
+      {
+         string cmd = LongTo2BitHEX(brightness);
 
+         TalkWithAxis(AxisId.Axis2_Dec, 'V', cmd);
+      }
 
       // Skywaterch Helper function
       protected bool IsHEXChar(char tmpChar)
@@ -1432,6 +1460,16 @@ namespace ASCOM.LunaticAstroEQ.Controller
          long PECPeriod = BCDstr2long(response);
          PESteps[(int)Axis] = PECPeriod;
       }
+
+
+      /// <summary>
+      /// This sends a 'q' command as spotted in the EQMOD USB stream.
+      /// </summary>
+      private void SetGearChangeHCDetection()
+      {
+         TalkWithAxis(AxisId.Axis1_RA, 'q', "010000");
+      }
+
       // Set initialization done ":F3", where '3'= Both CH1 and CH2.
       protected virtual void InitializeMC()
       {

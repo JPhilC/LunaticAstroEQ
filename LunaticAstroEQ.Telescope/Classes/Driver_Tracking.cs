@@ -61,7 +61,7 @@ namespace ASCOM.LunaticAstroEQ
 
       private PierSide _previousPointingSOP = PierSide.pierUnknown;
       private AxisPosition _previousAxisPosition;
-      private AxisRates[] _AxisRates = new AxisRates[2];
+      private AxisRates[] _AxisRates = new AxisRates[3];
       private AxisState[] _AxisState = new AxisState[2];
 
       private string CustomTrackFile = string.Empty;           // 
@@ -74,10 +74,17 @@ namespace ASCOM.LunaticAstroEQ
          lock (Controller)
          {
             DateTime now = DateTime.Now;
+            // This method is only called if this is the first connection to the mount
+            // so override saved ParkStatus and always start off parked.
             _ParkedAxisPosition = Settings.AxisParkPosition;
             _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
             _previousAxisPosition = _ParkedAxisPosition;
             Controller.MCSetAxisPosition(_ParkedAxisPosition);
+            //if (Settings.ParkStatus != ParkStatus.Parked)
+            //{
+            //   Settings.ParkStatus = ParkStatus.Parked;
+            //   SaveSettings();
+            //}
 
             // Get the MoveAxis value limits.
             InitialiseAxisRates();
@@ -102,22 +109,14 @@ namespace ASCOM.LunaticAstroEQ
       private void InitialiseAxisRates()
       {
          // Set the axis rates (used with the MoveAxis command).
-         AxisRates raAxisRates = new AxisRates(TelescopeAxes.axisPrimary);
-         AxisRates decAxisRates = new AxisRates(TelescopeAxes.axisSecondary);
-
          double[] maxRates = Controller.MCGetMaxRates();
+         AxisRates raAxisRates = new AxisRates(TelescopeAxes.axisPrimary, 0.0, maxRates[RA_AXIS]);
+         AxisRates decAxisRates = new AxisRates(TelescopeAxes.axisSecondary, 0.0, maxRates[DEC_AXIS]);
+         AxisRates terRate = new AxisRates(TelescopeAxes.axisTertiary, 0.0, 0.0);
 
-         raAxisRates[0].Minimum = 0;
-         raAxisRates[0].Maximum = maxRates[RA_AXIS];
-         decAxisRates[0].Minimum = 0;
-         decAxisRates[0].Maximum = maxRates[DEC_AXIS];
 
          // Form the time being the maximum rate is not coming back from 
-         _AxisRates = new AxisRates[]
-         {
-            new AxisRates(TelescopeAxes.axisPrimary),
-            new AxisRates(TelescopeAxes.axisTertiary)
-         };
+         _AxisRates = new AxisRates[] { raAxisRates, decAxisRates, terRate };
       }
 
 
@@ -222,23 +221,23 @@ namespace ASCOM.LunaticAstroEQ
             }
 
 
-            if (Settings.ParkStatus == ParkStatus.Parking)
-            {
-               System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
-            }
+            //if (Settings.ParkStatus == ParkStatus.Parking)
+            //{
+            //   System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
+            //}
 
             //if (_TargetPosition != null)
             //{
             //   System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
             //}
-            if (AtPark)
-            {
-               System.Diagnostics.Debug.WriteLine("Parked");
-            }
-            else
-            {
-               // System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
-            }
+            //if (Settings.ParkStatus == ParkStatus.Parked)
+            //{
+            //   System.Diagnostics.Debug.WriteLine("Parked");
+            //}
+            //else
+            //{
+            //   // System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
+            //}
             _previousAxisPosition = axisPosition;
             if (_previousPointingSOP == PierSide.pierUnknown)
             {
@@ -302,7 +301,6 @@ namespace ASCOM.LunaticAstroEQ
                AbortSlewInternal();
 
                // Clear tracking settings.
-               Settings.TrackingRate = 0.0;
                Settings.TrackingState = TrackingStatus.Off;
 
                // Set status to Parking
@@ -327,6 +325,13 @@ namespace ASCOM.LunaticAstroEQ
       }
 
       #region Slewing and goto ...
+      private PierSide GetDestinationSideOfPier(double rightAscension, double declination)
+      {
+         DateTime currentTime = DateTime.Now;
+         AxisPosition targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition);
+         MountCoordinate targetPosition = new MountCoordinate(targetAxisPosition, _AscomToolsTargetPosition, currentTime);
+         return targetPosition.PointingSideOfPier;
+      }
 
       private void SlewToEquatorialCoordinate(double rightAscension, double declination)
       {

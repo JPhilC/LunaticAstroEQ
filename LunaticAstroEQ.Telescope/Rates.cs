@@ -81,7 +81,7 @@ namespace ASCOM.LunaticAstroEQ
       // Constructor - Internal prevents public creation
       // of instances. Returned by Telescope.AxisRates.
       //
-      internal AxisRates(TelescopeAxes axis)
+      internal AxisRates(TelescopeAxes axis, double minRate, double maxRate)
       {
          this.axis = axis;
          //
@@ -99,15 +99,15 @@ namespace ASCOM.LunaticAstroEQ
             case TelescopeAxes.axisPrimary:
                // TODO Initialize this array with any Primary axis rates that your driver may provide
                // Example: m_Rates = new Rate[] { new Rate(10.5, 30.2), new Rate(54.0, 43.6) }
-               this.rates = new Rate[0];
+               this.rates = new Rate[] { new Rate(minRate, maxRate) };
                break;
             case TelescopeAxes.axisSecondary:
                // TODO Initialize this array with any Secondary axis rates that your driver may provide
-               this.rates = new Rate[0];
+               this.rates = new Rate[] { new Rate(minRate, maxRate) };
                break;
             case TelescopeAxes.axisTertiary:
                // TODO Initialize this array with any Tertiary axis rates that your driver may provide
-               this.rates = new Rate[0];
+               this.rates = new Rate[] { new Rate(0.0, 0.0) };
                break;
          }
       }
@@ -131,7 +131,7 @@ namespace ASCOM.LunaticAstroEQ
 
       public IRate this[int index]
       {
-         get { return this.rates[index - 1]; }  // 1-based
+         get { return this.rates[index -1]; }  // 1-based
       }
 
       #endregion
@@ -174,8 +174,7 @@ namespace ASCOM.LunaticAstroEQ
          // the tracking rates supported by your telescope. The one value
          // (tracking rate) that MUST be supported is driveSidereal!
          //
-         this.trackingRates = new[] { DriveRates.driveSidereal, DriveRates.driveLunar, DriveRates.driveSolar, DriveRates.driveKing };
-         // TODO Initialize this array with any additional tracking rates that your driver may provide
+         this.trackingRates = new DriveRates[] { DriveRates.driveSidereal, DriveRates.driveLunar, DriveRates.driveSolar, DriveRates.driveKing };
       }
 
       #region ITrackingRates Members
@@ -198,7 +197,7 @@ namespace ASCOM.LunaticAstroEQ
 
       public DriveRates this[int index]
       {
-         get { return this.trackingRates[index - 1]; }   // 1-based
+         get { return this.trackingRates[index-1]; }     // Interface using 1 based indices.
       }
 
       #endregion
