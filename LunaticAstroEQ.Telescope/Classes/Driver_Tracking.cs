@@ -56,7 +56,6 @@ namespace ASCOM.LunaticAstroEQ
 
       private DateTime _lastMessage = DateTime.Now;
       private DateTime _lastRefresh = DateTime.MinValue;
-      private TimeSpan _minRefreshInterval = new TimeSpan(0, 0, 0, 0, 500);
       private double _axisPositionTolerance = 0.00001;
 
       private PierSide _previousPointingSOP = PierSide.pierUnknown;
@@ -67,7 +66,8 @@ namespace ASCOM.LunaticAstroEQ
       private string CustomTrackFile = string.Empty;           // 
       private TrackDefinition CustomTrackDefinition = null;
 
-
+      // Flag set a the beginning of a Goto to trigger a refinement after the first goto ends
+      private bool _RefineGoto = false;
 
       private void InitialiseCurrentPosition()
       {
@@ -127,135 +127,139 @@ namespace ASCOM.LunaticAstroEQ
       {
          DateTime now = DateTime.Now;
          bool axisHasMoved = false;
-         if (now - _lastRefresh > _minRefreshInterval)
+         AxisPosition axisPosition = _previousAxisPosition;
+         lock (Controller)
          {
-            AxisPosition axisPosition = _previousAxisPosition;
-            lock (Controller)
-            {
-               _AxisState = Controller.MCGetAxesStates();
-               axisPosition = Controller.MCGetAxisPositions();
-            }
+            _AxisState = Controller.MCGetAxesStates();
+            axisPosition = Controller.MCGetAxisPositions();
+         }
 #if DEBUG
-            //string raStatus = Convert.ToString(axesStatus[RA_AXIS], 2);
-            //string decStatus = Convert.ToString(axesStatus[DEC_AXIS], 2); ;
-            //System.Diagnostics.Debug.WriteLine($"\nAxis states - RA: {raStatus}, Dec : {decStatus}\n");
-            //AxisState raStatus = _AxisState[RA_AXIS];
-            //AxisState decStatus = _AxisState[DEC_AXIS];
-            //System.Diagnostics.Debug.WriteLine($"\nRA : Slewing-{raStatus.Slewing}, SlewingTo-{raStatus.SlewingTo}, Forward-{!raStatus.MeshedForReverse}, FullStop-{raStatus.FullStop}, Tracking-{raStatus.Tracking}");
-            //System.Diagnostics.Debug.WriteLine($"Dec: Slewing-{decStatus.Slewing}, SlewingTo-{decStatus.SlewingTo}, Forward-{!decStatus.MeshedForReverse}, FullStop-{decStatus.FullStop}, Tracking-{decStatus.Tracking}");
+         //string raStatus = Convert.ToString(axesStatus[RA_AXIS], 2);
+         //string decStatus = Convert.ToString(axesStatus[DEC_AXIS], 2); ;
+         //System.Diagnostics.Debug.WriteLine($"\nAxis states - RA: {raStatus}, Dec : {decStatus}\n");
+         //AxisState raStatus = _AxisState[RA_AXIS];
+         //AxisState decStatus = _AxisState[DEC_AXIS];
+         //System.Diagnostics.Debug.WriteLine($"\nRA : Slewing-{raStatus.Slewing}, SlewingTo-{raStatus.SlewingTo}, Forward-{!raStatus.MeshedForReverse}, FullStop-{raStatus.FullStop}, Tracking-{raStatus.Tracking}");
+         //System.Diagnostics.Debug.WriteLine($"Dec: Slewing-{decStatus.Slewing}, SlewingTo-{decStatus.SlewingTo}, Forward-{!decStatus.MeshedForReverse}, FullStop-{decStatus.FullStop}, Tracking-{decStatus.Tracking}");
 #endif
-            //            if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
-            if (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         //            if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
+         if (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         {
+            // One or the other axis is moving
+            axisHasMoved = true;
+            if (_previousPointingSOP == PierSide.pierUnknown)
             {
-               // One or the other axis is moving
-               axisHasMoved = true;
-               if (_previousPointingSOP == PierSide.pierUnknown)
+               // First move away from home (NCP/SCP) position.
+               if (_TargetPosition != null)
                {
-                  // First move away from home (NCP/SCP) position.
-                  if (_TargetPosition != null)
-                  {
-                     System.Diagnostics.Debug.WriteLine("Initialising SOP from goto target.");
-                     System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
-                     axisPosition.DecFlipped = _TargetPosition.ObservedAxes.DecFlipped;
-                  }
-               }
-               else
-               {
-                  // Keep the axis position the same
-                  axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
+                  System.Diagnostics.Debug.WriteLine("Initialising SOP from goto target.");
+                  System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
+                  axisPosition.DecFlipped = _TargetPosition.ObservedAxes.DecFlipped;
                }
             }
             else
             {
-               // Check if parking.
-               if (Settings.ParkStatus == ParkStatus.Parking)
-               {
-                  LogMessage("Command", "Park - complete");
-                  // Update the parked axis position decflipped setting if it isn't set.
-                  _ParkedAxisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
-                  Settings.ParkStatus = ParkStatus.Parked;
-                  Settings.AxisParkPosition = _ParkedAxisPosition;
-                  SaveSettings();
-
-               }
-               else
-               {
-                  if (Settings.ParkStatus == ParkStatus.Unparked)
-                  {
-                     // Check if slew finished
-                     if (_IsSlewing)
-                     {
-                        _IsSlewing = false;
-                        // Announce("Slew complete.");
-                     }
-                     if (_IsMoveAxisSlewing)
-                     {
-                        _IsMoveAxisSlewing = false;
-                     }
-                     if (TrackingState != TrackingStatus.Off)
-                     {
-                        System.Diagnostics.Debug.WriteLine("Restarting tracking");
-                        LogMessage("Command", "Restarting tracking {0}", TrackingState);
-                        StartTracking();
-                     }
-                  }
-               }
-
+               // Keep the axis position the same
                axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
             }
 
-            // Update current position
-            _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
-
-            if (_previousPointingSOP != PierSide.pierUnknown)
+         }
+         else
+         {
+            // Check if parking.
+            if (Settings.ParkStatus == ParkStatus.Parking)
             {
-               // See if pointing has moved across the meridian
-               if (_CurrentPosition.PointingSideOfPier != _previousPointingSOP)
-               {
-                  System.Diagnostics.Debug.WriteLine("** Crossing the meridian **");
-                  // Pointing has moved across the meridian so toggle the DecFlipped value;
-                  axisPosition.DecFlipped = !_previousAxisPosition.DecFlipped;
-                  _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+               LogMessage("Command", "Park - complete");
+               // Update the parked axis position decflipped setting if it isn't set.
+               _ParkedAxisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
+               Settings.ParkStatus = ParkStatus.Parked;
+               Settings.AxisParkPosition = _ParkedAxisPosition;
+               SaveSettings();
 
-               }
-            }
-
-
-            //if (Settings.ParkStatus == ParkStatus.Parking)
-            //{
-            //   System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
-            //}
-
-            //if (_TargetPosition != null)
-            //{
-            //   System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
-            //}
-            //if (Settings.ParkStatus == ParkStatus.Parked)
-            //{
-            //   System.Diagnostics.Debug.WriteLine("Parked");
-            //}
-            //else
-            //{
-            //   // System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
-            //}
-            _previousAxisPosition = axisPosition;
-            if (_previousPointingSOP == PierSide.pierUnknown)
-            {
-               // Only initialise the previous pointing SOP if we know for certain what it should be
-               if (axisHasMoved && (_IsSlewing || _IsMoveAxisSlewing))
-               {
-                  // Remember the current pointing side of the pier.
-                  // Until the SOP has been determined from a SLEW or GOTO it should not be updated.
-                  _previousPointingSOP = _CurrentPosition.PointingSideOfPier;
-               }
             }
             else
             {
-               _previousPointingSOP = _CurrentPosition.PointingSideOfPier;
+               if (Settings.ParkStatus == ParkStatus.Unparked)
+               {
+                  // Check if slew finished
+                  if (_IsSlewing)
+                  {
+                     _IsSlewing = false;
+                     // Announce("Slew complete.");
+                  }
+                  if (_IsMoveAxisSlewing)
+                  {
+                     _IsMoveAxisSlewing = false;
+                  }
+                  if (TrackingState != TrackingStatus.Off)
+                  {
+                     System.Diagnostics.Debug.WriteLine("Restarting tracking");
+                     LogMessage("Command", "Restarting tracking {0}", TrackingState);
+                     StartTracking();
+                  }
+               }
             }
-            _lastRefresh = now;
+
+            axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
          }
 
+         // Update current position
+         _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+
+         if (_previousPointingSOP != PierSide.pierUnknown)
+         {
+            // See if pointing has moved across the meridian
+            if (_CurrentPosition.PointingSideOfPier != _previousPointingSOP)
+            {
+               System.Diagnostics.Debug.WriteLine("** Crossing the meridian **");
+               // Pointing has moved across the meridian so toggle the DecFlipped value;
+               axisPosition.DecFlipped = !_previousAxisPosition.DecFlipped;
+               _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+
+            }
+         }
+
+
+         //if (Settings.ParkStatus == ParkStatus.Parking)
+         //{
+         //   System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
+         //}
+
+         //if (_TargetPosition != null)
+         //{
+         //   System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
+         //}
+         //if (Settings.ParkStatus == ParkStatus.Parked)
+         //{
+         //   System.Diagnostics.Debug.WriteLine("Parked");
+         //}
+         //else
+         //{
+         //   // System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
+         //}
+         _previousAxisPosition = axisPosition;
+         if (_previousPointingSOP == PierSide.pierUnknown)
+         {
+            // Only initialise the previous pointing SOP if we know for certain what it should be
+            if (axisHasMoved && (_IsSlewing || _IsMoveAxisSlewing))
+            {
+               // Remember the current pointing side of the pier.
+               // Until the SOP has been determined from a SLEW or GOTO it should not be updated.
+               _previousPointingSOP = _CurrentPosition.PointingSideOfPier;
+            }
+         }
+         else
+         {
+            _previousPointingSOP = _CurrentPosition.PointingSideOfPier;
+         }
+         _lastRefresh = now;
+
+         // See if we need to refine the last goto
+         if (!axisHasMoved && _RefineGoto)
+         {
+            _RefineGoto = false;
+            SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+         }
       }
 
       private void RelocateMounts(double latitude, double longitude, double elevation)
@@ -312,12 +316,11 @@ namespace ASCOM.LunaticAstroEQ
                   // Block until the park completes
                   while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
                   {
-                     System.Diagnostics.Debug.Write("Waiting for 5 seconds");
+                     System.Diagnostics.Debug.WriteLine("Waiting for 5 seconds");
                      // wait 5 seconds
-                     Thread.Sleep(5000);
+                     Thread.Sleep(2000);
                      _AxisState = Controller.MCGetAxesStates();
                   }
-                  RefreshCurrentPosition();
                }
                // If not using synchronous parking the usual refresh current possition handles everything.
             }
@@ -337,6 +340,8 @@ namespace ASCOM.LunaticAstroEQ
       {
          lock (Controller)
          {
+            TargetRightAscension = rightAscension;
+            TargetDeclination = declination;
             LogMessage("SlewToCoordinates", "RA:{0}/Dec:{1}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension, "h", "m", "s"), _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
             DateTime currentTime = DateTime.Now;
             Controller.MCAxisStop(AxisId.Both_Axes); // Stop the axes moving to get distances
@@ -350,8 +355,6 @@ namespace ASCOM.LunaticAstroEQ
 
             _IsSlewing = true;
             Controller.MCAxisSlewTo(targetAxisPosition, Hemisphere);
-            TargetRightAscension = rightAscension;
-            TargetDeclination = declination;
          }
       }
       #endregion
@@ -449,7 +452,7 @@ namespace ASCOM.LunaticAstroEQ
                else
                {
                   decRate = Settings.DeclinationRate;
-                  Controller.MCStartAxisTracking(AxisId.Axis2_Dec, decRate, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
+                  Controller.MCStartTrackingRate(AxisId.Axis2_Dec, decRate, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
                   Settings.TrackingState = TrackingStatus.Custom;
                }
 
@@ -462,9 +465,10 @@ namespace ASCOM.LunaticAstroEQ
                {
                   // RightAscensionRate is in seconds or RA per sidereal second. The divisor below
                   // converts this to seconds of RA per SI second as expected by the controller
-                  adjustedRaRate = raRate + (Settings.RightAscensionRate / CoreConstants.SIDEREAL_RATE);
+                  // the 15 converts from seconds of time to arcseconds.
+                  adjustedRaRate = raRate + (Settings.RightAscensionRate * CoreConstants.SIDEREAL_RATE * 15.0);
                }
-               Controller.MCStartAxisTracking(AxisId.Axis1_RA, adjustedRaRate, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
+               Controller.MCStartTrackingRate(AxisId.Axis1_RA, adjustedRaRate, Hemisphere, (Hemisphere == HemisphereOption.Northern ? AxisDirection.Forward : AxisDirection.Reverse));
 
 
                SaveSettings();

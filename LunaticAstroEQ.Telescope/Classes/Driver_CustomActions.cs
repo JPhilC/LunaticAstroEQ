@@ -45,7 +45,8 @@ namespace ASCOM.LunaticAstroEQ
             //"Lunatic:SetCheckRASync",
             //"Lunatic:SetAutoGuiderPortRates",
             "Lunatic:SetCustomTrackingRates",
-            "Lunatic:SetSiteTemperature"
+            "Lunatic:SetSiteTemperature",
+            "Lunatic:SetPolarScopeBrightness"
       };
 
       /// <summary>
@@ -92,6 +93,15 @@ namespace ASCOM.LunaticAstroEQ
 
             case "Lunatic:SetSiteTemperature":
                _AscomToolsCurrentPosition.Transform.SiteTemperature = Convert.ToDouble(values[0]);
+               break;
+
+            case "Lunatic:SetPolarScopeBrightness":
+               if (!Connected)
+               {
+                  throw new ASCOM.NotConnectedException("Astro EQ is not connected.");
+               }
+               LogMessage("ProcessCustomAction", "{0} - {0}", actionName, actionParameters);
+               Controller.MCSetPolarScopeBrightness(Convert.ToInt32(values[0]));
                break;
 
             default:

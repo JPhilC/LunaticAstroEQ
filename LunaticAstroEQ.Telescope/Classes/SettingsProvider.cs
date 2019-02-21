@@ -174,7 +174,9 @@ namespace ASCOM.LunaticAstroEQ
          if (_Settings == null)
          {
             LoadSettings();
-
+         }
+         if (_Watcher == null)
+         {
             // Add file watcher
             _Watcher = new FileSystemWatcher();
             _Watcher.Path = UserSettingsFolder;
@@ -182,7 +184,6 @@ namespace ASCOM.LunaticAstroEQ
             // _Watcher.Changed += _Config_Changed;
             WeakEventManager<FileSystemWatcher, FileSystemEventArgs>.AddHandler(_Watcher, "Changed", _Config_Changed);
             _Watcher.EnableRaisingEvents = true;
-
          }
 
       }
@@ -209,6 +210,12 @@ namespace ASCOM.LunaticAstroEQ
       {
          lock (_Lock)
          {
+            bool watching = false;
+            if (_Watcher != null)
+            {
+               watching = _Watcher.EnableRaisingEvents;
+               _Watcher.EnableRaisingEvents = false;
+            }
             if (File.Exists(_SettingsFile))
             {
                using (StreamReader sr = new StreamReader(_SettingsFile))
@@ -222,6 +229,10 @@ namespace ASCOM.LunaticAstroEQ
                _Settings = new TelescopeSettings();   // Initilise with default values.
                SaveSettings();                        // Create a new file
             }
+            if (_Watcher != null)
+            {
+               _Watcher.EnableRaisingEvents = watching;
+            }
          }
       }
 
@@ -233,7 +244,12 @@ namespace ASCOM.LunaticAstroEQ
       {
          lock (_Lock)
          {
-            _Watcher.EnableRaisingEvents = false;
+            bool watching = false;
+            if (_Watcher != null)
+            {
+               watching = _Watcher.EnableRaisingEvents;
+               _Watcher.EnableRaisingEvents = false;
+            }
             JsonSerializer serializer = new JsonSerializer();
             serializer.NullValueHandling = NullValueHandling.Ignore;
             serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
@@ -245,7 +261,10 @@ namespace ASCOM.LunaticAstroEQ
                   serializer.Serialize(writer, _Settings);
                }
             }
-            _Watcher.EnableRaisingEvents = true;
+            if (_Watcher != null)
+            {
+               _Watcher.EnableRaisingEvents = watching;
+            }
          }
       }
 

@@ -32,7 +32,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Runtime.InteropServices;
-
+using System.Timers;
 using ASCOM;
 using ASCOM.Astrometry;
 using ASCOM.Astrometry.AstroUtils;
@@ -153,6 +153,9 @@ namespace ASCOM.LunaticAstroEQ
 
       private Dictionary<DriveRates, double> _TrackingRate = null;
 
+
+      private System.Timers.Timer _Timer = null;
+
       /// <summary>
       /// Initializes a new instance of the <see cref="LunaticAstroEQ"/> class.
       /// Must be public for COM registration.
@@ -167,14 +170,45 @@ namespace ASCOM.LunaticAstroEQ
          tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
 
 
-         tl.LogMessage("Telescope", "Starting initialisation");
+         LogMessage("Telescope", "Starting initialisation");
 
          IsConnected = false;
          InitialiseAscomTools();
 
+         InitialiseTimer();
 
-         tl.LogMessage("Telescope", "Completed initialisation");
+         InitialisePulseGuidingTimer();
+
+
+         LogMessage("Telescope", "Completed initialisation");
       }
+
+      #region Timer ...
+      private void InitialiseTimer()
+      {
+         _Timer = new System.Timers.Timer(Settings.RefreshInterval); // Initialise the pulse guiding timer with a 1 milisecond interval.
+         _Timer.Enabled = false;
+         _Timer.Elapsed += Timer_Elapsed;
+
+      }
+
+      private void DisposeTimer()
+      {
+         if (_Timer != null)
+         {
+            _Timer.Enabled = false;
+            _Timer.Elapsed -= PulseGuidingTimer_Elapsed;
+            _Timer.Dispose();
+            _Timer = null;
+         }
+      }
+
+      private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+      {
+         RefreshCurrentPosition();
+      }
+      #endregion
+
 
       private void InitialiseAscomTools()
       {
@@ -366,6 +400,8 @@ namespace ASCOM.LunaticAstroEQ
          //tl.Enabled = false;
          //tl.Dispose();
          //tl = null;
+         DisposeTimer();
+         DisposePulseGuidingTimer();
          _AscomToolsCurrentPosition.Dispose();
          _AscomToolsTargetPosition.Dispose();
          TelescopeSettingsProvider.Current.Dispose();
@@ -398,6 +434,9 @@ namespace ASCOM.LunaticAstroEQ
                   {
                      IsConnected = true;
                      InitialiseCurrentPosition();
+                     _Timer.Enabled = true;
+                     // Set the polar scope brightness
+                     Controller.MCSetPolarScopeBrightness(Settings.PolarSlopeBrightness);
 
                   }
                   else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
@@ -413,6 +452,7 @@ namespace ASCOM.LunaticAstroEQ
                }
                else
                {
+                  _Timer.Enabled = false;
                   Controller.Disconnect();
                   LogMessage("Connected Set", "Disconnecting from port {0}", Settings.COMPort);
                   IsConnected = false; ;
@@ -509,7 +549,6 @@ namespace ASCOM.LunaticAstroEQ
          {
             lock (Controller)
             {
-               RefreshCurrentPosition();
                double altitude = _CurrentPosition.AltAzimuth.Altitude.Value;
                tl.LogMessage("Altitude", "Get - " + _AscomToolsCurrentPosition.Util.DegreesToDMS(altitude, ":", ":"));
                return altitude;
@@ -548,7 +587,6 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            RefreshCurrentPosition();
             bool atPark = (Settings.ParkStatus == ParkStatus.Parked);
             LogMessage("AtPark", "Get - {0}", atPark);
             return atPark;
@@ -567,7 +605,6 @@ namespace ASCOM.LunaticAstroEQ
          {
             lock (Controller)
             {
-               RefreshCurrentPosition();
                double azimuth = _CurrentPosition.AltAzimuth.Azimuth.Value;
                tl.LogMessage("Azimuth", "Get - " + _AscomToolsCurrentPosition.Util.DegreesToDMS(azimuth, ":", ":"));
                return azimuth;
@@ -589,7 +626,7 @@ namespace ASCOM.LunaticAstroEQ
          bool canMove = false;
          switch (Axis)
          {
-            case TelescopeAxes.axisPrimary: 
+            case TelescopeAxes.axisPrimary:
             case TelescopeAxes.axisSecondary:
                canMove = true;
                break;
@@ -616,13 +653,17 @@ namespace ASCOM.LunaticAstroEQ
       }
 
 
-
+      private bool _CanPulseGuide = true;
       public bool CanPulseGuide
       {
          get
          {
-            tl.LogMessage("CanPulseGuide", "Get - " + false.ToString());
-            return false;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanPulseGuide", "Get - {0}", _CanPulseGuide);
+            return _CanPulseGuide;
          }
       }
 
@@ -640,13 +681,17 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private bool _CanSetGuideRates = true;
       public bool CanSetGuideRates
       {
          get
          {
-            //TODO: CanSetGuideRates
-            tl.LogMessage("CanSetGuideRates", "Get - " + false.ToString());
-            return false;
+            if (!Connected)
+            {
+               throw new NotConnectedException("Astro EQ is not connected.");
+            }
+            LogMessage("CanSetGuideRates", "Get - {0}", _CanSetGuideRates);
+            return _CanSetGuideRates;
          }
       }
 
@@ -790,7 +835,6 @@ namespace ASCOM.LunaticAstroEQ
          {
             lock (Controller)
             {
-               RefreshCurrentPosition();
                double declination = _CurrentPosition.Equatorial.Declination;
                LogMessage("Declination", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
                // System.Diagnostics.Debug.WriteLine($"Declination Get - {_AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":")}");
@@ -874,13 +918,22 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("GuideRateDeclination Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("GuideRateDeclination", false);
+            LogMessage("GuideRateDeclination", "Get - {0}", Settings.GuideRateDeclination);
+            return Settings.GuideRateDeclination;
          }
          set
          {
-            tl.LogMessage("GuideRateDeclination Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("GuideRateDeclination", true);
+            if (value == Settings.GuideRateDeclination)
+            {
+               return;
+            }
+            if (value < Settings.GuideRateDeclinationMin || value > Settings.GuideRateDeclinationMax)
+            {
+               throw new ASCOM.InvalidValueException($"GuideRateDeclination must be in the range {Settings.GuideRateDeclinationMin} to {Settings.GuideRateDeclinationMax} degrees/sec.");
+            }
+            LogMessage("GuideRateDeclination", "Set -{0}", value);
+            Settings.GuideRateDeclination = value;
+            SaveSettings();
          }
       }
 
@@ -888,13 +941,22 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("GuideRateRightAscension Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("GuideRateRightAscension", false);
+            LogMessage("GuideRateRightAscension", "Get - {0}", Settings.GuideRateRightAscension);
+            return Settings.GuideRateRightAscension;
          }
          set
          {
-            tl.LogMessage("GuideRateRightAscension Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("GuideRateRightAscension", true);
+            if (value == Settings.GuideRateRightAscension)
+            {
+               return;
+            }
+            if (value < Settings.GuideRateRightAscensionMin || value > Settings.GuideRateRightAscensionMax)
+            {
+               throw new ASCOM.InvalidValueException($"GuideRateRightAscension must be in the range {Settings.GuideRateRightAscensionMin} to {Settings.GuideRateRightAscensionMax} degrees/sec.");
+            }
+            LogMessage("GuideRateRightAscension", "Set -{0}", value);
+            Settings.GuideRateRightAscension = value;
+            SaveSettings();
          }
       }
 
@@ -902,11 +964,18 @@ namespace ASCOM.LunaticAstroEQ
       {
          get
          {
-            tl.LogMessage("IsPulseGuiding Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("IsPulseGuiding", false);
+            bool isPulseGuiding = (_PulseGuidingStopwatch[RA_AXIS].IsRunning || _PulseGuidingStopwatch[DEC_AXIS].IsRunning);
+            LogMessage("IsPulseGuiding", "Get - {0}", isPulseGuiding);
+            return isPulseGuiding;
          }
       }
 
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="axis"></param>
+      /// <param name="rate">The rate in degrees per second</param>
       public void MoveAxis(TelescopeAxes axis, double rate)
       {
          bool isRASlewing = false;
@@ -916,9 +985,9 @@ namespace ASCOM.LunaticAstroEQ
             throw new ASCOM.InvalidValueException("Driver does not support tertiary axis.");
          }
 
-         if (AtPark)
+         if (Settings.ParkStatus != ParkStatus.Unparked)
          {
-            throw new ASCOM.ParkedException("The mount is currently parked.");
+            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
          }
 
          IRate limits = _AxisRates[(int)axis][1];  // IRate is 1 based.
@@ -956,10 +1025,29 @@ namespace ASCOM.LunaticAstroEQ
          ParkInternal();
       }
 
-      public void PulseGuide(GuideDirections Direction, int Duration)
+      public void PulseGuide(GuideDirections direction, int duration)
       {
-         tl.LogMessage("PulseGuide", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("PulseGuide");
+         if (Settings.ParkStatus != ParkStatus.Unparked)
+         {
+            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
+         }
+         if (Slewing)
+         {
+            // Just return if slewing
+            return;
+         }
+         lock (Controller)
+         {
+            LogMessage("Command", "PulseGuide {0} {1}", direction, duration);
+            if (duration > 0)
+            {
+               StartPulseGuiding(direction, duration);
+            }
+            else
+            {
+               StopPulseGuiding(direction);
+            }
+         }
       }
 
       public double RightAscension
@@ -968,7 +1056,6 @@ namespace ASCOM.LunaticAstroEQ
          {
             lock (Controller)
             {
-               RefreshCurrentPosition();
                double rightAscension = _CurrentPosition.Equatorial.RightAscension.Value;
                LogMessage("RightAscension", "Get - {0}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension));
                // System.Diagnostics.Debug.WriteLine($"RightAscension Get - {_AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension)}");
@@ -1031,7 +1118,6 @@ namespace ASCOM.LunaticAstroEQ
          {
             lock (Controller)
             {
-               RefreshCurrentPosition();
                double lst = _CurrentPosition.LocalApparentSiderialTime;
                tl.LogMessage("SiderealTime", "Get - " + _AscomToolsCurrentPosition.Util.HoursToHMS(lst));
                return lst;
@@ -1159,9 +1245,9 @@ namespace ASCOM.LunaticAstroEQ
 
       public void SlewToCoordinates(double rightAscension, double declination)
       {
-         if (AtPark)
+         if (Settings.ParkStatus != ParkStatus.Unparked)
          {
-            throw new ASCOM.ParkedException("The mount is currently parked.");
+            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
          }
          if (!Tracking)
          {
@@ -1172,34 +1258,38 @@ namespace ASCOM.LunaticAstroEQ
          // Block until the slew completes
          while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
          {
-            System.Diagnostics.Debug.Write("Waiting for 5 seconds");
-            // wait 5 seconds
-            Thread.Sleep(5000);
-            _AxisState = Controller.MCGetAxesStates();
+            Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
          }
-         RefreshCurrentPosition();
+         // Refine the slew
+         SlewToEquatorialCoordinate(rightAscension, declination);
+         // Block until the slew completes
+         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         {
+            Thread.Sleep(1000);  // Allow time for main timer loop to update the axis state
+         }
 
       }
 
       public void SlewToCoordinatesAsync(double rightAscension, double declination)
       {
-         if (AtPark)
+         if (Settings.ParkStatus != ParkStatus.Unparked)
          {
-            throw new ASCOM.ParkedException("The mount is currently parked.");
+            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
          }
          if (!Tracking)
          {
             throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
          }
+         _RefineGoto = true;
          LogMessage("Command", "SlewToCoordinatesAsync RA:{0}, Dec: {0}", rightAscension, declination);
          SlewToEquatorialCoordinate(rightAscension, declination);
       }
 
       public void SlewToTarget()
       {
-         if (AtPark)
+         if (Settings.ParkStatus != ParkStatus.Unparked)
          {
-            throw new ASCOM.ParkedException("The mount is currently parked.");
+            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
          }
          if (!Tracking)
          {
@@ -1218,19 +1308,23 @@ namespace ASCOM.LunaticAstroEQ
          // Block until the slew completes
          while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
          {
-            System.Diagnostics.Debug.Write("Waiting for 5 seconds");
-            // wait 5 seconds
-            Thread.Sleep(5000);
-            _AxisState = Controller.MCGetAxesStates();
+            Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
          }
-         RefreshCurrentPosition();
+         // Refine the GOTO
+         SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+         // Block until the slew completes
+         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         {
+            Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
+         }
+
       }
 
       public void SlewToTargetAsync()
       {
-         if (AtPark)
+         if (Settings.ParkStatus != ParkStatus.Unparked)
          {
-            throw new ASCOM.ParkedException("The mount is currently parked.");
+            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
          }
          if (!Tracking)
          {
@@ -1245,6 +1339,7 @@ namespace ASCOM.LunaticAstroEQ
             throw new ASCOM.InvalidValueException("Target Declination is not set.");
          }
          LogMessage("Command", "SlewToTargetAsync", TargetRightAscension, TargetDeclination);
+         _RefineGoto = true;
          SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
       }
 
@@ -1259,7 +1354,6 @@ namespace ASCOM.LunaticAstroEQ
             switch (Settings.ParkStatus)
             {
                case ParkStatus.Unparked:
-                  RefreshCurrentPosition();     // This will update the values of _IsSlewing and _IsMoveAxisSlewing
                   isSlewing = _IsSlewing;
                   if (!isSlewing)
                   {

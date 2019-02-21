@@ -38,7 +38,7 @@ using System.Threading.Tasks;
 namespace ASCOM.LunaticAstroEQ.Controller
 {
    [ComVisible(false)]
-   public class ControllerSettings : DataObjectBase
+   public class ControllerSettings
    {
 
       /// <summary>
@@ -47,6 +47,17 @@ namespace ASCOM.LunaticAstroEQ.Controller
       public LatLongCoordinate ObservatoryLocation { get; set; } = new LatLongCoordinate();
 
       public double ObservatoryElevation { get; set; }
+
+      /// <summary>
+      /// The maximum slew rate for the mount as a multiplier of Sidereal
+      /// </summary>
+      public int MaximumSlewRate { get; set; }
+
+
+      public ControllerSettings()
+      {
+         MaximumSlewRate = 812;  // Based on my custom pulley EQ5
+      }
 
    }
 }

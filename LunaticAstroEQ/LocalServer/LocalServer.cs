@@ -630,7 +630,7 @@ namespace ASCOM.LunaticAstroEQ
 
          if (!ProcessArguments(args)) return;                  // Register/Unregister
 
-         // MessageBox.Show("Attach debugger if required. Click OK when done.");
+         MessageBox.Show("Attach debugger if required. Click OK when done.");
 
          // Initialize critical member variables.
          objsInUse = 0;

@@ -117,6 +117,7 @@
     <Compile Include="AscomUtilityTests.cs" />
     <Compile Include="RangeTests.cs" />
     <Compile Include="Investigations.cs" />
+    <Compile Include="ControllerTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LunaticAstroEQ.Controller\LunaticAstroEQ.Controller.csproj">
@@ -130,6 +131,10 @@
     <ProjectReference Include="..\LunaticAstroEQ.Telescope\LunaticAstroEQ.Telescope.csproj">
       <Project>{64308775-BD4A-469C-BCAB-3ED830B811AF}</Project>
       <Name>LunaticAstroEQ.Telescope</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LunaticAstroEQ\LunaticAstroEQ.csproj">
+      <Project>{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}</Project>
+      <Name>LunaticAstroEQ</Name>
     </ProjectReference>
     <ProjectReference Include="..\TA.Ascom.ReactiveCommunications\TA.Ascom.ReactiveCommunications.csproj">
       <Project>{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}</Project>

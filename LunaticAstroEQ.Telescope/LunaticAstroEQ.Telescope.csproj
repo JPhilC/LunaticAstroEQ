@@ -112,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\Driver_CustomActions.cs" />
+    <Compile Include="Classes\Driver_Guiding.cs" />
     <Compile Include="Classes\Driver_Limits.cs" />
     <Compile Include="Classes\Driver_Tracking.cs" />
     <Compile Include="Classes\TelescopeSettings.cs" />

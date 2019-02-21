@@ -98,6 +98,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
                string error = responseString.TrimStart(errorInitiator).TrimEnd(terminator);
                if (!string.IsNullOrEmpty(error)) {
                   ErrorMessage = new Maybe<string>(error);
+                  System.Diagnostics.Debug.WriteLine($"##### ERROR RESPONSE ({ErrorMessage}) ####");
                   // Failed = true;
                }
             }

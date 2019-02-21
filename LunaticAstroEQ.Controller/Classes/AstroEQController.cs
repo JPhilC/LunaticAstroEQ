@@ -51,7 +51,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
    {
       internal const int Initialised = 0x001;
       internal const int Running = 0x010;
-      internal const int SlewingTo = 0x100;
+      internal const int Slewing = 0x100;
       internal const int Reversed = 0x200;
       internal const int HighSpeed = 0x400;
    }
@@ -85,10 +85,12 @@ namespace ASCOM.LunaticAstroEQ.Controller
       const char cStartChar_In = '=';        // Leading charactor of a NORMAL response.
       const char cErrChar = '!';             // Leading charactor of an ABNORMAL response.
       const char cEndChar = (char)13;        // Tailing charactor of command and response.
-      public const double MAX_SLEW_SPEED_RADIANS = (800 * Constants.SIDEREALRATE_RADIANS);          //?   Radians
-      public const double MAX_SLEW_SPEED_DEGREES = (800 * Constants.SIDEREALRATE_DEGREES);
+      public const double MAX_SLEW_SPEED_RADIANS = (800 * CoreConstants.SIDEREAL_RATE_RADIANS);          //?   Radians
+      public const double MAX_SLEW_SPEED_DEGREES = (800 * CoreConstants.SIDEREAL_RATE_DEGREES);
 
-      public const double LOW_SPEED_MARGIN = (128.0 * Constants.SIDEREALRATE_RADIANS);
+      public const double LOW_SPEED_MARGIN_RADIANS = (128.0 * CoreConstants.SIDEREAL_RATE_RADIANS);
+      public const double LOW_SPEED_MARGIN_ARCSECS = (128.0 * CoreConstants.SIDEREAL_RATE_ARCSECS);
+
       /// <summary>
       /// Maximum error allowed when comparing Axis positions in radians (roughly 0.5 seconds)
       /// </summary>
@@ -443,7 +445,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       #endregion
 
 
-      //private bool echoResponse = false;
+      private bool echoResponse = false;
       /// <summary>
       /// One communication between mount and client
       /// </summary>
@@ -470,13 +472,13 @@ namespace ASCOM.LunaticAstroEQ.Controller
             sb.Append(cEndChar);    // CR Character            
 
             string cmdString = sb.ToString();
-            //echoResponse = false;
-            //// send the request
-            //if ((axis == 0) && ((cmd == 'G') || (cmd == 'f')))
-            //{
-            //   echoResponse = true;
-            //   System.Diagnostics.Debug.Write(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
-            //}
+            echoResponse = false;
+            // send the request
+            if ((axis == 0) && ("GHMUIJ".Contains(cmd)))
+            {
+               echoResponse = true;
+               System.Diagnostics.Debug.Write(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
+            }
             var cmdTransaction = new EQTransaction(cmdString) { Timeout = TimeSpan.FromSeconds(TimeOut) };
 
 
@@ -498,11 +500,11 @@ namespace ASCOM.LunaticAstroEQ.Controller
                      if (!cmdTransaction.Failed)
                      {
                         response = cmdTransaction.Value.ToString();
-                        //if (echoResponse)
-                        //{
-                        //   System.Diagnostics.Debug.WriteLine($" -> {response}");
-                        //   echoResponse = false;
-                        //}
+                        if (echoResponse)
+                        {
+                           System.Diagnostics.Debug.WriteLine($" -> {response}");
+                           echoResponse = false;
+                        }
                         break;
                      }
                      else
@@ -740,19 +742,13 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
                   #region Mimic EQMOD ...
                   // ==== This block is here simply because it was sent by EQMOD === //
-
-                  // Set polar scope brightness to zero
-
-                  MCSetPolarScopeBrightness(0);
-
                   // Gearchange command? Picked from watching USB traffic from EQMOD
                   SetGearChangeHCDetection();   // 'q' command
 
                   // Set program mode switched 'O' command.
                   MCSetSwitch(AxisId.Axis1_RA, false);
-                  MCSetSwitch(AxisId.Axis2_Dec, false);
+                  // MCSetSwitch(AxisId.Axis2_Dec, false);
 
-                  MCSetPolarScopeBrightness(125);
                   // ==== This block is here simply because it was sent by EQMOD === //
                   #endregion
 
@@ -765,8 +761,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   InitializeMC();
 
                   // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
-                  LowSpeedGotoMargin[(int)AxisId.Axis1_RA] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AxisId.Axis1_RA]);
-                  LowSpeedGotoMargin[(int)AxisId.Axis2_Dec] = (long)(640 * Constants.SIDEREALRATE_RADIANS * FactorRadToStep[(int)AxisId.Axis2_Dec]);
+                  LowSpeedGotoMargin[(int)AxisId.Axis1_RA] = (long)(640 * CoreConstants.SIDEREAL_RATE_RADIANS * FactorRadToStep[(int)AxisId.Axis1_RA]);
+                  LowSpeedGotoMargin[(int)AxisId.Axis2_Dec] = (long)(640 * CoreConstants.SIDEREAL_RATE_RADIANS * FactorRadToStep[(int)AxisId.Axis2_Dec]);
 
 
                   LowSpeedSlewRate[(int)AxisId.Axis1_RA] = ((double)StepTimerFreq[(int)AxisId.Axis1_RA] / ((double)GridPerRevolution[(int)AxisId.Axis1_RA] / CoreConstants.SECONDS_PER_SIDERIAL_DAY));
@@ -795,21 +791,27 @@ namespace ASCOM.LunaticAstroEQ.Controller
          return result;
       }
 
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="axis"></param>
+      /// <param name="speed">degrees per second</param>
+      /// <param name="hemisphere"></param>
       public void MCAxisSlew(AxisId axis, double speed, HemisphereOption hemisphere)
       {
          lock (lockObject)
          {
+            double internalSpeed = speed * CoreConstants.DEG_RAD;
             // Limit maximum speed
-            if (speed > MAX_SLEW_SPEED_RADIANS)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
-               speed = MAX_SLEW_SPEED_RADIANS;
-            else if (speed < -MAX_SLEW_SPEED_RADIANS)
-               speed = -MAX_SLEW_SPEED_RADIANS;
+            if (internalSpeed > MAX_SLEW_SPEED_RADIANS)                  // 3.4 degrees/sec, 800X sidereal rate, is the highest speed.
+               internalSpeed = MAX_SLEW_SPEED_RADIANS;
+            else if (internalSpeed < -MAX_SLEW_SPEED_RADIANS)
+               internalSpeed = -MAX_SLEW_SPEED_RADIANS;
 
-            double internalSpeed = speed;
             bool forward = false, highspeed = false;
 
             // InternalSpeed lower than 1/1000 of sidereal rate?
-            if (Math.Abs(internalSpeed) <= Constants.SIDEREALRATE_RADIANS / 1000.0)
+            if (Math.Abs(internalSpeed) <= CoreConstants.SIDEREAL_RATE_RADIANS / 1000.0)
             {
                MCAxisStop(axis);
                return;
@@ -826,15 +828,14 @@ namespace ASCOM.LunaticAstroEQ.Controller
                forward = false;
             }
 
-            // TODO: ask the details
-
             // Calculate and set step period. 
-            if (internalSpeed > LOW_SPEED_MARGIN)
+            if (internalSpeed > LOW_SPEED_MARGIN_RADIANS)
             {                 // High speed adjustment
                internalSpeed = internalSpeed / (double)HighSpeedRatio[(int)axis];
                highspeed = true;
             }
             internalSpeed = 1 / internalSpeed;                    // For using function RadSpeedToInt(), change to unit Senonds/Rad.
+
             long SpeedInt = RadSpeedToInt(axis, internalSpeed);
             if ((MCVersion == 0x010600) || (MCVersion == 0x010601))  // For special MC version.
                SpeedInt -= 3;
@@ -912,8 +913,19 @@ namespace ASCOM.LunaticAstroEQ.Controller
                forward = false;
             }
 
-            // Might need to check whether motor has stopped.
-            MCAxisStop(axis);
+            // Check if axis stopped
+            AxisState axesstate = MCGetAxisState(axis);
+            if (!axesstate.FullStop)
+            {
+               MCAxisStop(axis);
+               axesstate = MCGetAxisState(axis);
+               while (!axesstate.FullStop)
+               {
+                  Thread.Sleep(100);
+                  // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
+                  axesstate = MCGetAxisState(axis);
+               }
+            }
 
             // Check if the distance is long enough to trigger a high speed GOTO.
             if (movingSteps > LowSpeedGotoMargin[(int)axis])
@@ -964,7 +976,19 @@ namespace ASCOM.LunaticAstroEQ.Controller
                forward = false;
             }
 
-            // Might need to check whether motor has stopped.
+            // Check if axis stopped
+            AxisState axesstate = MCGetAxisState(axis);
+            if (!axesstate.FullStop)
+            {
+               MCAxisStop(axis);
+               axesstate = MCGetAxisState(axis);
+               while (!axesstate.FullStop)
+               {
+                  Thread.Sleep(100);
+                  // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
+                  axesstate = MCGetAxisState(axis);
+               }
+            }
 
             // Check if the distance is long enough to trigger a high speed GOTO.
             if (movingSteps > LowSpeedGotoMargin[(int)axis])
@@ -997,26 +1021,45 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
 
       /// <summary>
-      /// Start the RA axis tracking at a given rate of seconds of RA per SI second.
+      /// Start the axis moving at a given rate of arcsecs/per second.
       /// </summary>
-      /// <param name="trackingRate"></param>
+      /// <param name="trackingRate">arcsecs per second</param>
       /// <param name="hemisphere"></param>
       /// <param name="direction"></param>
-      public void MCStartAxisTracking(AxisId axis, double trackingRate, HemisphereOption hemisphere, AxisDirection direction)
+      public void MCStartTrackingRate(AxisId axis, double trackingRate, HemisphereOption hemisphere, AxisDirection direction)
       {
          lock (lockObject)
          {
             int ax = (int)axis;
+            if (Math.Abs(trackingRate) >= LOW_SPEED_MARGIN_ARCSECS)
+            {
+               throw new ASCOM.InvalidValueException("Tracking rate is too high for low speed tracking.");
+            }
 
             // LowSpeedSlewRate[0] is the Sidereal step rate so we need to work out the multiplier.
-            double lowSpeedMultiplier = trackingRate / CoreConstants.SIDEREAL_RATE_ARCSECS;
-
+            double lowSpeedMultiplier = CoreConstants.SIDEREAL_RATE_ARCSECS / trackingRate;
             int stepPeriod = (int)(LowSpeedSlewRate[ax] * lowSpeedMultiplier);
+            //AxisState axisState = MCGetAxisState(axis);
 
+            //// If the axis is changing speed or direction must stop it first
+            //if (!axisState.FullStop)
+            //{
             MCAxisStop(axis);
+            //   axisState = MCGetAxisState(axis);
+            //   // Wait until the axis stop
+            //   while (!axisState.FullStop)
+            //   {
+            //      Thread.Sleep(100);
+            //      // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
+            //      axisState = MCGetAxisState(axis);
+            //   }
+
+            //}
+
+
 
             // Set the motor hemisphere, mode, direction and speed
-            SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.HighSpeed);  // Not sure why high speed is needed but it seems to be to get the correct codes out.
+            SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.LowSpeed);
 
             // Set step period
             SetStepPeriod(axis, stepPeriod);
@@ -1028,17 +1071,6 @@ namespace ASCOM.LunaticAstroEQ.Controller
          }
       }
 
-      public void MCStartAxisByRate(AxisId axis, double rate)
-      {
-         throw new NotImplementedException("MCStartAxisByRate");
-         // _AxisState[(int)axis].SetTracking(true, rate);
-      }
-
-      public void MCChangeAxisByRate(AxisId axis, double rate)
-      {
-         throw new NotImplementedException("MCChangeAxisByRate");
-         // _AxisState[(int)axis].SetTracking(true, rate);
-      }
 
       public void MCAxisStop(AxisId axis)
       {
@@ -1052,18 +1084,27 @@ namespace ASCOM.LunaticAstroEQ.Controller
                return;
             }
 
-            if (InstantStop)
-            {
-               TalkWithAxis(axis, 'L', null);
-            }
-            else
-            {
-               TalkWithAxis(axis, 'K', null);
-            }
+            TalkWithAxis(axis, 'K', null);
             _AxisState[(int)axis].SetStopped();
          }
       }
 
+      public void MCAxisStopAndRelease(AxisId axis)
+      {
+
+         lock (lockObject)
+         {
+            if (axis == AxisId.Both_Axes)
+            {
+               MCAxisStopAndRelease(AxisId.Axis1_RA);
+               MCAxisStopAndRelease(AxisId.Axis2_Dec);
+               return;
+            }
+
+            TalkWithAxis(axis, 'L', null);
+            _AxisState[(int)axis].SetStopped();
+         }
+      }
 
       /// <summary>
       /// Sets an axis position
@@ -1147,15 +1188,17 @@ namespace ASCOM.LunaticAstroEQ.Controller
             {
                _AxisState[ax].FullStop = false;
                // Axis is running
-               if ((state & FFlags.SlewingTo) == FFlags.SlewingTo)
+               if ((state & FFlags.Slewing) == FFlags.Slewing)
                {
-                  _AxisState[ax].SlewingTo = true;              // Axis is slewing to a target (i.e. GOTO).
-                  _AxisState[ax].Slewing = false;
+                  // SLEWing
+                  _AxisState[ax].SlewingTo = false;
+                  _AxisState[ax].Slewing = true;
                }
                else
                {
-                  _AxisState[ax].Slewing = true;                // Not stopped and not slewing GOTO so must be just slewing..
-                  _AxisState[ax].SlewingTo = false;
+                  // GOTOing
+                  _AxisState[ax].Slewing = false;
+                  _AxisState[ax].SlewingTo = true;
                }
             }
             else
@@ -1228,9 +1271,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <returns></returns>
       public double[] MCGetMaxRates()
       {
-         // TODO: Fix this once confirmation comes back from Tom
-         // return HighSpeedSlewRate;
-         return new double[] { 800 * CoreConstants.SIDEREAL_RATE_DEGREES, 800 * CoreConstants.SIDEREAL_RATE_DEGREES };
+         return new double[] { _Settings.MaximumSlewRate * CoreConstants.SIDEREAL_RATE_DEGREES, _Settings.MaximumSlewRate * CoreConstants.SIDEREAL_RATE_DEGREES };
 
       }
 
@@ -1315,6 +1356,13 @@ namespace ASCOM.LunaticAstroEQ.Controller
          return A;
       }
 
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="axis"></param>
+      /// <param name="speed">Speed in radians per second</param>
+      /// <param name="hemisphere"></param>
       private void PrepareForSlewing(AxisId axis, double speed, HemisphereOption hemisphere)
       {
          AxisDirection direction = (speed > 0.0 ? AxisDirection.Forward : AxisDirection.Reverse);
@@ -1324,7 +1372,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          {
             if ((axesstate.SlewingTo) ||                               // GOTO in action
                  (axesstate.HighSpeed) ||                              // Currently high speed slewing
-                 (Math.Abs(speed) >= LOW_SPEED_MARGIN) ||               // Will be high speed slewing
+                 (Math.Abs(speed) >= LOW_SPEED_MARGIN_RADIANS) ||               // Will be high speed slewing
                  ((axesstate.MeshedForReverse) && (speed > 0)) ||        // Different direction
                  ((!axesstate.MeshedForReverse) && (speed < 0))          // Different direction
                 )
@@ -1338,24 +1386,13 @@ namespace ASCOM.LunaticAstroEQ.Controller
                return;
             }
 
-
             // Wait until the axis stop
-            while (true)
+            axesstate = MCGetAxisState(axis);
+            while (!axesstate.FullStop)
             {
+               Thread.Sleep(100);
                // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
                axesstate = MCGetAxisState(axis);
-
-               // Return if the axis has stopped.
-               if (axesstate.FullStop)
-               {
-                  break;
-               }
-               Thread.Sleep(100);
-
-               // If the axis is asked to stop.
-               // if ( (!AxesAskedToRun[Axis] && !(MountStatus & MOUNT_TRACKING_ON)) )		// If AXIS1 or AXIS2 is asked to stop or 
-               //	return ERR_USER_INTERRUPT;
-
             }
 
          }
@@ -1365,7 +1402,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             speed = -speed;                     // Get absolute value of Speed.
          }
 
-         if (speed > LOW_SPEED_MARGIN)
+         if (speed > LOW_SPEED_MARGIN_RADIANS)
          {
             SetMotionMode(axis, hemisphere, AxisMode.Slew, direction, AxisSpeed.HighSpeed);  // Set HIGH speed slewing mode.
          }
@@ -1513,19 +1550,24 @@ namespace ASCOM.LunaticAstroEQ.Controller
          // Set Mode and speed bits
          if (mode == AxisMode.Goto)
          {
-            // Nothing to do for GOTO
+            // For goto the speed bit is set for low speed
+            if (speed == AxisSpeed.LowSpeed)
+            {
+               ch |= 0x20;
+            }
          }
          else
          {
             // slew
             ch |= 0x10;
+            // For slews the speed bit is set for high speed.
+            if (speed == AxisSpeed.HighSpeed)
+            {
+               ch |= 0x20;
+            }
          }
 
 
-         if (speed == AxisSpeed.LowSpeed)
-         {
-            ch |= 0x20;
-         }
 
          string szCmd = LongTo2BitHEX(ch);
          TalkWithAxis(axis, 'G', szCmd);

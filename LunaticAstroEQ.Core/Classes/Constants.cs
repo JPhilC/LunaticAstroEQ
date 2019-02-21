@@ -59,7 +59,7 @@ namespace ASCOM.LunaticAstroEQ.Core
       /// <summary>
       /// Ratio of from synodic (solar) to sidereal (stellar) rate used with RightAscensionRate property.
       /// </summary>
-      public const double SIDEREAL_RATE = 0.9972695677;      // Use to convert from sideral seconds to S seconds.
+      public const double SIDEREAL_RATE = 0.9972695677;      // Use to convert from sideral seconds to SI seconds.
 
       /// <summary>
       /// Radians per degree

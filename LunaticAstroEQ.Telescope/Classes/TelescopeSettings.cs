@@ -53,6 +53,14 @@ namespace ASCOM.LunaticAstroEQ
       public bool TracingState { get; set; }
 
 
+      // The main timer's interval for updating current position 
+      // and checking status changes.
+      public int RefreshInterval { get; set; }
+
+      /// <summary>
+      /// Polar scope bightness value, set to the mount using the V command.
+      /// </summary>
+      public int PolarSlopeBrightness { get; set; }
 
       public ParkStatus ParkStatus { get; set; }
 
@@ -73,6 +81,32 @@ namespace ASCOM.LunaticAstroEQ
       public double DeclinationRate { get; set; }
       #endregion
 
+      #region Guiding related ...
+      public double GuideRateDeclination { get; set; }
+      public double GuideRateRightAscension { get; set; }
+      /// <summary>
+      /// Minimum guide rate declination (degrees/sec);
+      /// </summary>
+      public double GuideRateDeclinationMin { get; set; }
+      /// <summary>
+      /// Maximum guide rate declination (degrees/sec);
+      /// </summary>
+      public double GuideRateDeclinationMax { get; set; }
+      /// <summary>
+      /// Minimum guide rate right ascension (degrees/sec);
+      /// </summary>
+      public double GuideRateRightAscensionMin { get; set; }
+      /// <summary>
+      /// Maxiumum guide rate right ascension (degrees/sec);
+      /// </summary>
+      public double GuideRateRightAscensionMax { get; set; }
+
+      /// <summary>
+      /// The pulse guiding time interval (milliseconds)
+      /// </summary>
+      public int PulseGuidingInterval { get; set; }
+      #endregion
+
       public Dictionary<DriveRates, double> DriveRateValue { get; set; } = new Dictionary<DriveRates, double>();
 
       public AscomCompliance AscomCompliance { get; set; }
@@ -89,6 +123,8 @@ namespace ASCOM.LunaticAstroEQ
          BaudRate = BaudRate.Baud9600;
          Timeout = TimeOutOption.TO2000;
          Retry = RetryOption.Once;
+         RefreshInterval = 250;
+         PolarSlopeBrightness = 125;
          CustomTrackingRate = new double[] { 0.0D, 0.0D};
          AscomCompliance = new AscomCompliance();
          AxisParkPosition = new AxisPosition(0.0, 0.0);
@@ -102,6 +138,14 @@ namespace ASCOM.LunaticAstroEQ
          { DriveRates.driveLunar, CoreConstants.LUNAR_RATE_ARCSECS},
          { DriveRates.driveSolar, CoreConstants.SOLAR_RATE_ARCSECS},
          { DriveRates.driveKing, CoreConstants.KING_RATE_ARCSECS}};
+
+         GuideRateDeclination = 0.0;         // Degrees/Sec
+         GuideRateRightAscension = 0.0;      // Degrees/Sec
+         GuideRateDeclinationMin = 0.0;      // Degrees/Sec
+         GuideRateDeclinationMax = 10.0;     // Degrees/Sec
+         GuideRateRightAscensionMin = 0.0;   // Degrees/Sec
+         GuideRateRightAscensionMax = 10.0;  // Degrees/Sec
+         PulseGuidingInterval = 20;          // Milliseconds
       }
    }
 }
