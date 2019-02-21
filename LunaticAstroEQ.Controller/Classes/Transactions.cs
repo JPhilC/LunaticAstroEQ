@@ -93,7 +93,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             var responseString = Response.Single();
             //System.Diagnostics.Debug.WriteLine(string.Format("Raw response: {0}", responseString));
             Value = responseString.TrimStart(responseInitiator).TrimEnd(terminator);
-            if (string.IsNullOrEmpty(Value)) {
+            if (string.IsNullOrEmpty(Value) && responseString[0] == errorInitiator) {
                // Check if we have an error instead.
                string error = responseString.TrimStart(errorInitiator).TrimEnd(terminator);
                if (!string.IsNullOrEmpty(error)) {

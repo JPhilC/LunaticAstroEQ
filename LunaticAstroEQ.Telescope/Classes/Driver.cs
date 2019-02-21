@@ -203,9 +203,26 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
+      private bool processingElapsed = false;
       private void Timer_Elapsed(object sender, ElapsedEventArgs e)
       {
-         RefreshCurrentPosition();
+         if (processingElapsed)
+         {
+            return;
+         }
+         processingElapsed = true;
+         try
+         {
+            RefreshCurrentPosition();
+         }
+         catch
+         {
+            throw;
+         }
+         finally
+         {
+            processingElapsed = false;
+         }
       }
       #endregion
 
@@ -1256,14 +1273,14 @@ namespace ASCOM.LunaticAstroEQ
          LogMessage("Command", "SlewToCoordinates RA:{0}, Dec: {0}", rightAscension, declination);
          SlewToEquatorialCoordinate(rightAscension, declination);
          // Block until the slew completes
-         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         while (_IsSlewing)
          {
             Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
          }
          // Refine the slew
          SlewToEquatorialCoordinate(rightAscension, declination);
          // Block until the slew completes
-         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         while (_IsSlewing)
          {
             Thread.Sleep(1000);  // Allow time for main timer loop to update the axis state
          }
@@ -1306,14 +1323,14 @@ namespace ASCOM.LunaticAstroEQ
          LogMessage("Command", "SlewToTarget", TargetRightAscension, TargetDeclination);
          SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
          // Block until the slew completes
-         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         while (_IsSlewing)
          {
             Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
          }
          // Refine the GOTO
          SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
          // Block until the slew completes
-         while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         while (_IsSlewing)
          {
             Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
          }

@@ -1385,16 +1385,6 @@ namespace ASCOM.LunaticAstroEQ.Controller
                // Other situatuion, there is no need to set motion mode.
                return;
             }
-
-            // Wait until the axis stop
-            axesstate = MCGetAxisState(axis);
-            while (!axesstate.FullStop)
-            {
-               Thread.Sleep(100);
-               // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
-               axesstate = MCGetAxisState(axis);
-            }
-
          }
 
          if (direction == AxisDirection.Reverse)

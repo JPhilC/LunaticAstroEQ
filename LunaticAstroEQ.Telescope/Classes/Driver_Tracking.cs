@@ -55,7 +55,6 @@ namespace ASCOM.LunaticAstroEQ
    {
 
       private DateTime _lastMessage = DateTime.Now;
-      private DateTime _lastRefresh = DateTime.MinValue;
       private double _axisPositionTolerance = 0.00001;
 
       private PierSide _previousPointingSOP = PierSide.pierUnknown;
@@ -142,8 +141,8 @@ namespace ASCOM.LunaticAstroEQ
          //System.Diagnostics.Debug.WriteLine($"\nRA : Slewing-{raStatus.Slewing}, SlewingTo-{raStatus.SlewingTo}, Forward-{!raStatus.MeshedForReverse}, FullStop-{raStatus.FullStop}, Tracking-{raStatus.Tracking}");
          //System.Diagnostics.Debug.WriteLine($"Dec: Slewing-{decStatus.Slewing}, SlewingTo-{decStatus.SlewingTo}, Forward-{!decStatus.MeshedForReverse}, FullStop-{decStatus.FullStop}, Tracking-{decStatus.Tracking}");
 #endif
-         //            if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
-         if (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
+         // if (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
          {
             // One or the other axis is moving
             axisHasMoved = true;
@@ -177,28 +176,6 @@ namespace ASCOM.LunaticAstroEQ
                SaveSettings();
 
             }
-            else
-            {
-               if (Settings.ParkStatus == ParkStatus.Unparked)
-               {
-                  // Check if slew finished
-                  if (_IsSlewing)
-                  {
-                     _IsSlewing = false;
-                     // Announce("Slew complete.");
-                  }
-                  if (_IsMoveAxisSlewing)
-                  {
-                     _IsMoveAxisSlewing = false;
-                  }
-                  if (TrackingState != TrackingStatus.Off)
-                  {
-                     System.Diagnostics.Debug.WriteLine("Restarting tracking");
-                     LogMessage("Command", "Restarting tracking {0}", TrackingState);
-                     StartTracking();
-                  }
-               }
-            }
 
             axisPosition.DecFlipped = _previousAxisPosition.DecFlipped;
          }
@@ -225,19 +202,21 @@ namespace ASCOM.LunaticAstroEQ
          //   System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
          //}
 
-         //if (_TargetPosition != null)
-         //{
-         //   System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
-         //}
-         //if (Settings.ParkStatus == ParkStatus.Parked)
-         //{
-         //   System.Diagnostics.Debug.WriteLine("Parked");
-         //}
-         //else
-         //{
-         //   // System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
-         //}
+         if (_TargetPosition != null)
+         {
+            System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
+         }
+         if (Settings.ParkStatus == ParkStatus.Parked)
+         {
+            System.Diagnostics.Debug.WriteLine("Parked");
+         }
+         else
+         {
+            System.Diagnostics.Debug.WriteLine($"Current Axes: {axisPosition.RAAxis.Value}/{axisPosition.DecAxis.Value}\t{axisPosition.DecFlipped}\tRA/Dec: {_CurrentPosition.Equatorial.RightAscension}/{_CurrentPosition.Equatorial.Declination}\t{_CurrentPosition.PointingSideOfPier}\n");
+         }
+
          _previousAxisPosition = axisPosition;
+         // See if we can sort out the initial SideOfPier
          if (_previousPointingSOP == PierSide.pierUnknown)
          {
             // Only initialise the previous pointing SOP if we know for certain what it should be
@@ -252,13 +231,39 @@ namespace ASCOM.LunaticAstroEQ
          {
             _previousPointingSOP = _CurrentPosition.PointingSideOfPier;
          }
-         _lastRefresh = now;
 
-         // See if we need to refine the last goto
-         if (!axisHasMoved && _RefineGoto)
+         // If the axis has stopped moving there are some bit to clear up
+         if (!axisHasMoved)
          {
-            _RefineGoto = false;
-            SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+            // See if we need to refine a goto.
+            if (_RefineGoto)
+            {
+               _RefineGoto = false;
+               System.Diagnostics.Debug.WriteLine("Refining GOTO");
+               SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+            }
+            else
+            {
+               if (Settings.ParkStatus == ParkStatus.Unparked)
+               {
+                  // Check if slew finished
+                  if (_IsSlewing)
+                  {
+                     _IsSlewing = false;
+                     // Announce("Slew complete.");
+                  }
+                  if (_IsMoveAxisSlewing)
+                  {
+                     _IsMoveAxisSlewing = false;
+                  }
+                  if (TrackingState != TrackingStatus.Off)
+                  {
+                     System.Diagnostics.Debug.WriteLine("Restarting tracking");
+                     LogMessage("Command", "Restarting tracking {0}", TrackingState);
+                     StartTracking();
+                  }
+               }
+            }
          }
       }
 
@@ -314,7 +319,7 @@ namespace ASCOM.LunaticAstroEQ
                if (Settings.AscomCompliance.UseSynchronousParking)
                {
                   // Block until the park completes
-                  while (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+                  while (Settings.ParkStatus != ParkStatus.Parked)
                   {
                      System.Diagnostics.Debug.WriteLine("Waiting for 5 seconds");
                      // wait 5 seconds
