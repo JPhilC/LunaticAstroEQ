@@ -53,11 +53,15 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// </summary>
       public int MaximumSlewRate { get; set; }
 
+      public bool CreateDumpFiles { get; set; }
 
       public ControllerSettings()
       {
          MaximumSlewRate = 812;  // Based on my custom pulley EQ5
+         CreateDumpFiles = true;
       }
+
+
 
    }
 }

@@ -210,13 +210,15 @@ namespace ASCOM.LunaticAstroEQ
          {
             return;
          }
-         processingElapsed = true;
          try
          {
+            processingElapsed = true;
             RefreshCurrentPosition();
+            processingElapsed = false;
          }
-         catch
+         catch (Exception ex)
          {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
             throw;
          }
          finally

@@ -59,6 +59,7 @@ namespace ASCOM.LunaticAstroEQ
 
       private PierSide _previousPointingSOP = PierSide.pierUnknown;
       private AxisPosition _previousAxisPosition;
+      private bool _wasMoving = false;
       private AxisRates[] _AxisRates = new AxisRates[3];
       private AxisState[] _AxisState = new AxisState[2];
 
@@ -197,10 +198,10 @@ namespace ASCOM.LunaticAstroEQ
          }
 
 
-         //if (Settings.ParkStatus == ParkStatus.Parking)
-         //{
-         //   System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
-         //}
+         if (Settings.ParkStatus == ParkStatus.Parking)
+         {
+            System.Diagnostics.Debug.WriteLine($"Parking to: {_ParkedAxisPosition.RAAxis.Value}/{_ParkedAxisPosition.RAAxis.Value}\t{_ParkedAxisPosition.DecFlipped}");
+         }
 
          if (_TargetPosition != null)
          {
@@ -233,7 +234,7 @@ namespace ASCOM.LunaticAstroEQ
          }
 
          // If the axis has stopped moving there are some bit to clear up
-         if (!axisHasMoved)
+         if (_wasMoving && !axisHasMoved)
          {
             // See if we need to refine a goto.
             if (_RefineGoto)
@@ -256,15 +257,20 @@ namespace ASCOM.LunaticAstroEQ
                   {
                      _IsMoveAxisSlewing = false;
                   }
-                  if (TrackingState != TrackingStatus.Off)
+                  if (!_IsMoveAxisSlewing && !_IsSlewing)
                   {
-                     System.Diagnostics.Debug.WriteLine("Restarting tracking");
-                     LogMessage("Command", "Restarting tracking {0}", TrackingState);
-                     StartTracking();
+                     if (TrackingState != TrackingStatus.Off)
+                     {
+                        System.Diagnostics.Debug.WriteLine("Restarting tracking");
+                        LogMessage("Command", "Restarting tracking {0}", TrackingState);
+                        StartTracking();
+                     }
                   }
                }
             }
          }
+
+         _wasMoving = axisHasMoved;
       }
 
       private void RelocateMounts(double latitude, double longitude, double elevation)
@@ -352,6 +358,12 @@ namespace ASCOM.LunaticAstroEQ
             Controller.MCAxisStop(AxisId.Both_Axes); // Stop the axes moving to get distances
             AxisPosition currentAxisPosition = _CurrentPosition.ObservedAxes;
             AxisPosition targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition);
+
+            double slewSeconds = Controller.MCGetSlewTimeEstimate(targetAxisPosition, Hemisphere);
+            
+            // Get a refined target position allowing for slew time.
+            targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition, slewSeconds);
+
             _TargetPosition = new MountCoordinate(targetAxisPosition, _AscomToolsTargetPosition, currentTime);
             System.Diagnostics.Debug.WriteLine($"Current Physical SOP: { currentAxisPosition.PhysicalSideOfPier}\t\tPointing SOP: {_CurrentPosition.GetPointingSideOfPier(false)}");
             System.Diagnostics.Debug.WriteLine($" Target Physical SOP: { targetAxisPosition.PhysicalSideOfPier}\t\tPointing SOP: {_TargetPosition.GetPointingSideOfPier(false)}");
@@ -477,25 +489,6 @@ namespace ASCOM.LunaticAstroEQ
 
 
                SaveSettings();
-               //if (Settings.TrackUsingPEC)
-               //{
-               //   //  track using PEC
-               //   PECStartTracking();
-               //   if (!mute)
-               //   {
-               //      // EQ_Beep(??)
-               //   }
-               //}
-               //else
-               //{
-               //   //  Set Caption
-               //   // HC.TrackingFrame.Caption = oLangDll.GetLangString(121) & " " & oLangDll.GetLangString(122)
-               //   // HC.Add_Message(oLangDll.GetLangString(5014))
-               //   if (!mute)
-               //   {
-               //      // EQ_Beep(10)
-               //   }
-               //}
             }
          }
       }

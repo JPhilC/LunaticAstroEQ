@@ -44,6 +44,7 @@ using ASCOM.LunaticAstroEQ.Core.Geometry;
 using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
 using ASCOM.DeviceInterface;
 using ASCOM.DriverAccess;
+using ASCOM.Utilities;
 
 namespace ASCOM.LunaticAstroEQ.Controller
 {
@@ -109,11 +110,11 @@ namespace ASCOM.LunaticAstroEQ.Controller
       private long[] BreakSteps = new long[2];           // Break steps from slewing to stop.
       private long[] LowSpeedGotoMargin = new long[2];      // If slewing steps exceeds this LowSpeedGotoMargin, 
                                                             // GOTO is in high speed slewing.
-      private double[] LowSpeedSlewRate = new double[2];    // Low speed slew rate
-      private double[] HighSpeedSlewRate = new double[2];   // High speed slew rate
+      private double[] LowSpeedSlewRate = new double[2];    // Low speed slew rate (Steps/Sec)
+      private double[] HighSpeedSlewRate = new double[2];   // High speed slew rate (Steps/sec)
 
+      private System.IO.StreamWriter _dumpFile = null;
 
-      private bool InstantStop;              // Use InstantStop command for MCAxisStop
       #endregion
 
       #region Singleton code ...
@@ -273,6 +274,16 @@ namespace ASCOM.LunaticAstroEQ.Controller
 
          lock (lockObject)
          {
+            if (_Settings.CreateDumpFiles)
+            {
+               DateTime now = DateTime.Now;
+               // Get the ASCOM trace file path
+               string logPath = $"{ System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}\\ASCOM\\Logs {now.ToString("yyyy-MM-dd")}";
+               System.IO.Directory.CreateDirectory(logPath);
+               string fileName = $"{logPath}\\{this.GetType().Name}.{now.ToString("HHmm.ffffff")}.dmp";
+               _dumpFile = new StreamWriter(fileName, false);
+            }
+
             int result = MCInit(ComPort, baud, timeout, retry);
             Interlocked.Increment(ref OpenConnections);
             return result;
@@ -287,6 +298,12 @@ namespace ASCOM.LunaticAstroEQ.Controller
             Interlocked.Decrement(ref OpenConnections);
             if (OpenConnections <= 0)
             {
+               if (_dumpFile != null)
+               {
+                  _dumpFile.Flush();
+                  _dumpFile.Close();
+                  _dumpFile = null;
+               }
                EndPoint = null;
                ConnectionString = string.Empty;
                ControllerActive = false;
@@ -455,87 +472,90 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// <returns>The response string from mount</returns>
       public String TalkWithAxis(AxisId axis, char cmd, string cmdDataStr)
       {
-         lock (lockObject)
+         string response = string.Empty;
+
+         const int BufferSize = 20;
+         StringBuilder sb = new StringBuilder(BufferSize);
+         sb.Append(cStartChar_Out);                  // 0: Leading char
+         sb.Append(cmd);                         // 1: Length of command( Source, distination, command char, data )
+
+         // Target Device
+         sb.Append(((int)axis + 1).ToString());    // 2: Target Axis
+                                                   // Copy command data to buffer
+         sb.Append(cmdDataStr);
+
+         sb.Append(cEndChar);    // CR Character            
+
+         string cmdString = sb.ToString();
+         // echoResponse = false;
+         // send the request
+         //if ((axis == 0) && ("GHMUIJ".Contains(cmd)))
+         //{
+         //echoResponse = true;
+         //System.Diagnostics.Debug.Write(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
+         //}
+
+         if (_dumpFile != null)
          {
-            string response = string.Empty;
+            _dumpFile.Write(cmdString);
+         }
+         var cmdTransaction = new EQTransaction(cmdString) { Timeout = TimeSpan.FromSeconds(TimeOut) };
 
-            const int BufferSize = 20;
-            StringBuilder sb = new StringBuilder(BufferSize);
-            sb.Append(cStartChar_Out);                  // 0: Leading char
-            sb.Append(cmd);                         // 1: Length of command( Source, distination, command char, data )
 
-            // Target Device
-            sb.Append(((int)axis + 1).ToString());    // 2: Target Axis
-                                                      // Copy command data to buffer
-            sb.Append(cmdDataStr);
-
-            sb.Append(cEndChar);    // CR Character            
-
-            string cmdString = sb.ToString();
-            echoResponse = false;
-            // send the request
-            if ((axis == 0) && ("GHMUIJ".Contains(cmd)))
+         using (ICommunicationChannel channel = new SerialCommunicationChannel(EndPoint))
+         using (var processor = new ReactiveTransactionProcessor())
+         {
+            var transactionObserver = new TransactionObserver(channel);
+            processor.SubscribeTransactionObserver(transactionObserver);
+            try
             {
-               echoResponse = true;
-               System.Diagnostics.Debug.Write(String.Format("TalkWithAxis({0}, {1}, {2})", axis, cmd, cmdDataStr));
-            }
-            var cmdTransaction = new EQTransaction(cmdString) { Timeout = TimeSpan.FromSeconds(TimeOut) };
+               channel.Open();
 
-
-            using (ICommunicationChannel channel = new SerialCommunicationChannel(EndPoint))
-            using (var processor = new ReactiveTransactionProcessor())
-            {
-               var transactionObserver = new TransactionObserver(channel);
-               processor.SubscribeTransactionObserver(transactionObserver);
-               try
+               // prepare to communicate
+               for (int i = 0; i < Retry; i++)
                {
-                  channel.Open();
 
-                  // prepare to communicate
-                  for (int i = 0; i < Retry; i++)
+                  Task.Run(() => processor.CommitTransaction(cmdTransaction));
+                  cmdTransaction.WaitForCompletionOrTimeout();
+                  if (!cmdTransaction.Failed)
                   {
-
-                     Task.Run(() => processor.CommitTransaction(cmdTransaction));
-                     cmdTransaction.WaitForCompletionOrTimeout();
-                     if (!cmdTransaction.Failed)
+                     response = cmdTransaction.Value.ToString();
+                     if (_dumpFile != null)
                      {
-                        response = cmdTransaction.Value.ToString();
-                        if (echoResponse)
-                        {
-                           System.Diagnostics.Debug.WriteLine($" -> {response}");
-                           echoResponse = false;
-                        }
-                        break;
+                        _dumpFile.WriteLine(response);
+                        //System.Diagnostics.Debug.WriteLine($" -> {response}");
+                        //echoResponse = false;
                      }
-                     else
-                     {
-                        Trace.TraceError(cmdTransaction.ErrorMessage.Single());
-                     }
+                     break;
+                  }
+                  else
+                  {
+                     Trace.TraceError(cmdTransaction.ErrorMessage.Single());
                   }
                }
-               catch (Exception ex)
-               {
-                  Trace.TraceError("Connnection Lost");
-                  throw new DriverException("AstroEQ not responding", ex);
-               }
-               finally
-               {
-                  // To clean up, we just need to dispose the TransactionObserver and the channel is closed automatically.
-                  // Not strictly necessary, but good practice.
-                  transactionObserver.OnCompleted(); // There will be no more transactions.
-                  transactionObserver = null; // not necessary, but good practice.
-               }
-
             }
-            //if (string.IsNullOrWhiteSpace(response)) {
-            //   if (axis == AxisId.Axis1)
-            //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS1);
-            //   else
-            //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS2);
-            //}
-            //System.Diagnostics.Debug.WriteLine($" -> Response: {response} (0x{response:X})");
-            return response;
+            catch (Exception ex)
+            {
+               Trace.TraceError("Connnection Lost");
+               throw new DriverException("AstroEQ not responding", ex);
+            }
+            finally
+            {
+               // To clean up, we just need to dispose the TransactionObserver and the channel is closed automatically.
+               // Not strictly necessary, but good practice.
+               transactionObserver.OnCompleted(); // There will be no more transactions.
+               transactionObserver = null; // not necessary, but good practice.
+            }
+
          }
+         //if (string.IsNullOrWhiteSpace(response)) {
+         //   if (axis == AxisId.Axis1)
+         //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS1);
+         //   else
+         //      throw new MountControllerException(ErrorCode.ERR_NORESPONSE_AXIS2);
+         //}
+         //System.Diagnostics.Debug.WriteLine($" -> Response: {response} (0x{response:X})");
+         return response;
       }
 
       /// <summary>
@@ -764,7 +784,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
                   LowSpeedGotoMargin[(int)AxisId.Axis1_RA] = (long)(640 * CoreConstants.SIDEREAL_RATE_RADIANS * FactorRadToStep[(int)AxisId.Axis1_RA]);
                   LowSpeedGotoMargin[(int)AxisId.Axis2_Dec] = (long)(640 * CoreConstants.SIDEREAL_RATE_RADIANS * FactorRadToStep[(int)AxisId.Axis2_Dec]);
 
-
+                  // I think the following are IRQs/Step!
                   LowSpeedSlewRate[(int)AxisId.Axis1_RA] = ((double)StepTimerFreq[(int)AxisId.Axis1_RA] / ((double)GridPerRevolution[(int)AxisId.Axis1_RA] / CoreConstants.SECONDS_PER_SIDERIAL_DAY));
                   LowSpeedSlewRate[(int)AxisId.Axis2_Dec] = ((double)StepTimerFreq[(int)AxisId.Axis2_Dec] / ((double)GridPerRevolution[(int)AxisId.Axis2_Dec] / CoreConstants.SECONDS_PER_SIDERIAL_DAY));
                   HighSpeedSlewRate[(int)AxisId.Axis1_RA] = ((double)HighSpeedRatio[(int)AxisId.Axis1_RA] * ((double)StepTimerFreq[(int)AxisId.Axis1_RA] / ((double)GridPerRevolution[(int)AxisId.Axis1_RA] / CoreConstants.SECONDS_PER_SIDERIAL_DAY)));
@@ -813,7 +833,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
             // InternalSpeed lower than 1/1000 of sidereal rate?
             if (Math.Abs(internalSpeed) <= CoreConstants.SIDEREAL_RATE_RADIANS / 1000.0)
             {
-               MCAxisStop(axis);
+               AxisStop(axis);
                return;
             }
 
@@ -850,14 +870,55 @@ namespace ASCOM.LunaticAstroEQ.Controller
          }
       }
 
+      public double MCGetSlewTimeEstimate(AxisPosition targetPosition, HemisphereOption hemisphere)
+      {
+         lock (lockObject)
+         {
+            double raTime = GetSlewTimeEstimate(AxisId.Axis1_RA, targetPosition.RAAxis.Radians);
+            double decTime = GetSlewTimeEstimate(AxisId.Axis2_Dec, targetPosition.DecAxis.Radians);
+            return Math.Max(raTime, decTime);
+         }
+      }
+
+      private double GetSlewTimeEstimate(AxisId axis, double targetPosition)
+      {
+         int ax = (int)axis;
+         var movingSteps = Math.Abs(GetMovingSteps(axis, targetPosition));
+
+         // If there is no increment, return directly.
+         if (movingSteps == 0)
+         {
+            return 0.0;
+         }
+
+         long highSteps = 0;
+         long lowSteps = 0;
+         // Check if the distance is long enough to trigger a high speed GOTO.
+         if (movingSteps > LowSpeedGotoMargin[ax])
+         {
+            lowSteps = BreakSteps[(int)axis];
+            highSteps = movingSteps - lowSteps;
+         }
+         else
+         {
+            lowSteps = movingSteps;
+         }
+
+         double lowTime = lowSteps / LowSpeedSlewRate[ax];
+         double highTime = highSteps / HighSpeedSlewRate[ax];
+         return highTime + lowTime;
+      }
+
+
       public void MCAxisSlewTo(AxisPosition targetPosition, HemisphereOption hemisphere)
       {
          lock (lockObject)
          {
-            MCAxisSlewTo(AxisId.Axis1_RA, targetPosition.RAAxis.Radians, hemisphere);
-            MCAxisSlewTo(AxisId.Axis2_Dec, targetPosition.DecAxis.Radians, hemisphere);
+            AxisSlewTo(AxisId.Axis1_RA, targetPosition.RAAxis.Radians, hemisphere);
+            AxisSlewTo(AxisId.Axis2_Dec, targetPosition.DecAxis.Radians, hemisphere);
          }
       }
+
 
       /// <summary>
       /// Slew one axis to a position given in Radians
@@ -868,87 +929,97 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          lock (lockObject)
          {
-
-            // Get current position of the axis.
-            var CurPosition = MCGetAxisPosition(axis);
-            double movingAngle;
-            // If Current Position < 180 and target is < 180 simple move
-            if (CurPosition < Math.PI && targetPosition > Math.PI)
-            {
-               movingAngle = targetPosition - CurPosition - CoreConstants.TWO_PI;
-            }
-            // If current position >180 and target < 180 must move through zero
-            else if (CurPosition > Math.PI && targetPosition < Math.PI)
-            {
-               movingAngle = CoreConstants.TWO_PI - (CurPosition - targetPosition);
-            }
-            // If current position < 180 and target > 180 must move through zero
-            else
-            {
-               movingAngle = targetPosition - CurPosition;
-            }
-            // Calculate slewing distance.
-            //// Note: For EQ mount, Positions[AXIS1] is offset( -PI/2 ) adjusted in UpdateAxisPosition().
-            //var MovingAngle = TargetPosition - CurPosition;
-            //System.Diagnostics.Debug.WriteLine($"Current Position = {Angle.RadiansToDegrees(CurPosition)}");
-            //System.Diagnostics.Debug.WriteLine($"Target Position = {Angle.RadiansToDegrees(TargetPosition)}");
-            //System.Diagnostics.Debug.WriteLine($"MovingAngle = {Angle.RadiansToDegrees(MovingAngle)}");
-            // Convert distance in radian into steps.
-            var movingSteps = AngleToStep(axis, movingAngle);
-
-            bool forward = true, highspeed = false;
-            AxisDirection direction = AxisDirection.Forward;
-
-            // If there is no increment, return directly.
-            if (movingSteps == 0)
-            {
-               return;
-            }
-
-            // Set moving direction
-            if (movingSteps < 0)
-            {
-               direction = AxisDirection.Reverse;
-               movingSteps = -movingSteps;
-               forward = false;
-            }
-
-            // Check if axis stopped
-            AxisState axesstate = MCGetAxisState(axis);
-            if (!axesstate.FullStop)
-            {
-               MCAxisStop(axis);
-               axesstate = MCGetAxisState(axis);
-               while (!axesstate.FullStop)
-               {
-                  Thread.Sleep(100);
-                  // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
-                  axesstate = MCGetAxisState(axis);
-               }
-            }
-
-            // Check if the distance is long enough to trigger a high speed GOTO.
-            if (movingSteps > LowSpeedGotoMargin[(int)axis])
-            {
-               SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.HighSpeed);  // high speed GOTO slewing 
-               highspeed = true;
-            }
-            else
-            {
-               SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.LowSpeed);  // low speed GOTO slewing
-               highspeed = false;
-            }
-
-
-            SetGotoTargetIncrement(axis, movingSteps);
-
-            SetBreakPointIncrement(axis, BreakSteps[(int)axis]);
-            StartMotion(axis);
-
-            // _TargetPosition[(int)Axis] = TargetPosition;
-            _AxisState[(int)axis].SetSlewingTo(forward, highspeed);
+            AxisSlewTo(axis, targetPosition, hemisphere);
          }
       }
+
+      /// <summary>
+      /// Slew one axis to a position given in Radians
+      /// </summary>
+      /// <param name="axis">Axis to slew</param>
+      /// <param name="targetPosition">Target position in Radians</param>
+      private void AxisSlewTo(AxisId axis, double targetPosition, HemisphereOption hemisphere)
+      {
+         var movingSteps = GetMovingSteps(axis, targetPosition);
+
+         bool forward = true, highspeed = false;
+         AxisDirection direction = AxisDirection.Forward;
+
+         // If there is no increment, return directly.
+         if (movingSteps == 0)
+         {
+            return;
+         }
+
+         // Set moving direction
+         if (movingSteps < 0)
+         {
+            direction = AxisDirection.Reverse;
+            movingSteps = -movingSteps;
+            forward = false;
+         }
+
+         // Check if axis stopped
+         AxisState axesstate = GetAxisState(axis);
+         if (!axesstate.FullStop)
+         {
+            AxisStop(axis);
+            axesstate = GetAxisState(axis);
+         }
+
+         // Check if the distance is long enough to trigger a high speed GOTO.
+         if (movingSteps > LowSpeedGotoMargin[(int)axis])
+         {
+            SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.HighSpeed);  // high speed GOTO slewing 
+            highspeed = true;
+         }
+         else
+         {
+            SetMotionMode(axis, hemisphere, AxisMode.Goto, direction, AxisSpeed.LowSpeed);  // low speed GOTO slewing
+            highspeed = false;
+         }
+
+
+         SetGotoTargetIncrement(axis, movingSteps);
+
+         SetBreakPointIncrement(axis, BreakSteps[(int)axis]);
+         StartMotion(axis);
+
+         // _TargetPosition[(int)Axis] = TargetPosition;
+         _AxisState[(int)axis].SetSlewingTo(forward, highspeed);
+      }
+
+
+      private long GetMovingSteps(AxisId axis, double targetPosition)
+      {
+         // Get current position of the axis.
+         var CurPosition = MCGetAxisPosition(axis);
+         double movingAngle;
+         // If Current Position < 180 and target is < 180 simple move
+         if (CurPosition < Math.PI && targetPosition > Math.PI)
+         {
+            movingAngle = targetPosition - CurPosition - CoreConstants.TWO_PI;
+         }
+         // If current position >180 and target < 180 must move through zero
+         else if (CurPosition > Math.PI && targetPosition < Math.PI)
+         {
+            movingAngle = CoreConstants.TWO_PI - (CurPosition - targetPosition);
+         }
+         // If current position < 180 and target > 180 must move through zero
+         else
+         {
+            movingAngle = targetPosition - CurPosition;
+         }
+         // Calculate slewing distance.
+         //// Note: For EQ mount, Positions[AXIS1] is offset( -PI/2 ) adjusted in UpdateAxisPosition().
+         //var MovingAngle = TargetPosition - CurPosition;
+         //System.Diagnostics.Debug.WriteLine($"Current Position = {Angle.RadiansToDegrees(CurPosition)}");
+         //System.Diagnostics.Debug.WriteLine($"Target Position = {Angle.RadiansToDegrees(TargetPosition)}");
+         //System.Diagnostics.Debug.WriteLine($"MovingAngle = {Angle.RadiansToDegrees(MovingAngle)}");
+         // Convert distance in radian into steps.
+         return AngleToStep(axis, movingAngle);
+      }
+
 
       public void MCAxisSlewBy(AxisId axis, double movingAngle, HemisphereOption hemisphere)
       {
@@ -977,17 +1048,17 @@ namespace ASCOM.LunaticAstroEQ.Controller
             }
 
             // Check if axis stopped
-            AxisState axesstate = MCGetAxisState(axis);
+            AxisState axesstate = GetAxisState(axis);
             if (!axesstate.FullStop)
             {
-               MCAxisStop(axis);
-               axesstate = MCGetAxisState(axis);
-               while (!axesstate.FullStop)
-               {
-                  Thread.Sleep(100);
-                  // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
-                  axesstate = MCGetAxisState(axis);
-               }
+               AxisStop(axis);
+               axesstate = GetAxisState(axis);
+               //while (!axesstate.FullStop)
+               //{
+               //   Thread.Sleep(100);
+               //   // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
+               //   axesstate = MCGetAxisState(axis);
+               //}
             }
 
             // Check if the distance is long enough to trigger a high speed GOTO.
@@ -1039,12 +1110,12 @@ namespace ASCOM.LunaticAstroEQ.Controller
             // LowSpeedSlewRate[0] is the Sidereal step rate so we need to work out the multiplier.
             double lowSpeedMultiplier = CoreConstants.SIDEREAL_RATE_ARCSECS / trackingRate;
             int stepPeriod = (int)(LowSpeedSlewRate[ax] * lowSpeedMultiplier);
-            //AxisState axisState = MCGetAxisState(axis);
+            //AxisState axisState = GetAxisState(axis);
 
             //// If the axis is changing speed or direction must stop it first
             //if (!axisState.FullStop)
             //{
-            MCAxisStop(axis);
+            AxisStop(axis);
             //   axisState = MCGetAxisState(axis);
             //   // Wait until the axis stop
             //   while (!axisState.FullStop)
@@ -1079,14 +1150,19 @@ namespace ASCOM.LunaticAstroEQ.Controller
          {
             if (axis == AxisId.Both_Axes)
             {
-               MCAxisStop(AxisId.Axis1_RA);
-               MCAxisStop(AxisId.Axis2_Dec);
+               AxisStop(AxisId.Axis1_RA);
+               AxisStop(AxisId.Axis2_Dec);
                return;
             }
 
-            TalkWithAxis(axis, 'K', null);
-            _AxisState[(int)axis].SetStopped();
+            AxisStop(axis);
          }
+      }
+
+      private void AxisStop(AxisId axis)
+      {
+         TalkWithAxis(axis, 'K', null);
+         _AxisState[(int)axis].SetStopped();
       }
 
       public void MCAxisStopAndRelease(AxisId axis)
@@ -1115,8 +1191,8 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          lock (lockObject)
          {
-            MCSetAxisPosition(AxisId.Axis1_RA, newPositions.RAAxis.Radians);
-            MCSetAxisPosition(AxisId.Axis2_Dec, newPositions.DecAxis.Radians);
+            SetAxisPosition(AxisId.Axis1_RA, newPositions.RAAxis.Radians);
+            SetAxisPosition(AxisId.Axis2_Dec, newPositions.DecAxis.Radians);
          }
       }
 
@@ -1125,18 +1201,24 @@ namespace ASCOM.LunaticAstroEQ.Controller
       /// </summary>
       /// <param name="Axis"></param>
       /// <param name="NewValue">The current axis position in radians</param>
-      public void MCSetAxisPosition(AxisId Axis, double NewValue)
+      public void MCSetAxisPosition(AxisId axis, double newValue)
       {
          lock (lockObject)
          {
-            long NewStepIndex = AngleToStep(Axis, NewValue);
-            NewStepIndex += 0x800000;
-
-            string szCmd = LongTo6BitHEX(NewStepIndex);
-            TalkWithAxis(Axis, 'E', szCmd);
-
-            // _AxisPosition[(int)Axis] = NewValue;
+            SetAxisPosition(axis, newValue);
          }
+      }
+
+
+      private void SetAxisPosition(AxisId Axis, double NewValue)
+      {
+         long NewStepIndex = AngleToStep(Axis, NewValue);
+         NewStepIndex += 0x800000;
+
+         string szCmd = LongTo6BitHEX(NewStepIndex);
+         TalkWithAxis(Axis, 'E', szCmd);
+
+         // _AxisPosition[(int)Axis] = NewValue;
       }
 
       /// <summary>
@@ -1148,18 +1230,23 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          lock (lockObject)
          {
-            string response = TalkWithAxis(axis, 'j', null);
-            long iPosition = BCDstr2long(response);
-            iPosition -= 0x00800000;
-            return StepToAngle(axis, iPosition);
+            return GetAxisPosition(axis);
          }
+      }
+
+      private double GetAxisPosition(AxisId axis)
+      {
+         string response = TalkWithAxis(axis, 'j', null);
+         long iPosition = BCDstr2long(response);
+         iPosition -= 0x00800000;
+         return StepToAngle(axis, iPosition);
       }
 
       public AxisPosition MCGetAxisPositions()
       {
          lock (lockObject)
          {
-            return new AxisPosition(MCGetAxisPosition(AxisId.Axis1_RA), MCGetAxisPosition(AxisId.Axis2_Dec), false, true);
+            return new AxisPosition(GetAxisPosition(AxisId.Axis1_RA), GetAxisPosition(AxisId.Axis2_Dec), false, true);
          }
       }
 
@@ -1174,69 +1261,72 @@ namespace ASCOM.LunaticAstroEQ.Controller
          }
       }
 
-
-
       public AxisState MCGetAxisState(AxisId axis)
       {
          lock (lockObject)
          {
-            int ax = (int)axis;
-            var response = TalkWithAxis(axis, 'f', null);
-            int state = Convert.ToInt32(response.Substring(1, response.Length - 2), 16);
+            return GetAxisState(axis);
+         }
+      }
 
-            if ((state & FFlags.Running) == FFlags.Running)
+      private AxisState GetAxisState(AxisId axis)
+      {
+         int ax = (int)axis;
+         var response = TalkWithAxis(axis, 'f', null);
+         int state = Convert.ToInt32(response.Substring(1, response.Length - 2), 16);
+
+         if ((state & FFlags.Running) == FFlags.Running)
+         {
+            _AxisState[ax].FullStop = false;
+            // Axis is running
+            if ((state & FFlags.Slewing) == FFlags.Slewing)
             {
-               _AxisState[ax].FullStop = false;
-               // Axis is running
-               if ((state & FFlags.Slewing) == FFlags.Slewing)
-               {
-                  // SLEWing
-                  _AxisState[ax].SlewingTo = false;
-                  _AxisState[ax].Slewing = true;
-               }
-               else
-               {
-                  // GOTOing
-                  _AxisState[ax].Slewing = false;
-                  _AxisState[ax].SlewingTo = true;
-               }
-            }
-            else
-            {
-               _AxisState[ax].FullStop = true; // FullStop = 1;	// Axis is fully stop.
-               _AxisState[ax].Slewing = false;
+               // SLEWing
                _AxisState[ax].SlewingTo = false;
-            }
-
-            if ((state & FFlags.Reversed) == FFlags.Reversed)
-            {
-               _AxisState[ax].MeshedForReverse = true; // Gears are meshed for reverse running
+               _AxisState[ax].Slewing = true;
             }
             else
             {
-               _AxisState[ax].MeshedForReverse = false;
-            }
-
-
-            if ((state & FFlags.Initialised) == FFlags.Initialised)
-            {
-               _AxisState[ax].NotInitialized = false;
-            }
-            else
-            {
-               _AxisState[ax].NotInitialized = true;      // MC is not initialized.
-            }
-
-            if ((state & FFlags.HighSpeed) == FFlags.HighSpeed)
-            {
-               _AxisState[ax].HighSpeed = true;
-            }
-            else
-            {
-               _AxisState[ax].HighSpeed = false;
+               // GOTOing
+               _AxisState[ax].Slewing = false;
+               _AxisState[ax].SlewingTo = true;
             }
          }
-         return _AxisState[(int)axis];
+         else
+         {
+            _AxisState[ax].FullStop = true; // FullStop = 1;	// Axis is fully stop.
+            _AxisState[ax].Slewing = false;
+            _AxisState[ax].SlewingTo = false;
+         }
+
+         if ((state & FFlags.Reversed) == FFlags.Reversed)
+         {
+            _AxisState[ax].MeshedForReverse = true; // Gears are meshed for reverse running
+         }
+         else
+         {
+            _AxisState[ax].MeshedForReverse = false;
+         }
+
+
+         if ((state & FFlags.Initialised) == FFlags.Initialised)
+         {
+            _AxisState[ax].NotInitialized = false;
+         }
+         else
+         {
+            _AxisState[ax].NotInitialized = true;      // MC is not initialized.
+         }
+
+         if ((state & FFlags.HighSpeed) == FFlags.HighSpeed)
+         {
+            _AxisState[ax].HighSpeed = true;
+         }
+         else
+         {
+            _AxisState[ax].HighSpeed = false;
+         }
+         return _AxisState[ax];
       }
 
       //public long MCGetAxisStatus(AxisId axis)
@@ -1367,7 +1457,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
       {
          AxisDirection direction = (speed > 0.0 ? AxisDirection.Forward : AxisDirection.Reverse);
 
-         var axesstate = MCGetAxisState(axis);
+         var axesstate = GetAxisState(axis);
          if (!axesstate.FullStop)
          {
             if ((axesstate.SlewingTo) ||                               // GOTO in action
@@ -1378,7 +1468,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
                 )
             {
                // We need to stop the motor first to change Motion Mode, etc.
-               MCAxisStop(axis);
+               AxisStop(axis);
             }
             else
             {

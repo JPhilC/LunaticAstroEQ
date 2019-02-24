@@ -246,12 +246,19 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       #endregion
 
 
-
-      public AxisPosition GetAxisPositionForRADec(double targetRA, double targetDec, AscomTools tools)
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="targetRA"></param>
+      /// <param name="targetDec"></param>
+      /// <param name="tools"></param>
+      /// <param name="futureOffset">Offset in future in seconds (if any)</param>
+      /// <returns></returns>
+      public AxisPosition GetAxisPositionForRADec(double targetRA, double targetDec, AscomTools tools, double futureOffset = 0.0)
       {
          bool flipDEC;
          double adjustedRA = targetRA;
-         double targetHA = AstroConvert.RangeHA(targetRA - LocalApparentSiderialTime);
+         double targetHA = AstroConvert.RangeHA(targetRA - LocalApparentSiderialTime + (futureOffset/3600.0));
          if (targetHA < 0) // Target is to the west.
          {
             if (ForceMeridianFlip)
@@ -309,7 +316,7 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
 
          // Compute for Target RA/DEC angles
-         Angle RAAxis = GetAxisPositionForRA(adjustedRA, 0.0);
+         Angle RAAxis = GetAxisPositionForRA(adjustedRA, 0.0, futureOffset);
          Angle DecAxis = GetAxisPositionForDec(targetDec, flipDEC);
          // System.Diagnostics.Debug.WriteLine($"RA/Dec:{targetHA}/{targetDec} Axes:{ RAAxis.Value}/{ DecAxis.Value} FlipDec: {flipDEC}");
          return new AxisPosition(RAAxis.Value, DecAxis.Value, flipDEC);
@@ -346,16 +353,15 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
       }
 
       /// <summary>
-      /// 
+      /// Gets an Axis position in degrees (0 is at 12-o-clock)
       /// </summary>
       /// <param name="targetRA">Target RA in hours</param>
       /// <param name="targetDec">Target Dec in degrees</param>
-      /// <param name="longitude">Site longitude</param>
-      /// <param name="hemisphere">Site hemisphere</param>
+      /// <param name="futureOffset">Future offset in seconds (if any).</param>
       /// <returns></returns>
-      private Angle GetAxisPositionForRA(double targetRA, double targetDec)
+      private Angle GetAxisPositionForRA(double targetRA, double targetDec, double futureOffset = 0.0)
       {
-         double deltaRa = targetRA - LocalApparentSiderialTime;
+         double deltaRa = targetRA - LocalApparentSiderialTime + (futureOffset/3600.0);
          if (Hemisphere == HemisphereOption.Northern)
          {
             if (targetDec > 90.0 && targetDec <= 270.0)
