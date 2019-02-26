@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,35 +117,8 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <metadata name="notifyIcon1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>17, 17</value>
-  </metadata>
-  <metadata name="contextMenuStrip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>130, 17</value>
-  </metadata>
-  <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-  <data name="notifyIcon1.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-    <value>
-        AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAQAQAAMQOAADEDgAAAAAAAAAA
-        AAAAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAA
-        AP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAA
-        AP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/x8fH/8eHh7/Hx8f/wEB
-        Af8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/IiIi/35+fv9hYWH/bGxs/9DQ
-        0P/CwsL/uLi4/2tra/8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8UFBT/Hx8f/21tbf9iYmL/AAAA/wUF
-        Bf9CQkL/vr6+///////s7Oz/DAwM/wAAAP8AAAD/AAAA/wAAAP9BQUH/dnZ2/xUVFf8JCQn/AAAA/wAA
-        AP9QUFD/srKy/6mpqf/h4eH//////zk5Of8YGBj/VFRU/1RUVP+FhYX/wsLC/zw8PP8AAAD/AAAA/xgY
-        GP9OTk7/0NDQ/9DQ0P+goKD/ycnJ//////9VVVX/Kysr/8DAwP+np6f/i4uL/46Ojv8XFxf/AAAA/0RE
-        RP+kpKT/xcXF/9DQ0P+pqan/rKys/9PT0//39/f/VlZW/wwMDP+RkZH/cXFx/1dXV/9lZWX/CwsL/ysr
-        K/+hoaH/cXFx/319ff+/v7//2dnZ/97e3v/Ly8v/9fX1/zw8PP8AAAD/UFBQ/25ubv9WVlb/ZWVl/yYm
-        Jv+mpqb/rKys/4KCgv+cnJz/xcXF/97e3v/i4uL/4ODg/+Tk5P8NDQ3/AAAA/woKCv9bW1v/W1tb/2lp
-        af+cnJz/tbW1/7W1tf++vr7/u7u7/7y8vP/IyMj/0tLS//////+MjIz/AAAA/wAAAP8EBAT/OTk5/1FR
-        Uf9SUlL/jIyM/66urv+3t7f/urq6/7e3t/+vr6//xMTE/+Xl5f/W1tb/EhIS/wAAAP8AAAD/AAAA/wgI
-        CP87Ozv/YGBg/3Nzc/+CgoL/np6e/6Wlpf+goKD/r6+v/87Ozv/U1NT/LCws/wAAAP8AAAD/AAAA/wAA
-        AP8AAAD/AgIC/0BAQP96enr/goKC/4yMjP+ysrL/x8fH/8rKyv+Tk5P/Ghoa/wAAAP8AAAD/AAAA/wAA
-        AP8AAAD/AAAA/wAAAP8AAAD/EBAQ/yoqKv9OTk7/Y2Nj/1hYWP8oKCj/AAAA/wAAAP8AAAD/AAAA/wAA
-        AP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAA
-        AP8AAAD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-        AAAAAAAAAAAAAA==
-</value>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="LunaticMoon_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\LunaticMoon_16.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>
