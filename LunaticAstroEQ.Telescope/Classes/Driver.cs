@@ -452,7 +452,7 @@ namespace ASCOM.LunaticAstroEQ
                   if (connectionResult == Core.Constants.MOUNT_SUCCESS)
                   {
                      IsConnected = true;
-                     InitialiseCurrentPosition();
+                     InitialiseCurrentPosition(true);
                      _Timer.Enabled = true;
                      // Set the polar scope brightness
                      Controller.MCSetPolarScopeBrightness(Settings.PolarSlopeBrightness);
@@ -461,6 +461,8 @@ namespace ASCOM.LunaticAstroEQ
                   else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
                   {
                      IsConnected = true;
+                     InitialiseCurrentPosition(false);
+                     _Timer.Enabled = true;
 
                   }
                   else

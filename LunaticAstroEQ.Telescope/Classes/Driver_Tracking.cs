@@ -69,7 +69,7 @@ namespace ASCOM.LunaticAstroEQ
       // Flag set a the beginning of a Goto to trigger a refinement after the first goto ends
       private bool _RefineGoto = false;
 
-      private void InitialiseCurrentPosition()
+      private void InitialiseCurrentPosition(bool firstConnection)
       {
          lock (Controller)
          {
@@ -77,9 +77,17 @@ namespace ASCOM.LunaticAstroEQ
             // This method is only called if this is the first connection to the mount
             // so override saved ParkStatus and always start off parked.
             _ParkedAxisPosition = Settings.AxisParkPosition;
-            _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
-            _previousAxisPosition = _ParkedAxisPosition;
-            Controller.MCSetAxisPosition(_ParkedAxisPosition);
+            if (firstConnection)
+            {
+               _CurrentPosition = new MountCoordinate(_ParkedAxisPosition, _AscomToolsCurrentPosition, now);
+               _previousAxisPosition = _ParkedAxisPosition;
+               Controller.MCSetAxisPosition(_ParkedAxisPosition);
+            }
+            else
+            {
+               _previousAxisPosition = Controller.MCGetAxisPositions();
+               _CurrentPosition = new MountCoordinate(_previousAxisPosition, _AscomToolsCurrentPosition, now);
+            }
             //if (Settings.ParkStatus != ParkStatus.Parked)
             //{
             //   Settings.ParkStatus = ParkStatus.Parked;
