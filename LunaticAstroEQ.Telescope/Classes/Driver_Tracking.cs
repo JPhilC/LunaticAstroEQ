@@ -120,6 +120,8 @@ namespace ASCOM.LunaticAstroEQ
       }
 
 
+      double? _previousDeltaRa;
+      bool _decFlippedConfirmed = false;
       /// <summary>
       /// Refreshes the NCP and current positions if more than 500ms have elapsed since the last refresh.
       /// </summary>
@@ -142,8 +144,8 @@ namespace ASCOM.LunaticAstroEQ
          //System.Diagnostics.Debug.WriteLine($"\nRA : Slewing-{raStatus.Slewing}, SlewingTo-{raStatus.SlewingTo}, Forward-{!raStatus.MeshedForReverse}, FullStop-{raStatus.FullStop}, Tracking-{raStatus.Tracking}");
          //System.Diagnostics.Debug.WriteLine($"Dec: Slewing-{decStatus.Slewing}, SlewingTo-{decStatus.SlewingTo}, Forward-{!decStatus.MeshedForReverse}, FullStop-{decStatus.FullStop}, Tracking-{decStatus.Tracking}");
 #endif
-         if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
-         // if (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
+         /// if (!axisPosition.Equals(_previousAxisPosition, _axisPositionTolerance))
+         if (!_AxisState[RA_AXIS].FullStop || !_AxisState[DEC_AXIS].FullStop)
          {
             // One or the other axis is moving
             axisHasMoved = true;
@@ -155,6 +157,7 @@ namespace ASCOM.LunaticAstroEQ
                   System.Diagnostics.Debug.WriteLine("Initialising SOP from goto target.");
                   System.Diagnostics.Debug.WriteLine($"Target Axes: {_TargetPosition.ObservedAxes.RAAxis.Value}/{_TargetPosition.ObservedAxes.DecAxis.Value}\t{_TargetPosition.ObservedAxes.DecFlipped}\tRA/Dec: {_TargetPosition.Equatorial.RightAscension}/{_TargetPosition.Equatorial.Declination}\t{_TargetPosition.PointingSideOfPier}");
                   axisPosition.DecFlipped = _TargetPosition.ObservedAxes.DecFlipped;
+                  _previousPointingSOP = _TargetPosition.PointingSideOfPier;
                }
             }
             else
@@ -183,6 +186,50 @@ namespace ASCOM.LunaticAstroEQ
 
          // Update current position
          _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+
+         if (!_decFlippedConfirmed && _CurrentPosition.PointingSideOfPier != PierSide.pierUnknown)
+         {
+            double ha = AstroConvert.RangeHA(SiderealTime - _CurrentPosition.Equatorial.RightAscension.Value);
+            if (_CurrentPosition.PointingSideOfPier == PierSide.pierWest)
+            {
+               if (ha >= 0)
+               {
+                  // need to flip the DEC axis as it is reporting the wrong RA
+                  axisPosition.DecFlipped = !axisPosition.DecFlipped;
+                  _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+               }
+            }
+            else
+            {
+               if (ha < 0)
+               {
+                  // need to flip the DEC axis as it is reporting the wrong RA
+                  axisPosition.DecFlipped = !axisPosition.DecFlipped;
+                  _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+               }
+            }
+            _decFlippedConfirmed = true;
+         }
+
+         //// Just check that we have the DecFlipped setting correct
+         //if (!_decFlippedConfirmed && _IsSlewing)
+         //{
+         //   double deltaRa = _TargetPosition.Equatorial.RightAscension - _CurrentPosition.Equatorial.RightAscension;
+         //   if (_previousDeltaRa.HasValue)
+         //   {
+         //      if (deltaRa > _previousDeltaRa.Value)
+         //      {
+         //         // Going in the wrong direction so flip the Dec axis
+         //         axisPosition.DecFlipped = !axisPosition.DecFlipped;
+         //         _CurrentPosition.MoveRADec(axisPosition, _AscomToolsCurrentPosition, now);
+         //      }
+         //      _decFlippedConfirmed = true;
+         //   }
+         //   else {
+         //      // Get it on the next cycle
+         //      _previousDeltaRa = deltaRa;
+         //   }
+         //}
 
          if (_previousPointingSOP != PierSide.pierUnknown)
          {
@@ -360,7 +407,7 @@ namespace ASCOM.LunaticAstroEQ
             AxisPosition targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition);
 
             double slewSeconds = Controller.MCGetSlewTimeEstimate(targetAxisPosition, Hemisphere);
-            
+
             // Get a refined target position allowing for slew time.
             targetAxisPosition = _CurrentPosition.GetAxisPositionForRADec(rightAscension, declination, _AscomToolsCurrentPosition, slewSeconds);
 

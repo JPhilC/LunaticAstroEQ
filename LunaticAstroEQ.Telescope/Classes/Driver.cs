@@ -1584,7 +1584,7 @@ namespace ASCOM.LunaticAstroEQ
          get
          {
             DateTime utcDate = DateTime.UtcNow;
-            LogMessage("UTCDate", "Get - {0}", String.Format("MM/dd/yy HH:mm:ss", utcDate));
+            LogMessage("UTCDate", "Get - {0:}", utcDate.ToString("MM/dd/yy HH:mm:ss"));
             return utcDate;
          }
          set

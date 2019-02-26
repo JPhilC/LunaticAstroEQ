@@ -178,6 +178,11 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
          PierSide pointingSOP = PierSide.pierUnknown;
          if (ObservedAxes != null)
          {
+            if (ObservedAxes[1] == 0.0)
+            {
+               // Impossible to tell so return unknown
+               return pointingSOP;
+            }
             if (ObservedAxes[1] > 180.0)  //  (ObservedAxes[1] <= 90 || ObservedAxes[1] >= 270.0)
             {
                if (swapSideOfPier)

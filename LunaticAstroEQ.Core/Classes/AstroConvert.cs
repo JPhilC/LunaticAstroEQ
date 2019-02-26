@@ -59,6 +59,9 @@ namespace ASCOM.LunaticAstroEQ.Core
 
       public static double DegToRad(double degrees) { return (degrees * Constants.DEG_RAD); }
       public static double HrsToRad(double hours) { return (hours * Constants.HRS_RAD); }
+
+      public static double DegToHrs(double degrees) { return (degrees * 24.0 / 360.0); }
+
       public static double HrsToRad(TimeSpan timespan) { return (timespan.TotalHours * Constants.HRS_RAD); }
 
       public static double RadToDeg(double Rad) { return (Rad * Constants.RAD_DEG); }

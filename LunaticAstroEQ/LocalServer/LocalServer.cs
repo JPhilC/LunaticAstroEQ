@@ -1,3 +1,5 @@
+#define SHOW_DEBUG_MESSAGE
+
 //
 // ASCOM.LunaticAstroEQ Local COM Server
 //
@@ -40,6 +42,8 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
+
+
 
 using System;
 using System.IO;
@@ -630,8 +634,11 @@ namespace ASCOM.LunaticAstroEQ
 
          if (!ProcessArguments(args)) return;                  // Register/Unregister
 
-         // MessageBox.Show("Attach debugger if required. Click OK when done.");
-
+#if DEBUG
+#if SHOW_DEBUG_MESSAGE
+         MessageBox.Show("Attach debugger if required. Click OK when done.");
+#endif
+#endif
          // Initialize critical member variables.
          objsInUse = 0;
          serverLocks = 0;

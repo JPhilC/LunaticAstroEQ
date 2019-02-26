@@ -960,11 +960,16 @@ namespace ASCOM.LunaticAstroEQ.Controller
          }
 
          // Check if axis stopped
-         AxisState axesstate = GetAxisState(axis);
-         if (!axesstate.FullStop)
+         AxisState axisState = GetAxisState(axis);
+         if (!axisState.FullStop)
          {
             AxisStop(axis);
-            axesstate = GetAxisState(axis);
+            axisState = GetAxisState(axis);
+            while (!axisState.FullStop)
+            {
+               Thread.Sleep(100);
+               axisState = GetAxisState(axis);
+            }
          }
 
          // Check if the distance is long enough to trigger a high speed GOTO.
@@ -1053,12 +1058,12 @@ namespace ASCOM.LunaticAstroEQ.Controller
             {
                AxisStop(axis);
                axesstate = GetAxisState(axis);
-               //while (!axesstate.FullStop)
-               //{
-               //   Thread.Sleep(100);
-               //   // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
-               //   axesstate = MCGetAxisState(axis);
-               //}
+               while (!axesstate.FullStop)
+               {
+                  Thread.Sleep(100);
+                  // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
+                  axesstate = GetAxisState(axis);
+               }
             }
 
             // Check if the distance is long enough to trigger a high speed GOTO.
@@ -1110,22 +1115,22 @@ namespace ASCOM.LunaticAstroEQ.Controller
             // LowSpeedSlewRate[0] is the Sidereal step rate so we need to work out the multiplier.
             double lowSpeedMultiplier = CoreConstants.SIDEREAL_RATE_ARCSECS / trackingRate;
             int stepPeriod = (int)(LowSpeedSlewRate[ax] * lowSpeedMultiplier);
-            //AxisState axisState = GetAxisState(axis);
+            AxisState axisState = GetAxisState(axis);
 
-            //// If the axis is changing speed or direction must stop it first
-            //if (!axisState.FullStop)
-            //{
-            AxisStop(axis);
-            //   axisState = MCGetAxisState(axis);
-            //   // Wait until the axis stop
-            //   while (!axisState.FullStop)
-            //   {
-            //      Thread.Sleep(100);
-            //      // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
-            //      axisState = MCGetAxisState(axis);
-            //   }
+            // If the axis is changing speed or direction must stop it first
+            if (!axisState.FullStop)
+            {
+               AxisStop(axis);
+               axisState = GetAxisState(axis);
+               // Wait until the axis stop
+               while (!axisState.FullStop)
+               {
+                  Thread.Sleep(100);
+                  // Update Mount status, the status of both axes are also updated because _GetMountStatus() includes such operations.
+                  axisState = GetAxisState(axis);
+               }
 
-            //}
+            }
 
 
 
