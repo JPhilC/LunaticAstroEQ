@@ -118,7 +118,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
             </DockPanel>
         </Grid>
         <StatusBar Grid.Row="2" Background="#FF4B0909" Foreground="#FFEE0707">
-            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap">
+                <TextBlock.ToolTip>
+                    <TextBlock Text="{Binding StatusMoreInfo}" TextWrapping="Wrap"></TextBlock>
+                </TextBlock.ToolTip>
+            </TextBlock>
         </StatusBar>
     </Grid>
 </Window>

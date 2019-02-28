@@ -7,7 +7,11 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 //
 // TODO - Add your authorship information here
+#if BETA
+[assembly: AssemblyTitle("ASCOM.LunaticAstroEQ.Telescope.BetaTest")]
+#else
 [assembly: AssemblyTitle("ASCOM.LunaticAstroEQ.Telescope")]
+#endif
 [assembly: AssemblyDescription("ASCOM driver for AstroEQ telescope controllers")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Lunatic Software")]

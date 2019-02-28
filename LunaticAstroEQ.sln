@@ -19,12 +19,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lunatic.TelescopeController
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Beta Test|Any CPU = Beta Test|Any CPU
+		Beta Test|x86 = Beta Test|x86
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Beta Test|Any CPU.ActiveCfg = Release (Beta Test)|Any CPU
+		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Beta Test|Any CPU.Build.0 = Release (Beta Test)|Any CPU
+		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Beta Test|x86.ActiveCfg = Release (Beta Test)|Any CPU
+		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Beta Test|x86.Build.0 = Release (Beta Test)|Any CPU
 		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -33,6 +39,10 @@ Global
 		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Release|x86.ActiveCfg = Release|Any CPU
 		{3689A2CB-94C5-4012-A5CF-7E7D1DD27143}.Release|x86.Build.0 = Release|Any CPU
+		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Beta Test|Any CPU.ActiveCfg = Release (Beta Test)|Any CPU
+		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Beta Test|Any CPU.Build.0 = Release (Beta Test)|Any CPU
+		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Beta Test|x86.ActiveCfg = Release (Beta Test)|Any CPU
+		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Beta Test|x86.Build.0 = Release (Beta Test)|Any CPU
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -41,6 +51,10 @@ Global
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Release|x86.ActiveCfg = Release|Any CPU
 		{64308775-BD4A-469C-BCAB-3ED830B811AF}.Release|x86.Build.0 = Release|Any CPU
+		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Beta Test|Any CPU.ActiveCfg = Release (Beta Test)|Any CPU
+		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Beta Test|Any CPU.Build.0 = Release (Beta Test)|Any CPU
+		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Beta Test|x86.ActiveCfg = Release (Beta Test)|Any CPU
+		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Beta Test|x86.Build.0 = Release (Beta Test)|Any CPU
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -49,6 +63,10 @@ Global
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Release|x86.ActiveCfg = Release|Any CPU
 		{0CE35AF1-03DD-42EA-B8DA-6E806178E283}.Release|x86.Build.0 = Release|Any CPU
+		{BAB4E803-5772-42F2-8843-059074BAB448}.Beta Test|Any CPU.ActiveCfg = Release (Beta Test)|Any CPU
+		{BAB4E803-5772-42F2-8843-059074BAB448}.Beta Test|Any CPU.Build.0 = Release (Beta Test)|Any CPU
+		{BAB4E803-5772-42F2-8843-059074BAB448}.Beta Test|x86.ActiveCfg = Release (Beta Test)|Any CPU
+		{BAB4E803-5772-42F2-8843-059074BAB448}.Beta Test|x86.Build.0 = Release (Beta Test)|Any CPU
 		{BAB4E803-5772-42F2-8843-059074BAB448}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BAB4E803-5772-42F2-8843-059074BAB448}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BAB4E803-5772-42F2-8843-059074BAB448}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -57,6 +75,10 @@ Global
 		{BAB4E803-5772-42F2-8843-059074BAB448}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BAB4E803-5772-42F2-8843-059074BAB448}.Release|x86.ActiveCfg = Release|Any CPU
 		{BAB4E803-5772-42F2-8843-059074BAB448}.Release|x86.Build.0 = Release|Any CPU
+		{73CE7553-CA61-429D-89BE-25856541CF0D}.Beta Test|Any CPU.ActiveCfg = Release (Beta Test)|Any CPU
+		{73CE7553-CA61-429D-89BE-25856541CF0D}.Beta Test|Any CPU.Build.0 = Release (Beta Test)|Any CPU
+		{73CE7553-CA61-429D-89BE-25856541CF0D}.Beta Test|x86.ActiveCfg = Release (Beta Test)|Any CPU
+		{73CE7553-CA61-429D-89BE-25856541CF0D}.Beta Test|x86.Build.0 = Release (Beta Test)|Any CPU
 		{73CE7553-CA61-429D-89BE-25856541CF0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{73CE7553-CA61-429D-89BE-25856541CF0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73CE7553-CA61-429D-89BE-25856541CF0D}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -65,6 +87,10 @@ Global
 		{73CE7553-CA61-429D-89BE-25856541CF0D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{73CE7553-CA61-429D-89BE-25856541CF0D}.Release|x86.ActiveCfg = Release|Any CPU
 		{73CE7553-CA61-429D-89BE-25856541CF0D}.Release|x86.Build.0 = Release|Any CPU
+		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Beta Test|Any CPU.ActiveCfg = Release (Beta Test)|Any CPU
+		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Beta Test|Any CPU.Build.0 = Release (Beta Test)|Any CPU
+		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Beta Test|x86.ActiveCfg = Release (Beta Test)|Any CPU
+		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Beta Test|x86.Build.0 = Release (Beta Test)|Any CPU
 		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -73,6 +99,10 @@ Global
 		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Release|x86.ActiveCfg = Release|Any CPU
 		{90A3332B-527D-42CA-8B23-B8E2E3EDB09A}.Release|x86.Build.0 = Release|Any CPU
+		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Beta Test|Any CPU.ActiveCfg = Release (Beta Test)|Any CPU
+		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Beta Test|Any CPU.Build.0 = Release (Beta Test)|Any CPU
+		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Beta Test|x86.ActiveCfg = Release (Beta Test)|Any CPU
+		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Beta Test|x86.Build.0 = Release (Beta Test)|Any CPU
 		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{05F298A9-5C49-4D75-B457-BAC1CECB0A64}.Debug|x86.ActiveCfg = Debug|Any CPU

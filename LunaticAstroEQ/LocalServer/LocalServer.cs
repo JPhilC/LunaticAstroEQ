@@ -147,9 +147,13 @@ namespace ASCOM.LunaticAstroEQ
       private static ArrayList s_ComObjectAssys;            // Dynamically loaded assemblies containing served COM objects
       private static ArrayList s_ComObjectTypes;            // Served COM object types
       private static ArrayList s_ClassFactories;            // Served COM object class factories
+#if BETA
+      private static string s_appId = "{3f621124-be7a-4d79-8e78-8be955ef5bdb}";  // Our AppId
+#else
       private static string s_appId = "{3f621124-89fb-4d79-8e78-8be955ef5bdb}";  // Our AppId
+#endif
       private static readonly Object lockObject = new object();
-      #endregion
+#endregion
 
       // This property returns the main thread's id.
       public static uint MainThreadId { get; private set; } // Stores the main thread's thread id.
@@ -158,7 +162,7 @@ namespace ASCOM.LunaticAstroEQ
       public static bool StartedByCOM { get; private set; }   // True if server started by COM (-embedding)
 
 
-      #region Server Lock, Object Counting, and AutoQuit on COM startup
+#region Server Lock, Object Counting, and AutoQuit on COM startup
       // Returns the total number of objects alive currently.
       public static int ObjectsCount
       {
@@ -235,13 +239,13 @@ namespace ASCOM.LunaticAstroEQ
             }
          }
       }
-      #endregion
+#endregion
 
       // -----------------
       // PRIVATE FUNCTIONS
       // -----------------
 
-      #region Dynamic Driver Assembly Loader
+#region Dynamic Driver Assembly Loader
       //
       // Load the assemblies that contain the classes that we will serve
       // via COM. These will be located in the same folder as
@@ -304,9 +308,9 @@ namespace ASCOM.LunaticAstroEQ
          }
          return true;
       }
-      #endregion
+#endregion
 
-      #region COM Registration and Unregistration
+#region COM Registration and Unregistration
       //
       // Test if running elevated
       //
@@ -384,6 +388,7 @@ namespace ASCOM.LunaticAstroEQ
                key.SetValue(null, assyDescription);
                key.SetValue("AppID", s_appId);
                key.SetValue("AuthenticationLevel", 1, RegistryValueKind.DWord);
+               key.SetValue("RunAs", "Interactive User", RegistryValueKind.String);
             }
             //
             // HKCR\APPID\exename.ext
@@ -536,9 +541,9 @@ namespace ASCOM.LunaticAstroEQ
             catch (Exception) { }
          }
       }
-      #endregion
+#endregion
 
-      #region Class Factory Support
+#region Class Factory Support
       //
       // On startup, we register the class factories of the COM objects
       // that we serve. This requires the class facgtory name to be
@@ -568,9 +573,9 @@ namespace ASCOM.LunaticAstroEQ
          foreach (ClassFactory factory in s_ClassFactories)
             factory.RevokeClassObject();
       }
-      #endregion
+#endregion
 
-      #region Command Line Arguments
+#region Command Line Arguments
       //
       // ProcessArguments() will process the command-line arguments
       // If the return value is true, we carry on and start this application.
@@ -619,9 +624,9 @@ namespace ASCOM.LunaticAstroEQ
 
          return bRet;
       }
-      #endregion
+#endregion
 
-      #region SERVER ENTRY POINT (main)
+#region SERVER ENTRY POINT (main)
       //
       // ==================
       // SERVER ENTRY POINT
@@ -679,6 +684,6 @@ namespace ASCOM.LunaticAstroEQ
             GarbageCollector.WaitForThreadToStop();
          }
       }
-      #endregion
+#endregion
    }
 }

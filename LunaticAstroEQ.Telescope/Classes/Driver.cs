@@ -62,6 +62,15 @@ namespace ASCOM.LunaticAstroEQ
    // throw the appropriate ASCOM exception.
    //
 
+#if BETA
+   /// <summary>
+   /// ASCOM Telescope Driver for LunaticAstroEQ.
+   /// </summary>
+   [Guid("3b88ba0e-be7a-4154-add1-cab66da84bae")]
+   [ProgId("ASCOM.LunaticAstroEQ.Telescope.BetaTest")]
+   [ServedClassName("(Beta Test) Driver for AstroEQ telescope controllers ")]
+   [ClassInterface(ClassInterfaceType.None)]
+#else
    /// <summary>
    /// ASCOM Telescope Driver for LunaticAstroEQ.
    /// </summary>
@@ -69,6 +78,7 @@ namespace ASCOM.LunaticAstroEQ
    [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
    [ServedClassName("Driver for AstroEQ telescope controllers")]
    [ClassInterface(ClassInterfaceType.None)]
+#endif
    public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
    {
       /// <summary>
@@ -80,9 +90,13 @@ namespace ASCOM.LunaticAstroEQ
       /// <summary>
       /// Driver description that displays in the ASCOM Chooser.
       /// </summary>
+#if BETA
       internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ.";
       internal string driverName = "AstroEQ ASCOM Driver";
-
+#else
+      internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ (Beta Test).";
+      internal string driverName = "AstroEQ ASCOM Driver (Beta Test)";
+#endif
       private const int RA_AXIS = 0;
       private const int DEC_AXIS = 1;
 
@@ -183,7 +197,7 @@ namespace ASCOM.LunaticAstroEQ
          LogMessage("Telescope", "Completed initialisation");
       }
 
-      #region Timer ...
+#region Timer ...
       private void InitialiseTimer()
       {
          _Timer = new System.Timers.Timer(Settings.RefreshInterval); // Initialise the pulse guiding timer with a 1 milisecond interval.
@@ -226,7 +240,7 @@ namespace ASCOM.LunaticAstroEQ
             processingElapsed = false;
          }
       }
-      #endregion
+#endregion
 
 
       private void InitialiseAscomTools()
@@ -234,8 +248,8 @@ namespace ASCOM.LunaticAstroEQ
          double latitude, longitude, elevation, temperature;
          lock (Controller)
          {
-            latitude = Controller.ObservatoryLocation.Latitude.Value;
-            longitude = Controller.ObservatoryLocation.Longitude.Value;
+            latitude = Controller.ObservatoryLatitude.Value;
+            longitude = Controller.ObservatoryLongitude.Value;
             elevation = Controller.ObservatoryElevation;
             temperature = 15.0;
          }
@@ -273,7 +287,7 @@ namespace ASCOM.LunaticAstroEQ
       // PUBLIC COM INTERFACE ITelescopeV3 IMPLEMENTATION
       //
 
-      #region Common properties and methods.
+#region Common properties and methods.
 
       /// <summary>
       /// Displays the Setup Dialog form.
@@ -540,9 +554,9 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      #endregion
+#endregion
 
-      #region ITelescope Implementation
+#region ITelescope Implementation
       public void AbortSlew()
       {
          tl.LogMessage("AbortSlew", "");
@@ -1181,8 +1195,8 @@ namespace ASCOM.LunaticAstroEQ
          {
             lock (Controller)
             {
-               LogMessage("SiteLatitude", "Get {0}", Controller.ObservatoryLocation.Latitude.Value);
-               return Controller.ObservatoryLocation.Latitude.Value;
+               LogMessage("SiteLatitude", "Get {0}", Controller.ObservatoryLatitude.Value);
+               return Controller.ObservatoryLatitude.Value;
             }
          }
          set
@@ -1194,11 +1208,11 @@ namespace ASCOM.LunaticAstroEQ
                {
                   throw new ASCOM.InvalidValueException("Site Latitude must be in the range -90 to 90.");
                }
-               if (Controller.ObservatoryLocation.Latitude.Value == value)
+               if (Controller.ObservatoryLatitude.Value == value)
                {
                   return;
                }
-               Controller.ObservatoryLocation.Latitude = value;
+               Controller.ObservatoryLatitude = value;
                RelocateMounts(value, SiteLongitude, SiteElevation);
             }
          }
@@ -1211,8 +1225,8 @@ namespace ASCOM.LunaticAstroEQ
          {
             lock (Controller)
             {
-               LogMessage("SiteLongitude", "Get {0}", Controller.ObservatoryLocation.Longitude.Value);
-               return Controller.ObservatoryLocation.Longitude.Value;
+               LogMessage("SiteLongitude", "Get {0}", Controller.ObservatoryLongitude.Value);
+               return Controller.ObservatoryLongitude.Value;
             }
          }
          set
@@ -1224,11 +1238,11 @@ namespace ASCOM.LunaticAstroEQ
                {
                   throw new ASCOM.InvalidValueException("Site Longitude must be in the range -180.0 to 180.0.");
                }
-               if (Controller.ObservatoryLocation.Longitude.Value == value)
+               if (Controller.ObservatoryLongitude.Value == value)
                {
                   return;
                }
-               Controller.ObservatoryLocation.Longitude = value;
+               Controller.ObservatoryLongitude = value;
                RelocateMounts(SiteLatitude, value, SiteElevation);
             }
          }
@@ -1610,9 +1624,9 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      #endregion
+#endregion
 
-      #region Private properties and methods
+#region Private properties and methods
 
       // here are some useful properties and methods that can be used as required
       // to help with driver development
@@ -1672,6 +1686,6 @@ namespace ASCOM.LunaticAstroEQ
          tl.LogMessage(identifier, msg);
          // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
       }
-      #endregion
+#endregion
    }
 }

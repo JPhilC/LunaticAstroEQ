@@ -102,9 +102,9 @@ namespace Lunatic.TelescopeController.ViewModel
       #endregion
 
       #region Telescope driver selection etc ...
-      private ASCOM.DeviceInterface.ITelescopeV3 _Driver;
+      private ASCOM.DriverAccess.Telescope _Driver;
 
-      private ASCOM.DeviceInterface.ITelescopeV3 Driver
+      private ASCOM.DriverAccess.Telescope Driver
       {
          get
          {
@@ -340,6 +340,7 @@ namespace Lunatic.TelescopeController.ViewModel
          RaisePropertyChanged("SetupMenuHeader");
          RaisePropertyChanged("DisconnectMenuHeader");
          RaisePropertyChanged("ConnectMenuHeader");
+         ConnectCommand.RaiseCanExecuteChanged();
          StatusMessage = (DriverSelected ? DriverName + " selected." : (String.IsNullOrEmpty(StatusMessage) ? "Telescope driver not selected" : StatusMessage));  // Keeps error displayed if failed to connect.
       }
 
@@ -354,7 +355,23 @@ namespace Lunatic.TelescopeController.ViewModel
          }
          private set
          {
-            Set<string>(ref _StatusMessage, value);
+            if (Set<string>(ref _StatusMessage, value))
+            {
+               _StatusMoreInfo = String.Empty;
+            }
+         }
+      }
+
+      private string _StatusMoreInfo = "";
+      public string StatusMoreInfo
+      {
+         get
+         {
+            return _StatusMoreInfo;
+         }
+         private set
+         {
+            Set<string>(ref _StatusMoreInfo, value);
          }
       }
 
@@ -713,7 +730,7 @@ End Property
          else
          {
             // Code runs "for real"
-            
+
 
             _SettingsProvider = settingsProvider;
             _Settings = settingsProvider.Settings;
@@ -790,7 +807,7 @@ End Property
             {
                try
                {
-                  AxisPosition = new AxisPosition(Driver.CommandString("Lunatic:GetAxisPositions"));
+                  AxisPosition = new AxisPosition(Driver.CommandString("Lunatic:GetAxisPositions", true));
                }
                catch
                {
@@ -855,17 +872,8 @@ End Property
          {
             try
             {
-               Driver = new ASCOM.DriverAccess.Telescope(Settings.DriverId);
-               if (Driver != null)
-               {
-                  DriverName = Settings.DriverName;
-                  DriverId = Settings.DriverId;
-               }
-               else
-               {
-                  DriverName = string.Empty;
-                  DriverId = string.Empty;
-               }
+               DriverName = Settings.DriverName;
+               DriverId = Settings.DriverId;
             }
             catch (Exception)
             {
@@ -876,7 +884,7 @@ End Property
          }
          //#endif
          // TODO: Replace the following to determine it from the driver
-         CurrentTrackingMode = TrackingMode.Stop;
+         // CurrentTrackingMode = TrackingMode.Stop;
       }
 
       private void Sites_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -897,6 +905,9 @@ End Property
             case "CurrentSite.Temperature":
                SaveSettings();
                UpdateDriverSiteDetails(true);
+               break;
+            default:
+               SaveSettings();
                break;
          }
       }
@@ -1012,10 +1023,10 @@ End Property
                Driver.SiteElevation = Settings.CurrentSite.Elevation;
                Driver.SiteLatitude = Settings.CurrentSite.Latitude;
                Driver.SiteLongitude = Settings.CurrentSite.Longitude;
-            }
-            if (DriverActionAvailable("Lunatic:SetSiteTemperature"))
-            {
-               Driver.Action("Lunatic:SetSiteTemperature", Settings.CurrentSite.Temperature.ToString());
+               if (DriverActionAvailable("Lunatic:SetSiteTemperature"))
+               {
+                  Driver.Action("Lunatic:SetSiteTemperature", Settings.CurrentSite.Temperature.ToString());
+               }
             }
          }
       }
@@ -1042,12 +1053,10 @@ End Property
                      Driver = new ASCOM.DriverAccess.Telescope(driverId);
                      DriverName = Driver.Description;
                      DriverId = driverId; // Triggers a refresh of menu options etc so must happen AFTER updating the driver name.
+                     Connect();
                   }
                   else
                   {
-                     if (Driver != null)
-                     {
-                     }
                      Driver = null;
                      DriverName = string.Empty;
                      DriverId = string.Empty;
@@ -1078,51 +1087,38 @@ End Property
                   RaisePropertyChanged("IsConnected");
                   RaisePropertyChanged("IsParked");
                   RaiseCanExecuteChanged();
-               }, () => { return Driver != null; }));
+               }, () => { return !String.IsNullOrEmpty(DriverId); }));
          }
       }
 
       // Perform the logic when connecting.
       private void Connect()
       {
-         bool initialiseNeeded = true; // Assume that we will be initialising the site details.
          try
          {
             // Check to see if the driver is already connected
+            if (Driver == null)
+            {
+               Driver = new ASCOM.DriverAccess.Telescope(DriverId);
+            }
             try
             {
-               initialiseNeeded = !Driver.CommandBool("Lunatic:IsInitialised", false);
-               LunaticDriver = true;
+               LunaticDriver = Driver.CommandBool("Lunatic:IsLunaticDriver", true);
             }
             catch
             {
                LunaticDriver = false;
-               // See if the SiteLongitude throws an error if so they need to be initialised
             }
             Driver.Connected = true;
-            //if (!initialiseNeeded)
-            //{
-            //   // It may be that it isn't a Lunatic driver so test if SiteLongitude is initialised
-            //   try
-            //   {
-            //      double testLongitude = Driver.SiteLongitude;
-            //   }
-            //   catch (ASCOM.InvalidOperationException)
-            //   {
-            //      initialiseNeeded = true;
-            //   }
-            //}
-            //if (initialiseNeeded)
-            //{
-            //   UpdateDriverSiteDetails();
-            //}
             _ProcessingDisplayTimerTick = false;
             _DisplayTimer.Start();
             StatusMessage = "Connected to " + DriverName + ".";
+            AlignSiteDetails();
          }
          catch (Exception ex)
          {
-            StatusMessage = ex.Message;
+            StatusMessage = "Connection to telescope mount failed (for more details see tooltip).";
+            StatusMoreInfo = ex.Message;
          }
       }
 
@@ -1133,10 +1129,38 @@ End Property
          if (Driver != null)
          {
             Driver.Connected = false;
-            // Driver = null;
+            Driver = null;
          }
          LunaticDriver = false;
          StatusMessage = "Not connected.";
+      }
+
+      private void AlignSiteDetails()
+      {
+         if (Driver.SiteLatitude == 0.0 && Driver.SiteLongitude == 0.0 && Driver.SiteElevation == 0.0)
+         {
+            UpdateDriverSiteDetails(true);
+         }
+         else
+         {
+            Site controllerSite = Sites.Where(s => s.Latitude == Driver.SiteLatitude
+                                                && s.Longitude == Driver.SiteLongitude
+                                                && s.Elevation == Driver.SiteElevation)
+               .FirstOrDefault();
+            if (controllerSite == null)
+            {
+               controllerSite = new Site()
+               {
+                  SiteName = $"Telescope_{DateTime.Now.ToString("yyyyMMddHHmmss")}",
+                  Latitude = Driver.SiteLatitude,
+                  Longitude = Driver.SiteLongitude,
+                  Elevation = Driver.SiteElevation
+               };
+               Sites.Add(controllerSite);
+            }
+            controllerSite.IsCurrentSite = true;
+            SaveSettings();
+         }
       }
 
       private RelayCommand _SetupCommand;

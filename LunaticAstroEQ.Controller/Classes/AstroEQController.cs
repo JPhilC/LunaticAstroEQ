@@ -164,31 +164,81 @@ namespace ASCOM.LunaticAstroEQ.Controller
       }
 
       #endregion
-
       /// <summary>
-      /// The observatory geo coordinates
+      /// The observatory latitude
       /// </summary>
-      public LatLongCoordinate ObservatoryLocation
+      public Angle ObservatoryLatitude
       {
          get
          {
             lock (_Settings)
             {
-               return _Settings.ObservatoryLocation;
+               return _Settings.ObservatoryLocation.Latitude;
             }
          }
          set
          {
             lock (_Settings)
             {
-               if (value != _Settings.ObservatoryLocation)
+               if (value != _Settings.ObservatoryLocation.Latitude)
                {
-                  _Settings.ObservatoryLocation = value;
+                  _Settings.ObservatoryLocation.Latitude = value;
                   SaveSettings();
                }
             }
          }
       }
+
+      /// <summary>
+      /// The observatory longitude
+      /// </summary>
+      public Angle ObservatoryLongitude
+      {
+         get
+         {
+            lock (_Settings)
+            {
+               return _Settings.ObservatoryLocation.Longitude;
+            }
+         }
+         set
+         {
+            lock (_Settings)
+            {
+               if (value != _Settings.ObservatoryLocation.Longitude)
+               {
+                  _Settings.ObservatoryLocation.Longitude = value;
+                  SaveSettings();
+               }
+            }
+         }
+      }
+
+
+      ///// <summary>
+      ///// The observatory geo coordinates
+      ///// </summary>
+      //public LatLongCoordinate ObservatoryLocation
+      //{
+      //   get
+      //   {
+      //      lock (_Settings)
+      //      {
+      //         return _Settings.ObservatoryLocation;
+      //      }
+      //   }
+      //   set
+      //   {
+      //      lock (_Settings)
+      //      {
+      //         if (value != _Settings.ObservatoryLocation)
+      //         {
+      //            _Settings.ObservatoryLocation = value;
+      //            SaveSettings();
+      //         }
+      //      }
+      //   }
+      //}
 
       /// <summary>
       /// The observatory elevation (m)

@@ -379,6 +379,10 @@ namespace Lunatic.TelescopeController
          {
             RaisePropertyChanged("CurrentSite." + e.PropertyName);
          }
+         else
+         {
+            RaisePropertyChanged("SomeSite." + e.PropertyName);
+         }
       }
 
 

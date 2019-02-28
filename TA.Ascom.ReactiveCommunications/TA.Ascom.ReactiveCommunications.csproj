@@ -130,6 +130,17 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>LunaticSoftwareStrongNameKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release %28Beta Test%29|AnyCPU'">
+    <OutputPath>bin\Release %28Beta Test%29\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>bin\Release\TA.Ascom.ReactiveCommunications.XML</DocumentationFile>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>default</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="Classes\ChannelFactory.cs" />
     <Compile Include="Classes\DeviceEndpoint.cs" />
