@@ -41,8 +41,11 @@ namespace ASCOM.LunaticAstroEQ.Controller
       private static ControllerSettings _Settings = null;
 
       private object _Lock = new object();
-
+#if BETA
+      private const string CONFIG_SETTINGS_FILENAME = "AstroEQController_BetaTest.config";
+#else
       private const string CONFIG_SETTINGS_FILENAME = "AstroEQController.config";
+#endif
 
 
       #region Version info ...
@@ -141,7 +144,7 @@ namespace ASCOM.LunaticAstroEQ.Controller
          _MinorVersion = versionInfo.ProductMinorPart;
       }
 
-      #endregion
+#endregion
 
 
 

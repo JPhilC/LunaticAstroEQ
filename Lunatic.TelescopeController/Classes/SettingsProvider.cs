@@ -39,8 +39,11 @@ namespace Lunatic.TelescopeController
    public class SettingsProvider : ISettingsProvider<TelescopeControlSettings>
    {
       private static TelescopeControlSettings _Settings = null;
-
+#if BETA
+      private const string CONFIG_SETTINGS_FILENAME = "TelescopeControl_BetaTest.config";
+#else
       private const string CONFIG_SETTINGS_FILENAME = "TelescopeControl.config";
+#endif
 
       #region Version info ...
       private static string _CompanyName = null;
@@ -125,7 +128,7 @@ namespace Lunatic.TelescopeController
          _MinorVersion = versionInfo.ProductMinorPart;
       }
 
-      #endregion
+#endregion
 
 
 

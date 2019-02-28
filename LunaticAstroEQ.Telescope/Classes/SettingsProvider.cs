@@ -63,8 +63,11 @@ namespace ASCOM.LunaticAstroEQ
       private static TelescopeSettings _Settings = null;
 
       private object _Lock = new object();
-
+#if BETA
+      private const string CONFIG_SETTINGS_FILENAME = "AstroEQDriver_BetaTest.config";
+#else
       private const string CONFIG_SETTINGS_FILENAME = "AstroEQDriver.config";
+#endif
 
 
       #region Version info ...
@@ -163,7 +166,7 @@ namespace ASCOM.LunaticAstroEQ
          _MinorVersion = versionInfo.ProductMinorPart;
       }
 
-      #endregion
+#endregion
 
 
 
@@ -268,7 +271,7 @@ namespace ASCOM.LunaticAstroEQ
          }
       }
 
-      #region IDisposable ...
+#region IDisposable ...
       public void Dispose()
       {
          Dispose(true);
@@ -288,6 +291,6 @@ namespace ASCOM.LunaticAstroEQ
             }
          }
       }
-      #endregion
+#endregion
    }
 }
