@@ -136,6 +136,7 @@
     <Compile Include="RangeTests.cs" />
     <Compile Include="Investigations.cs" />
     <Compile Include="ControllerTests.cs" />
+    <Compile Include="Ascom.Utilities.ProfileTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LunaticAstroEQ.Controller\LunaticAstroEQ.Controller.csproj">

@@ -1,7 +1,7 @@
 /*
 BSD 2-Clause License
 
-Copyright (c) 2019, Philip Crompton, Email: phil@lunaticsoftware.org
+Copyright (c) 2019, LunaticSoftware.org, Email: phil@lunaticsoftware.org
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,7 @@ namespace ASCOM.LunaticAstroEQ
    /// </summary>
    [Guid("3b88ba0e-be7a-4154-add1-cab66da84bae")]
    [ProgId("ASCOM.LunaticAstroEQ.Telescope.BetaTest")]
-   [ServedClassName("(Beta Test) Driver for AstroEQ telescope controllers ")]
+   [ServedClassName("AstroEQ & Synta telescope mounts (Beta release)")]
    [ClassInterface(ClassInterfaceType.None)]
 #else
    /// <summary>
@@ -76,7 +76,7 @@ namespace ASCOM.LunaticAstroEQ
    /// </summary>
    [Guid("3b88ba0e-c3ed-4154-add1-cab66da84bae")]
    [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
-   [ServedClassName("Driver for AstroEQ telescope controllers")]
+   [ServedClassName("AstroEQ & Synta telescope mounts")]
    [ClassInterface(ClassInterfaceType.None)]
 #endif
    public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
@@ -91,11 +91,11 @@ namespace ASCOM.LunaticAstroEQ
       /// Driver description that displays in the ASCOM Chooser.
       /// </summary>
 #if BETA
-      internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ.";
-      internal string driverName = "AstroEQ ASCOM Driver";
+      internal string driverDescription = "Astro EQ & Synta mount driver from LunaticSoftware.org.";
+      internal string driverName = "AstroEQ & Synta mount driver ";
 #else
-      internal string driverDescription = "ASCOM Telescope Driver for LunaticAstroEQ (Beta Test).";
-      internal string driverName = "AstroEQ ASCOM Driver (Beta Test)";
+      internal string driverDescription = "Astro EQ & Synta mount driver from LunaticSoftware.org. (Beta Test).";
+      internal string driverName = "AstroEQ/EQ-modded Skywatcher driver (Beta Test)";
 #endif
       private const int RA_AXIS = 0;
       private const int DEC_AXIS = 1;
