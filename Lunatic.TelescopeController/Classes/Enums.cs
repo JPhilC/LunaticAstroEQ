@@ -62,6 +62,8 @@ namespace Lunatic.TelescopeController
       SiderealPEC,
       [Description("Lunar")]
       Lunar,
+      [Description("King")]
+      King,
       [Description("Custom")]
       Custom,
       [Description("Not tracking")]

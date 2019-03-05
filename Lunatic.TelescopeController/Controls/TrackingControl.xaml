@@ -86,9 +86,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock>RA</TextBlock>
-                <TextBox Grid.Column="2">RA Rate</TextBox>
+                <TextBox Grid.Column="2" Text="{Binding TrackingRateRA, StringFormat={}{0:N5}}" IsEnabled="{Binding CanSetRightAscensionRate}"/>
                 <TextBlock Grid.Column="4">DEC</TextBlock>
-                <TextBox Grid.Column="6">DEC Rate</TextBox>
+                <TextBox Grid.Column="6" Text="{Binding TrackingRateDec, StringFormat={}{0:N5}}" IsEnabled="{Binding CanSetDeclinationRate}"/>
             </Grid>
         </Grid>
     </GroupBox>

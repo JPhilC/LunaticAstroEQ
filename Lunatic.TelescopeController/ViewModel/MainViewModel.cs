@@ -33,6 +33,7 @@ using ASCOM.LunaticAstroEQ.Core.Services;
 using GalaSoft.MvvmLight.Command;
 using GalaSoft.MvvmLight.Threading;
 using Lunatic.TelescopeController.Controls;
+using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -231,6 +232,56 @@ namespace Lunatic.TelescopeController.ViewModel
             Set<TrackingMode>("CurrentTrackingMode", ref _CurrentTrackingMode, value);
          }
       }
+
+      public bool CanSetRightAscensionRate
+      {
+         get
+         {
+            return (IsConnected ? (Driver.CanSetRightAscensionRate && !Driver.Tracking) : false);
+         }
+      }
+
+      private double _TrackingRateRA;
+      public double TrackingRateRA
+      {
+         get
+         {
+            return _TrackingRateRA;
+         }
+         set
+         {
+            if (Set(ref _TrackingRateRA, value))
+            {
+               Driver.RightAscensionRate = (_TrackingRateRA - CoreConstants.SIDEREAL_RATE_ARCSECS) * CoreConstants.SIDEREAL_RATE;
+            }
+         }
+      }
+
+      public bool CanSetDeclinationRate
+      {
+         get
+         {
+            return (IsConnected  ? (Driver.CanSetDeclinationRate && !Driver.Tracking) : false);
+
+         }
+      }
+
+      private double _TrackingRateDec;
+      public double TrackingRateDec
+      {
+         get
+         {
+            return _TrackingRateDec;
+         }
+         set
+         {
+            if (Set(ref _TrackingRateDec, value))
+            {
+               Driver.DeclinationRate = _TrackingRateDec;
+            }
+         }
+      }
+
 
       public bool IsSlewing
       {
@@ -739,6 +790,7 @@ End Property
             {
                _Synth = new SpeechSynthesizer();
                _Synth.SetOutputToDefaultAudioDevice();
+               _Synth.Rate = Settings.VoiceRate;
                _Synth.SelectVoiceByHints(Settings.VoiceGender, Settings.VoiceAge);
             }
 
@@ -758,6 +810,53 @@ End Property
          // Release the reference to the driver.
          Driver = null;
          base.Cleanup();
+      }
+
+      private void InitialiseGUI()
+      {
+         if (Driver != null && !_ProcessingDisplayTimerTick)
+         {
+            _ProcessingDisplayTimerTick = true;
+            LocalSiderealTime = Driver.SiderealTime;
+            RightAscension = Driver.RightAscension;
+            Declination = Driver.Declination;
+            Altitude = Driver.Altitude;
+            Azimuth = Driver.Azimuth;
+            PierSide = (PierSide)Driver.SideOfPier;
+
+            #region Current tracking related stuff ...
+            // The next two would trigger an update to a driver if we updated the property viat the setter
+            _TrackingRateRA = CoreConstants.SIDEREAL_RATE_ARCSECS + (Driver.RightAscensionRate / CoreConstants.SIDEREAL_RATE);
+            _TrackingRateDec = Driver.DeclinationRate;
+            RaisePropertyChanged("TrackingRateRA");
+            RaisePropertyChanged("TrackingRateDec");
+            RaisePropertyChanged("CanSetRightAscensionRate");
+            RaisePropertyChanged("CanSetDeclinationRate");
+            CurrentTrackingMode = GetCurrentTrackingMode();
+            #endregion
+
+            if (LunaticDriver)
+            {
+               try
+               {
+                  AxisPosition = new AxisPosition(Driver.CommandString("Lunatic:GetAxisPositions", true));
+               }
+               catch
+               {
+                  // TODO: Log message
+               }
+            }
+            if (Driver.AtPark != IsParked)
+            {
+               RaisePropertyChanged("IsParked");
+               ParkCommand.RaiseCanExecuteChanged();
+            }
+            RefreshParkStatus();
+
+            RaisePropertyChanged("IsSlewing");
+            RaiseCanExecuteChanged();
+            _ProcessingDisplayTimerTick = false;
+         }
       }
 
       #region Weather API calls ...
@@ -803,6 +902,9 @@ End Property
             Altitude = Driver.Altitude;
             Azimuth = Driver.Azimuth;
             PierSide = (PierSide)Driver.SideOfPier;
+
+            CurrentTrackingMode = GetCurrentTrackingMode();
+
             if (LunaticDriver)
             {
                try
@@ -1110,6 +1212,8 @@ End Property
                LunaticDriver = false;
             }
             Driver.Connected = true;
+            InitialiseGUI();
+
             _ProcessingDisplayTimerTick = false;
             _DisplayTimer.Start();
             StatusMessage = "Connected to " + DriverName + ".";
@@ -1315,7 +1419,7 @@ End Property
 
       #endregion  
 
-      #region Tracking Command ...
+      #region Tracking Command and associated methods ...
       private RelayCommand<TrackingMode> _StartTrackingCommand;
 
       public RelayCommand<TrackingMode> StartTrackingCommand
@@ -1325,60 +1429,98 @@ End Property
             return _StartTrackingCommand
                ?? (_StartTrackingCommand = new RelayCommand<TrackingMode>((trackingMode) =>
                {
+                  string announcement = "";
                   switch (trackingMode)
                   {
                      case TrackingMode.Stop:
-                        _Driver.Action("Lunatic:SetTrackUsingPEC", "false");
-                        _Driver.Tracking = false;
+                        Driver.Tracking = false;
+                        announcement = "Tracking is OFF.";
                         break;
                      case TrackingMode.Sidereal:
-                        _Driver.Action("Lunatic:SetTrackUsingPEC", "false");
-                        _Driver.TrackingRate = DriveRates.driveSidereal;
-                        break;
-                     case TrackingMode.SiderealPEC:
-                        _Driver.Action("Lunatic:SetTrackUsingPEC", "true");
-                        _Driver.TrackingRate = DriveRates.driveSidereal;
+                        Driver.RightAscensionRate = 0.0;
+                        Driver.DeclinationRate = 0.0;
+                        Driver.TrackingRate = DriveRates.driveSidereal;
+                        _TrackingRateRA = CoreConstants.SIDEREAL_RATE_ARCSECS;
+                        Driver.Tracking = true;
+                        announcement = "Sidereal tracking is ON.";
                         break;
                      case TrackingMode.Lunar:
-                        _Driver.Action("Lunatic:SetTrackUsingPEC", "false");
-                        _Driver.TrackingRate = DriveRates.driveLunar;
+                        Driver.RightAscensionRate = 0.0;
+                        Driver.DeclinationRate = 0.0;
+                        Driver.TrackingRate = DriveRates.driveLunar;
+                        _TrackingRateRA = CoreConstants.LUNAR_RATE_ARCSECS;
+                        Driver.Tracking = true;
+                        announcement = "Lunar tracking is ON.";
                         break;
                      case TrackingMode.Solar:
-                        _Driver.Action("Lunatic:SetTrackUsingPEC", "false");
-                        _Driver.TrackingRate = DriveRates.driveSolar;
+                        Driver.RightAscensionRate = 0.0;
+                        Driver.DeclinationRate = 0.0;
+                        Driver.TrackingRate = DriveRates.driveSolar;
+                        _TrackingRateRA = CoreConstants.SOLAR_RATE_ARCSECS;
+                        Driver.Tracking = true;
+                        announcement = "Solar tracking is ON.";
                         break;
                      case TrackingMode.Custom:
-                        // Get the current tracking speed
-                        double baseRATrackingRate = 0.0;
-                        switch (_Driver.TrackingRate)
+                        if (Driver.CanSetDeclinationRate && Driver.CanSetRightAscensionRate)
                         {
-                           case DriveRates.driveSidereal:
-                              baseRATrackingRate = Constants.SIDEREAL_RATE_ARCSECS;
-                              break;
-                           case DriveRates.driveLunar:
-                              baseRATrackingRate = Constants.LUNAR_RATE_ARCSECS;
-                              break;
-                           case DriveRates.driveSolar:
-                              baseRATrackingRate = Constants.SOLAR_RATE_ARCSECS;
-                              break;
-                           default:
-                              throw new ArgumentOutOfRangeException("Unexpected Driver Tracking rate");
-                        }
-                        if (_Driver.CanSetDeclinationRate || _Driver.CanSetRightAscensionRate)
-                        {
-                           _Driver.Action("Lunatic:SetTrackUsingPEC", "false");
-
-                           _Driver.RightAscensionRate = baseRATrackingRate;
+                           Driver.TrackingRate = DriveRates.driveSidereal;
+                           _TrackingRateRA = CoreConstants.SIDEREAL_RATE_ARCSECS + (Driver.RightAscensionRate / CoreConstants.SIDEREAL_RATE);
+                           Driver.Tracking = true;
+                           announcement = "Custom tracking is ON.";
                         }
                         else
                         {
-                           // Log message "Custom tracking is not supported by the currently selected driver."
+                           StatusMessage = "Custom tracking is not supported by the currently selected driver.";
+                           announcement = "Custom is not supported.";
+                           Driver.Tracking = false;
                         }
                         break;
                   }
+                  _TrackingRateDec = Driver.DeclinationRate;
+                  RaisePropertyChanged("TrackingRateRA");
+                  RaisePropertyChanged("TrackingRateDec");
+                  RaisePropertyChanged("CanSetRightAscensionRate");
+                  RaisePropertyChanged("CanSetDeclinationRate");
                   CurrentTrackingMode = trackingMode;
-               }, (trackingMode) => { return (IsConnected && !IsParked && _Driver.CanSetTracking); }));   // Check that we are connected and not parked
+                  Announce(announcement);
+
+               }, (trackingMode) => { return (IsConnected && !IsParked && Driver.CanSetTracking); }));   // Check that we are connected and not parked
          }
+      }
+
+
+      private TrackingMode GetCurrentTrackingMode()
+      {
+         TrackingMode mode = TrackingMode.Stop;
+         if (Driver.Tracking)
+         {
+            switch (Driver.TrackingRate)
+            {
+               case DriveRates.driveSidereal:
+                  if (Driver.RightAscensionRate != 0.0 || Driver.DeclinationRate != 0.0)
+                  {
+                     mode = TrackingMode.Custom;
+                  }
+                  else
+                  {
+                     mode = TrackingMode.Sidereal;
+                  }
+                  break;
+               case DriveRates.driveLunar:
+                  mode = TrackingMode.Lunar;
+                  break;
+               case DriveRates.driveSolar:
+                  mode = TrackingMode.Solar;
+                  break;
+               case DriveRates.driveKing:
+                  mode = TrackingMode.King;
+                  break;
+               default:
+                  StatusMessage = "Unrecognised driver rate set on current driver.";
+                  break;
+            }
+         }
+         return mode;
       }
 
       #endregion
@@ -1400,7 +1542,7 @@ End Property
                   }
                   else
                   {
-                     Announce("Unparking");
+                     Announce("Parking");
                      Driver.Park();
                   }
                   RaisePropertyChanged("IsParked");

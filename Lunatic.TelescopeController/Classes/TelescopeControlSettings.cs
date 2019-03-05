@@ -36,6 +36,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Speech.Synthesis;
@@ -410,6 +411,9 @@ namespace Lunatic.TelescopeController
 
       public VoiceAge VoiceAge { get; set; }
 
+      [Range(-10, 10, ErrorMessage = "Value for {0} must be between {1} and {2}.")]
+      public int VoiceRate { get; set; }
+
       private SiteCollection _Sites;
       public SiteCollection Sites
       {
@@ -551,6 +555,7 @@ namespace Lunatic.TelescopeController
 
          this.VoiceGender = VoiceGender.Female;
          this.VoiceAge = VoiceAge.Teen;
+         this.VoiceRate = -3;     // Range -10 to 10
       }
 
       [OnDeserialized]
