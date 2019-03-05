@@ -39,68 +39,21 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
-using System.Resources;
 using System.Speech.Synthesis;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
-using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
+using System.Globalization;
 
 namespace Lunatic.TelescopeController.ViewModel
 {
-   [CategoryOrder("Mount Options", 1)]
-   [CategoryOrder("Site Information", 2)]
-   [CategoryOrder("Gamepad", 3)]
-   [CategoryOrder("General", 4)]
-   public class MainViewModel : LunaticViewModelBase, IDisposable
+   public partial class MainViewModel : LunaticViewModelBase, IDisposable
    {
 
       #region Properties ....
       private bool LunaticDriver = false;
 
       SpeechSynthesizer _Synth;
-
-
-      #region Settings ...
-      ISettingsProvider<TelescopeControlSettings> _SettingsProvider;
-
-      private TelescopeControlSettings _Settings;
-      public TelescopeControlSettings Settings
-      {
-         get
-         {
-            return _Settings;
-         }
-      }
-
-      #region Site information ...
-      [Category("Site Information")]
-      [DisplayName("Current site")]
-      [Description("The currently selected telescope site.")]
-      [PropertyOrder(0)]
-      public Site CurrentSite
-      {
-         get
-         {
-            return _Settings.Sites.CurrentSite;
-         }
-      }
-
-      [Category("Site Information")]
-      [DisplayName("Available sites")]
-      [Description("Manage the available sites.")]
-      [PropertyOrder(1)]
-      public SiteCollection Sites
-      {
-         get
-         {
-            return _Settings.Sites;
-         }
-      }
-      #endregion
-
-      #endregion
 
       #region Telescope driver selection etc ...
       private ASCOM.DriverAccess.Telescope _Driver;
@@ -786,13 +739,29 @@ End Property
             _SettingsProvider = settingsProvider;
             _Settings = settingsProvider.Settings;
             PopSettings();
-            if (Settings.VoiceGender != VoiceGender.NotSet)
+
+            #region Setup the voice synth
+            _Synth = new SpeechSynthesizer();
+            _Synth.SetOutputToDefaultAudioDevice();
+            GetInstalledVoices();
+            if (VoicesAvailable)
             {
-               _Synth = new SpeechSynthesizer();
-               _Synth.SetOutputToDefaultAudioDevice();
+               if (_Settings.VoiceName == string.Empty)
+               {
+                  _Settings.VoiceName = _AvailableVoices.First();
+                  SaveSettings();
+               }
                _Synth.Rate = Settings.VoiceRate;
-               _Synth.SelectVoiceByHints(Settings.VoiceGender, Settings.VoiceAge);
+               _Synth.SelectVoice(Settings.VoiceName);
             }
+            else
+            {
+               VoiceName = string.Empty;
+               AnnouncementsOn = false;
+               _Synth.Dispose();
+               _Synth = null;
+            }
+            #endregion
 
             // Get current temperature via call to OpenWeatherAPI
             RefreshTemperature();
@@ -1568,9 +1537,9 @@ End Property
       }
 
 
-      private void Announce(string message)
+      private void Announce(string message, bool always = false)
       {
-         if (_Synth != null)
+         if (_Synth != null && (always || _Settings.AnnouncementsOn))
          {
             _Synth.SpeakAsync(message);
          }

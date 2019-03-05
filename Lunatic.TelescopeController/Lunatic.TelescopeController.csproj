@@ -165,6 +165,7 @@
       <DependentUpon>TrackingControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="ViewModel\MainViewModel.cs" />
+    <Compile Include="ViewModel\MainViewModel_Settings.cs" />
     <Compile Include="ViewModel\MapViewModel.cs" />
     <Compile Include="ViewModelLocator.cs" />
     <Page Include="Controls\AxisPositionControl.xaml">

@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
     <GroupBox Header="Settings" Template="{StaticResource LunaticGroupBoxControlTemplate}">
         <Grid>
             <ScrollViewer Margin="0,0,0,0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <xctk:PropertyGrid x:Name="propertyGrid" 
+                <xctk:PropertyGrid x:Name="propertyGrid" Width="500"
                                SelectedObject="{Binding}"
                                EditorDefinitions="{StaticResource PropertyGridPropertyEditors}"
                                PreparePropertyItem="propertyGrid_PreparePropertyItem"
@@ -54,18 +54,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                                ShowTitle="False">
                     <xctk:PropertyGrid.PropertyDefinitions>
                         <xctk:PropertyDefinition TargetProperties="
-                                             MountOption,
-                                             PulseGuidingMode,
-                     SlewWithTrackingOff,
-                     AllowExceptions,
-                     AllowPulseGuidingExceptions,
-                     UseSynchronousParking,
-                     Epoch,
-                     SideOfPier,
-                     SwapPointingSideOfPier,
-                     SwapPhysicalSideOfPier,
-                     CurrentSite,
-                     Sites"/>
+                                                CurrentSite,
+                                                Sites,
+                                                AlwaysOnTop,
+                                                 AnnouncementsOn,
+                                                 VoiceName,
+                                                 VoiceRate"/>
                     </xctk:PropertyGrid.PropertyDefinitions>
 
                 </xctk:PropertyGrid>

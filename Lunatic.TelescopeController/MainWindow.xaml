@@ -36,7 +36,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
         SizeToContent="WidthAndHeight"
         d:DesignHeight="650" d:DesignWidth="750" 
         Background="Black"
-        Icon="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/LunaticMoon.ico">
+        Icon="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/LunaticMoon.ico"
+        Deactivated="Window_Deactivated"
+        Closed="Window_Closed">
     <Window.Resources>
         <local:DisplayModeToBooleanConverter x:Key="DisplayModeConverter" />
     </Window.Resources>

@@ -124,6 +124,24 @@
         </DockPanel>
     </DataTemplate>
 
+    <!-- Data templates -->
+    <DataTemplate x:Key="VoiceNameDataTemplate">
+            <xctk:PropertyGridEditorComboBox SelectedItem="{Binding Value}"
+                 ItemsSource="{Binding Path=DataContext.AvailableVoices, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"
+                 IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
+    </DataTemplate>
+
+    <DataTemplate x:Key="AnnouncementsOnDataTemplate">
+        <xctk:PropertyGridEditorCheckBox IsChecked="{Binding Value}" 
+                 IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
+    </DataTemplate>
+
+    <DataTemplate x:Key="VoiceRateDataTemplate">
+        <xctk:PropertyGridEditorIntegerUpDown Value="{Binding Value}" 
+                 IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
+    </DataTemplate>
+
+
     <xctk:EditorDefinitionCollection x:Key="PropertyGridPropertyEditors">
         <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource SiteCollectionDataTemplate}">
             <xctk:EditorTemplateDefinition.TargetProperties>
@@ -134,6 +152,15 @@
             <xctk:EditorTemplateDefinition.TargetProperties>
                 <xctk:TargetPropertyType Type="{x:Type ld:Site}"/>
             </xctk:EditorTemplateDefinition.TargetProperties>
+        </xctk:EditorTemplateDefinition>
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource VoiceNameDataTemplate}"
+                                       TargetProperties="VoiceName">
+        </xctk:EditorTemplateDefinition>
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource AnnouncementsOnDataTemplate}"
+                                       TargetProperties="AnnouncementsOn">
+        </xctk:EditorTemplateDefinition>
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource VoiceRateDataTemplate}"
+                                       TargetProperties="VoiceRate">
         </xctk:EditorTemplateDefinition>
     </xctk:EditorDefinitionCollection>
 

@@ -26,6 +26,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
 
+using Lunatic.TelescopeController.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,9 +49,39 @@ namespace Lunatic.TelescopeController
    /// </summary>
    public partial class MainWindow : Window
    {
+
+      MainViewModel _ViewModel;
       public MainWindow()
       {
          InitializeComponent();
+         _ViewModel = this.DataContext as MainViewModel;
+         WeakEventManager<MainViewModel, System.ComponentModel.PropertyChangedEventArgs>.AddHandler(_ViewModel, "PropertyChanged", _ViewModel_PropertyChanged);
+         if (_ViewModel.AlwaysOnTop)
+         {
+            this.Topmost = true;
+         }
+      }
+
+      private void _ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+      {
+         if (e.PropertyName == "AlwaysOnTop")
+         {
+            this.Topmost = _ViewModel.AlwaysOnTop;
+         }
+      }
+
+      private void Window_Deactivated(object sender, EventArgs e)
+      {
+         if (_ViewModel.AlwaysOnTop)
+         {
+            Window window = (Window)sender;
+            window.Topmost = true;
+         }
+      }
+
+      private void Window_Closed(object sender, EventArgs e)
+      {
+         WeakEventManager<MainViewModel, System.ComponentModel.PropertyChangedEventArgs>.RemoveHandler(_ViewModel, "PropertyChanged", _ViewModel_PropertyChanged);
       }
    }
 }

@@ -407,9 +407,9 @@ namespace Lunatic.TelescopeController
 
       public DisplayMode DisplayMode { get; set; }
 
-      public VoiceGender VoiceGender { get; set; }
+      public bool AnnouncementsOn { get; set; }
 
-      public VoiceAge VoiceAge { get; set; }
+      public string VoiceName { get; set; }
 
       [Range(-10, 10, ErrorMessage = "Value for {0} must be between {1} and {2}.")]
       public int VoiceRate { get; set; }
@@ -430,7 +430,7 @@ namespace Lunatic.TelescopeController
       public Site CurrentSite { get; set; }
       //Retry=1
 
-      public bool OnTop { get; set; }
+      public bool AlwaysOnTop { get; set; }
       // ON_TOP1=0
       // LIMIT_FILE=
       public string LimitFile { get; set; }
@@ -465,32 +465,32 @@ namespace Lunatic.TelescopeController
          }
       }
 
-      //DSYNC01=0
-      public int DecSync { get; set; }
-      //RSYNC01=0
-      public int RASync { get; set; }
+      ////DSYNC01=0
+      //public int DecSync { get; set; }
+      ////RSYNC01=0
+      //public int RASync { get; set; }
 
-      //DALIGN01=0 gDEC1Star
-      public double Dec1Star { get; set; }
+      ////DALIGN01=0 gDEC1Star
+      //public double Dec1Star { get; set; }
 
-      //RALIGN01=0 gRA1Star
-      public double RA1Star { get; set; }
+      ////RALIGN01=0 gRA1Star
+      //public double RA1Star { get; set; }
 
-      //BAR03_2=809  // From Mouse SlewPad
-      //BAR03_1=809  // From Mouse SlewPad
-      //SlewPadHeight=7875
-      //SlewPadWidth=7470
+      ////BAR03_2=809  // From Mouse SlewPad
+      ////BAR03_1=809  // From Mouse SlewPad
+      ////SlewPadHeight=7875
+      ////SlewPadWidth=7470
 
-      //UNPARK_DEC=9003010 gDECEncoderUNPark
-      public int DecEncoderUNParkPos { get; set; }
-      //UNPARK_RA=8388570 gRAEncoderUNPark
-      public int RAEncoderUNParkPos { get; set; }
-      //LASTPOS_DEC=8375645 gDECEncoderlastpos
-      public int DECEncoderLastPos { get; set; }
-      //LASTPOS_RA=9150089 gRAEncoderlastpos
-      public int RAEncoderLastPos { get; set; }
-      //TimeDelta= 0 gEQTimeDelta
-      public double TimeDelta { get; set; }
+      ////UNPARK_DEC=9003010 gDECEncoderUNPark
+      //public int DecEncoderUNParkPos { get; set; }
+      ////UNPARK_RA=8388570 gRAEncoderUNPark
+      //public int RAEncoderUNParkPos { get; set; }
+      ////LASTPOS_DEC=8375645 gDECEncoderlastpos
+      //public int DECEncoderLastPos { get; set; }
+      ////LASTPOS_RA=9150089 gRAEncoderlastpos
+      //public int RAEncoderLastPos { get; set; }
+      ////TimeDelta= 0 gEQTimeDelta
+      //public double TimeDelta { get; set; }
 
 
       //DEFAULT_UNPARK_MODE = 0
@@ -553,9 +553,8 @@ namespace Lunatic.TelescopeController
          this.Sites = new SiteCollection();
          this.SlewRatePresets = new ObservableCollection<SlewRatePreset>();
 
-         this.VoiceGender = VoiceGender.Female;
-         this.VoiceAge = VoiceAge.Teen;
-         this.VoiceRate = -3;     // Range -10 to 10
+         this.VoiceName = string.Empty;
+         this.VoiceRate = 0;     // Range -10 to 10
       }
 
       [OnDeserialized]
