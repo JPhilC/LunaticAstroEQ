@@ -31,8 +31,9 @@ using System.ComponentModel;
 using System.Speech.Synthesis;
 using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using System.Collections.Generic;
+using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
+using System;
 
 namespace Lunatic.TelescopeController.ViewModel
 {
@@ -232,9 +233,62 @@ namespace Lunatic.TelescopeController.ViewModel
             Announce("Voice speed is " + value.ToString(), true);
          }
       }
-      #endregion
+        #endregion
 
-      #endregion
 
-   }
+        #region Tracking settings
+        private int _MaxRASlewRate = 1;
+        public int MaxRASlewRate
+        {
+            get
+            {
+                return _MaxRASlewRate;
+            }
+            set
+            {
+                Set(ref _MaxRASlewRate, value);
+            }
+        }
+        private int _MaxDecSlewRate = 1;
+        public int MaxDecSlewRate
+        {
+            get
+            {
+                return _MaxDecSlewRate;
+            }
+            set
+            {
+                Set(ref _MaxDecSlewRate, value);
+            }
+        }
+
+
+        private void SetMaxSlewRates()
+        {
+            string result = Driver.CommandString("Lunatic:GetMaxRates", true);
+            string[] maxrates = result.Split(',');
+            MaxRASlewRate = (int)(Convert.ToDouble(maxrates[0]) / CoreConstants.SIDEREAL_RATE_DEGREES);
+            MaxDecSlewRate = (int)(Convert.ToDouble(maxrates[1]) / CoreConstants.SIDEREAL_RATE_DEGREES);
+            bool saveSettings = false;
+            foreach (SlewRatePreset rate in _Settings.SlewRatePresets)
+            {
+                if (rate.RARate > MaxRASlewRate)
+                {
+                    rate.RARate = MaxRASlewRate;
+                    saveSettings = true;
+                }
+                if (rate.DecRate > MaxDecSlewRate)
+                {
+                    rate.DecRate = MaxDecSlewRate;
+                    saveSettings = true;
+                }
+            }
+            if (saveSettings)
+            {
+                SaveSettings();
+            }
+        }
+        #endregion
+        #endregion
+    }
 }

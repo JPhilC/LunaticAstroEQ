@@ -68,12 +68,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                            IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.ReducedSlew}}"/>
                 <MenuItem Header="Mount Axis Position" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.AxisPosition}"  
                           IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.AxisPosition}}"/>
-                <MenuItem Header="Message Centre" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.MessageCentre}"  
+                <!--<MenuItem Header="Message Centre" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.MessageCentre}"  
                           IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.MessageCentre}}"/>
                 <MenuItem Header="PEC Chart" Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.PEC}"  
                           IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.PEC}}"/>
                 <MenuItem Header="Pulse Guiding"  Command="{Binding DisplayModeCommand}"  CommandParameter="{x:Static local:DisplayMode.PulseGuideMonitor}"  
-                          IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.PulseGuideMonitor}}"/>
+                          IsChecked="{Binding DisplayMode, Converter={StaticResource DisplayModeConverter}, ConverterParameter={x:Static local:DisplayMode.PulseGuideMonitor}}"/>-->
                 <Separator />
                 <MenuItem Header="Goto Coordinate" Command="{Binding ShowGotoWindowCommand}" />
             </MenuItem>
@@ -87,7 +87,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
             <Grid Grid.Row="1" Grid.Column="0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="240" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

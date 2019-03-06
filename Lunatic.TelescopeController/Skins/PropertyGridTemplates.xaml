@@ -137,7 +137,7 @@
     </DataTemplate>
 
     <DataTemplate x:Key="VoiceRateDataTemplate">
-        <xctk:PropertyGridEditorIntegerUpDown Value="{Binding Value}" 
+            <xctk:PropertyGridEditorIntegerUpDown Value="{Binding Value}" 
                  IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
     </DataTemplate>
 

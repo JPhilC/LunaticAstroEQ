@@ -123,7 +123,7 @@ namespace ASCOM.LunaticAstroEQ
          AxisRates terRate = new AxisRates(TelescopeAxes.axisTertiary, 0.0, 0.0);
 
 
-         // Form the time being the maximum rate is not coming back from 
+         // Form the time being the maximum rate is not coming back from the controller
          _AxisRates = new AxisRates[] { raAxisRates, decAxisRates, terRate };
       }
 

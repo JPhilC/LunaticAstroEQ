@@ -51,16 +51,16 @@ using System.Threading;
 
 namespace ASCOM.LunaticAstroEQ
 {
-   //
-   // Your driver's DeviceID is ASCOM.LunaticAstroEQ.Telescope
-   //
-   // The Guid attribute sets the CLSID for ASCOM.LunaticAstroEQ.Telescope
-   // The ClassInterface/None addribute prevents an empty interface called
-   // _LunaticAstroEQ from being created and used as the [default] interface
-   //
-   // TODO Replace the not implemented exceptions with code to implement the function or
-   // throw the appropriate ASCOM exception.
-   //
+    //
+    // Your driver's DeviceID is ASCOM.LunaticAstroEQ.Telescope
+    //
+    // The Guid attribute sets the CLSID for ASCOM.LunaticAstroEQ.Telescope
+    // The ClassInterface/None addribute prevents an empty interface called
+    // _LunaticAstroEQ from being created and used as the [default] interface
+    //
+    // TODO Replace the not implemented exceptions with code to implement the function or
+    // throw the appropriate ASCOM exception.
+    //
 
 #if BETA
    /// <summary>
@@ -71,1621 +71,1618 @@ namespace ASCOM.LunaticAstroEQ
    [ServedClassName("AstroEQ & Synta telescope mounts (Beta release)")]
    [ClassInterface(ClassInterfaceType.None)]
 #else
-   /// <summary>
-   /// ASCOM Telescope Driver for LunaticAstroEQ.
-   /// </summary>
-   [Guid("3b88ba0e-c3ed-4154-add1-cab66da84bae")]
-   [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
-   [ServedClassName("AstroEQ & Synta telescope mounts")]
-   [ClassInterface(ClassInterfaceType.None)]
+    /// <summary>
+    /// ASCOM Telescope Driver for LunaticAstroEQ.
+    /// </summary>
+    [Guid("3b88ba0e-c3ed-4154-add1-cab66da84bae")]
+    [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
+    [ServedClassName("AstroEQ & Synta telescope mounts")]
+    [ClassInterface(ClassInterfaceType.None)]
 #endif
-   public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
-   {
-      /// <summary>
-      /// ASCOM DeviceID (COM ProgID) for this driver.
-      /// The DeviceID is used by ASCOM applications to load the driver at runtime.
-      /// </summary>
-      internal string driverID;
-      // TODO Change the descriptive string for your driver then remove this line
-      /// <summary>
-      /// Driver description that displays in the ASCOM Chooser.
-      /// </summary>
+    public partial class Telescope : ReferenceCountedObjectBase, ITelescopeV3
+    {
+        /// <summary>
+        /// ASCOM DeviceID (COM ProgID) for this driver.
+        /// The DeviceID is used by ASCOM applications to load the driver at runtime.
+        /// </summary>
+        internal string driverID;
+        // TODO Change the descriptive string for your driver then remove this line
+        /// <summary>
+        /// Driver description that displays in the ASCOM Chooser.
+        /// </summary>
 #if BETA
       internal string driverDescription = "Astro EQ & Synta mount driver from LunaticSoftware.org.";
       internal string driverName = "AstroEQ & Synta mount driver ";
 #else
-      internal string driverDescription = "Astro EQ & Synta mount driver from LunaticSoftware.org. (Beta Test).";
-      internal string driverName = "AstroEQ/EQ-modded Skywatcher driver (Beta Test)";
+        internal string driverDescription = "Astro EQ & Synta mount driver from LunaticSoftware.org. (Beta Test).";
+        internal string driverName = "AstroEQ/EQ-modded Skywatcher driver (Beta Test)";
 #endif
-      private const int RA_AXIS = 0;
-      private const int DEC_AXIS = 1;
+        private const int RA_AXIS = 0;
+        private const int DEC_AXIS = 1;
 
-      private AstroEQController Controller
-      {
-         get
-         {
-            return SharedResources.Controller;
-         }
-      }
-
-      private static TraceLogger _tl = null;
-      /// <summary>
-      /// Variable to hold the trace logger object (creates a diagnostic log file with information that you specify)
-      /// </summary>
-      internal static TraceLogger tl
-      {
-         get
-         {
-            if (_tl == null)
+        private AstroEQController Controller
+        {
+            get
             {
-               _tl = new TraceLogger("", "LunaticAstroEQ");
+                return SharedResources.Controller;
             }
-            return _tl;
-         }
-      }
+        }
 
-      internal bool TraceState
-      {
-         get
-         {
-            return tl.Enabled;
-         }
-         set
-         {
-            tl.Enabled = value;
-            Settings.TracingState = value;
-         }
-      }
+        private static TraceLogger _tl = null;
+        /// <summary>
+        /// Variable to hold the trace logger object (creates a diagnostic log file with information that you specify)
+        /// </summary>
+        internal static TraceLogger tl
+        {
+            get
+            {
+                if (_tl == null)
+                {
+                    _tl = new TraceLogger("", "LunaticAstroEQ");
+                }
+                return _tl;
+            }
+        }
 
-      private HemisphereOption Hemisphere
-      {
-         get
-         {
-            return (SiteLatitude >= 0.0 ? HemisphereOption.Northern : HemisphereOption.Southern);
-         }
+        internal bool TraceState
+        {
+            get
+            {
+                return tl.Enabled;
+            }
+            set
+            {
+                tl.Enabled = value;
+                Settings.TracingState = value;
+            }
+        }
 
-      }
+        private HemisphereOption Hemisphere
+        {
+            get
+            {
+                return (SiteLatitude >= 0.0 ? HemisphereOption.Northern : HemisphereOption.Southern);
+            }
 
-      internal TelescopeSettings Settings
-      {
-         get
-         {
-            return TelescopeSettingsProvider.Current.Settings;
-         }
-      }
+        }
 
-      /// <summary>
-      /// Private variable to hold an ASCOM Utilities object
-      /// </summary>
-      private AscomTools _AscomToolsCurrentPosition;
-      private AscomTools _AscomToolsTargetPosition;
+        internal TelescopeSettings Settings
+        {
+            get
+            {
+                return TelescopeSettingsProvider.Current.Settings;
+            }
+        }
 
-      private AxisPosition _ParkedAxisPosition;
-      private MountCoordinate _CurrentPosition;
-      private MountCoordinate _TargetPosition;
+        /// <summary>
+        /// Private variable to hold an ASCOM Utilities object
+        /// </summary>
+        private AscomTools _AscomToolsCurrentPosition;
+        private AscomTools _AscomToolsTargetPosition;
 
-
-      private Dictionary<DriveRates, double> _TrackingRate = null;
-
-
-      private System.Timers.Timer _Timer = null;
-
-      /// <summary>
-      /// Initializes a new instance of the <see cref="LunaticAstroEQ"/> class.
-      /// Must be public for COM registration.
-      /// </summary>
-      public Telescope()
-      {
-         driverID = Marshal.GenerateProgIdForType(this.GetType());
-         driverDescription = GetDriverDescription();
-
+        private AxisPosition _ParkedAxisPosition;
+        private MountCoordinate _CurrentPosition;
+        private MountCoordinate _TargetPosition;
 
 
-         tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
+        private Dictionary<DriveRates, double> _TrackingRate = null;
 
 
-         LogMessage("Telescope", "Starting initialisation");
+        private System.Timers.Timer _Timer = null;
 
-         IsConnected = false;
-         InitialiseAscomTools();
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LunaticAstroEQ"/> class.
+        /// Must be public for COM registration.
+        /// </summary>
+        public Telescope()
+        {
+            driverID = Marshal.GenerateProgIdForType(this.GetType());
+            driverDescription = GetDriverDescription();
 
-         InitialiseTimer();
-
-         InitialisePulseGuidingTimer();
 
 
-         LogMessage("Telescope", "Completed initialisation");
-      }
+            tl.Enabled = Settings.TracingState; // This will also load the settings as it is the first time it is accessed.
 
-#region Timer ...
-      private void InitialiseTimer()
-      {
-         _Timer = new System.Timers.Timer(Settings.RefreshInterval); // Initialise the pulse guiding timer with a 1 milisecond interval.
-         _Timer.Enabled = false;
-         _Timer.Elapsed += Timer_Elapsed;
 
-      }
+            LogMessage("Telescope", "Starting initialisation");
 
-      private void DisposeTimer()
-      {
-         if (_Timer != null)
-         {
+            IsConnected = false;
+            InitialiseAscomTools();
+
+            InitialiseTimer();
+
+            InitialisePulseGuidingTimer();
+
+
+            LogMessage("Telescope", "Completed initialisation");
+        }
+
+        #region Timer ...
+        private void InitialiseTimer()
+        {
+            _Timer = new System.Timers.Timer(Settings.RefreshInterval); // Initialise the pulse guiding timer with a 1 milisecond interval.
             _Timer.Enabled = false;
-            _Timer.Elapsed -= PulseGuidingTimer_Elapsed;
-            _Timer.Dispose();
-            _Timer = null;
-         }
-      }
+            _Timer.Elapsed += Timer_Elapsed;
 
-      private bool processingElapsed = false;
-      private void Timer_Elapsed(object sender, ElapsedEventArgs e)
-      {
-         if (processingElapsed)
-         {
-            return;
-         }
-         try
-         {
-            processingElapsed = true;
-            RefreshCurrentPosition();
-            processingElapsed = false;
-         }
-         catch (Exception ex)
-         {
-            System.Diagnostics.Debug.WriteLine(ex.Message);
-            throw;
-         }
-         finally
-         {
-            processingElapsed = false;
-         }
-      }
-#endregion
+        }
 
-
-      private void InitialiseAscomTools()
-      {
-         double latitude, longitude, elevation, temperature;
-         lock (Controller)
-         {
-            latitude = Controller.ObservatoryLatitude.Value;
-            longitude = Controller.ObservatoryLongitude.Value;
-            elevation = Controller.ObservatoryElevation;
-            temperature = 15.0;
-         }
-         _AscomToolsCurrentPosition = new AscomTools();
-
-         // Initialise the transform from the site details stored with the controller
-         _AscomToolsCurrentPosition.Transform.SiteLatitude = latitude;
-         _AscomToolsCurrentPosition.Transform.SiteLongitude = longitude;
-         _AscomToolsCurrentPosition.Transform.SiteElevation = elevation;
-         _AscomToolsCurrentPosition.Transform.SiteTemperature = temperature;
-
-         _AscomToolsTargetPosition = new AscomTools();
-
-         // Initialise the transform from the site details stored with the controller
-         _AscomToolsTargetPosition.Transform.SiteLatitude = latitude;
-         _AscomToolsTargetPosition.Transform.SiteLongitude = longitude;
-         _AscomToolsTargetPosition.Transform.SiteElevation = elevation;
-         _AscomToolsTargetPosition.Transform.SiteTemperature = temperature;
-      }
-      private string GetDriverDescription()
-      {
-         string descr;
-         if (this.GetType().GetCustomAttributes(typeof(ServedClassNameAttribute), true).FirstOrDefault() is ServedClassNameAttribute attr)
-         {
-            descr = attr.DisplayName;
-         }
-         else
-         {
-            descr = this.GetType().Assembly.FullName;
-         }
-         return descr;
-      }
-
-      //
-      // PUBLIC COM INTERFACE ITelescopeV3 IMPLEMENTATION
-      //
-
-#region Common properties and methods.
-
-      /// <summary>
-      /// Displays the Setup Dialog form.
-      /// If the user clicks the OK button to dismiss the form, then
-      /// the new settings are saved, otherwise the old values are reloaded.
-      /// THIS IS THE ONLY PLACE WHERE SHOWING USER INTERFACE IS ALLOWED!
-      /// </summary>
-      public void SetupDialog()
-      {
-         // consider only showing the setup dialog if not connected
-         // or call a different dialog if connected
-         if (IsConnected)
-         {
-            System.Windows.Forms.MessageBox.Show("Already connected, just press OK");
-         }
-
-
-         using (SetupDialogForm F = new SetupDialogForm(this))
-         {
-            var result = F.ShowDialog();
-            if (result == System.Windows.Forms.DialogResult.OK)
+        private void DisposeTimer()
+        {
+            if (_Timer != null)
             {
-               SaveSettings();
+                _Timer.Enabled = false;
+                _Timer.Elapsed -= PulseGuidingTimer_Elapsed;
+                _Timer.Dispose();
+                _Timer = null;
             }
-         }
-      }
+        }
 
-      public ArrayList SupportedActions
-      {
-         get
-         {
-            tl.LogMessage("SupportedActions Get", "Returning empty arraylist");
-            return new ArrayList(_SupportedActions);
-         }
-      }
+        private bool processingElapsed = false;
+        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if (processingElapsed)
+            {
+                return;
+            }
+            try
+            {
+                processingElapsed = true;
+                RefreshCurrentPosition();
+                processingElapsed = false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+                throw;
+            }
+            finally
+            {
+                processingElapsed = false;
+            }
+        }
+        #endregion
 
-      /// <summary>
-      /// Invokes the specified device-specific action.
-      /// </summary>
-      /// <param name="ActionName">
-      /// A well known name agreed by interested parties that represents the action to be carried out. 
-      /// </param>
-      /// <param name="ActionParameters">List of required parameters or an <see cref="String.Empty">Empty String</see> if none are required.
-      /// </param>
-      /// <returns>A string response. The meaning of returned strings is set by the driver author.</returns>
-      /// <exception cref="ASCOM.MethodNotImplementedException">Throws this exception if no actions are suported.</exception>
-      /// <exception cref="ASCOM.ActionNotImplementedException">It is intended that the SupportedActions method will inform clients 
-      /// of driver capabilities, but the driver must still throw an ASCOM.ActionNotImplemented exception if it is asked to 
-      /// perform an action that it does not support.</exception>
-      /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
-      /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
-      /// <example>Suppose filter wheels start to appear with automatic wheel changers; new actions could 
-      /// be “FilterWheel:QueryWheels” and “FilterWheel:SelectWheel”. The former returning a 
-      /// formatted list of wheel names and the second taking a wheel name and making the change, returning appropriate 
-      /// values to indicate success or failure.
-      /// </example>
-      /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> 
-      /// This method is intended for use in all current and future device types and to avoid name clashes, management of action names 
-      /// is important from day 1. A two-part naming convention will be adopted - <b>DeviceType:UniqueActionName</b> where:
-      /// <list type="bullet">
-      /// <item><description>DeviceType is the same value as would be used by <see cref="ASCOM.Utilities.Chooser.DeviceType"/> e.g. Telescope, Camera, Switch etc.</description></item>
-      /// <item><description>UniqueActionName is a single word, or multiple words joined by underscore characters, that sensibly describes the action to be performed.</description></item>
-      /// </list>
-      /// <para>
-      /// It is recommended that UniqueActionNames should be a maximum of 16 characters for legibility.
-      /// Should the same function and UniqueActionName be supported by more than one type of device, the reserved DeviceType of 
-      /// “General” will be used. Action names will be case insensitive, so FilterWheel:SelectWheel, filterwheel:selectwheel 
-      /// and FILTERWHEEL:SELECTWHEEL will all refer to the same action.</para>
-      /// <para>The names of all supported actions must be returned in the <see cref="SupportedActions"/> property.</para>
-      /// </remarks>
-      public string Action(string actionName, string actionParameters)
-      {
-         CheckConnected("Action");
-         LogMessage("Action", string.Format("({0}, {1})", actionName, actionParameters));
-         return ProcessCustomAction(actionName, actionParameters);
-      }
 
-      public void CommandBlind(string command, bool raw)
-      {
-         CheckConnected("CommandBlind");
-         // Call CommandString and return as soon as it finishes
-         this.CommandString(command, raw);
-         // or
-         throw new ASCOM.MethodNotImplementedException("CommandBlind");
-         // DO NOT have both these sections!  One or the other
-      }
+        private void InitialiseAscomTools()
+        {
+            double latitude, longitude, elevation, temperature;
+            lock (Controller)
+            {
+                latitude = Controller.ObservatoryLatitude.Value;
+                longitude = Controller.ObservatoryLongitude.Value;
+                elevation = Controller.ObservatoryElevation;
+                temperature = 15.0;
+            }
+            _AscomToolsCurrentPosition = new AscomTools();
 
-      /// <summary>
-      /// Transmits an arbitrary string to the device and waits for a boolean response.
-      /// Optionally, protocol framing characters may be added to the string before transmission.
-      /// </summary>
-      /// <param name="Command">The literal command string to be transmitted.</param>
-      /// <param name="Raw">
-      /// if set to <c>true</c> the string is transmitted 'as-is'.
-      /// If set to <c>false</c> then protocol framing characters may be added prior to transmission.
-      /// </param>
-      /// <returns>
-      /// Returns the interpreted boolean response received from the device.
-      /// </returns>
-      /// <exception cref="MethodNotImplementedException">If the method is not implemented</exception>
-      /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
-      /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
-      /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> </remarks>
-      public bool CommandBool(string command, bool raw)
-      {
-         if (command != "Lunatic:IsInitialised")
-         {
+            // Initialise the transform from the site details stored with the controller
+            _AscomToolsCurrentPosition.Transform.SiteLatitude = latitude;
+            _AscomToolsCurrentPosition.Transform.SiteLongitude = longitude;
+            _AscomToolsCurrentPosition.Transform.SiteElevation = elevation;
+            _AscomToolsCurrentPosition.Transform.SiteTemperature = temperature;
+
+            _AscomToolsTargetPosition = new AscomTools();
+
+            // Initialise the transform from the site details stored with the controller
+            _AscomToolsTargetPosition.Transform.SiteLatitude = latitude;
+            _AscomToolsTargetPosition.Transform.SiteLongitude = longitude;
+            _AscomToolsTargetPosition.Transform.SiteElevation = elevation;
+            _AscomToolsTargetPosition.Transform.SiteTemperature = temperature;
+        }
+        private string GetDriverDescription()
+        {
+            string descr;
+            if (this.GetType().GetCustomAttributes(typeof(ServedClassNameAttribute), true).FirstOrDefault() is ServedClassNameAttribute attr)
+            {
+                descr = attr.DisplayName;
+            }
+            else
+            {
+                descr = this.GetType().Assembly.FullName;
+            }
+            return descr;
+        }
+
+        //
+        // PUBLIC COM INTERFACE ITelescopeV3 IMPLEMENTATION
+        //
+
+        #region Common properties and methods.
+
+        /// <summary>
+        /// Displays the Setup Dialog form.
+        /// If the user clicks the OK button to dismiss the form, then
+        /// the new settings are saved, otherwise the old values are reloaded.
+        /// THIS IS THE ONLY PLACE WHERE SHOWING USER INTERFACE IS ALLOWED!
+        /// </summary>
+        public void SetupDialog()
+        {
+            // consider only showing the setup dialog if not connected
+            // or call a different dialog if connected
+            if (IsConnected)
+            {
+                System.Windows.Forms.MessageBox.Show("Already connected, just press OK");
+            }
+
+
+            using (SetupDialogForm F = new SetupDialogForm(this))
+            {
+                var result = F.ShowDialog();
+                if (result == System.Windows.Forms.DialogResult.OK)
+                {
+                    SaveSettings();
+                }
+            }
+        }
+
+        public ArrayList SupportedActions
+        {
+            get
+            {
+                tl.LogMessage("SupportedActions Get", "Returning empty arraylist");
+                return new ArrayList(_SupportedActions);
+            }
+        }
+
+        /// <summary>
+        /// Invokes the specified device-specific action.
+        /// </summary>
+        /// <param name="ActionName">
+        /// A well known name agreed by interested parties that represents the action to be carried out. 
+        /// </param>
+        /// <param name="ActionParameters">List of required parameters or an <see cref="String.Empty">Empty String</see> if none are required.
+        /// </param>
+        /// <returns>A string response. The meaning of returned strings is set by the driver author.</returns>
+        /// <exception cref="ASCOM.MethodNotImplementedException">Throws this exception if no actions are suported.</exception>
+        /// <exception cref="ASCOM.ActionNotImplementedException">It is intended that the SupportedActions method will inform clients 
+        /// of driver capabilities, but the driver must still throw an ASCOM.ActionNotImplemented exception if it is asked to 
+        /// perform an action that it does not support.</exception>
+        /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
+        /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
+        /// <example>Suppose filter wheels start to appear with automatic wheel changers; new actions could 
+        /// be “FilterWheel:QueryWheels” and “FilterWheel:SelectWheel”. The former returning a 
+        /// formatted list of wheel names and the second taking a wheel name and making the change, returning appropriate 
+        /// values to indicate success or failure.
+        /// </example>
+        /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> 
+        /// This method is intended for use in all current and future device types and to avoid name clashes, management of action names 
+        /// is important from day 1. A two-part naming convention will be adopted - <b>DeviceType:UniqueActionName</b> where:
+        /// <list type="bullet">
+        /// <item><description>DeviceType is the same value as would be used by <see cref="ASCOM.Utilities.Chooser.DeviceType"/> e.g. Telescope, Camera, Switch etc.</description></item>
+        /// <item><description>UniqueActionName is a single word, or multiple words joined by underscore characters, that sensibly describes the action to be performed.</description></item>
+        /// </list>
+        /// <para>
+        /// It is recommended that UniqueActionNames should be a maximum of 16 characters for legibility.
+        /// Should the same function and UniqueActionName be supported by more than one type of device, the reserved DeviceType of 
+        /// “General” will be used. Action names will be case insensitive, so FilterWheel:SelectWheel, filterwheel:selectwheel 
+        /// and FILTERWHEEL:SELECTWHEEL will all refer to the same action.</para>
+        /// <para>The names of all supported actions must be returned in the <see cref="SupportedActions"/> property.</para>
+        /// </remarks>
+        public string Action(string actionName, string actionParameters)
+        {
+            CheckConnected("Action");
+            LogMessage("Action", string.Format("({0}, {1})", actionName, actionParameters));
+            return ProcessCustomAction(actionName, actionParameters);
+        }
+
+        public void CommandBlind(string command, bool raw)
+        {
+            CheckConnected("CommandBlind");
+            // Call CommandString and return as soon as it finishes
+            this.CommandString(command, raw);
+            // or
+            throw new ASCOM.MethodNotImplementedException("CommandBlind");
+            // DO NOT have both these sections!  One or the other
+        }
+
+        /// <summary>
+        /// Transmits an arbitrary string to the device and waits for a boolean response.
+        /// Optionally, protocol framing characters may be added to the string before transmission.
+        /// </summary>
+        /// <param name="Command">The literal command string to be transmitted.</param>
+        /// <param name="Raw">
+        /// if set to <c>true</c> the string is transmitted 'as-is'.
+        /// If set to <c>false</c> then protocol framing characters may be added prior to transmission.
+        /// </param>
+        /// <returns>
+        /// Returns the interpreted boolean response received from the device.
+        /// </returns>
+        /// <exception cref="MethodNotImplementedException">If the method is not implemented</exception>
+        /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
+        /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
+        /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> </remarks>
+        public bool CommandBool(string command, bool raw)
+        {
             CheckConnected("CommandBool");
-         }
-         LogMessage("CommandBool", string.Format("({0}, {1})", command, raw));
-         return ProcessCommandBool(command, raw);
-      }
+            LogMessage("CommandBool", string.Format("({0}, {1})", command, raw));
+            return ProcessCommandBool(command, raw);
+        }
 
-      /// <summary>
-      /// Transmits an arbitrary string to the device and waits for a string response.
-      /// Optionally, protocol framing characters may be added to the string before transmission.
-      /// </summary>
-      /// <param name="Command">The literal command string to be transmitted.</param>
-      /// <param name="Raw">
-      /// if set to <c>true</c> the string is transmitted 'as-is'.
-      /// If set to <c>false</c> then protocol framing characters may be added prior to transmission.
-      /// </param>
-      /// <returns>
-      /// Returns the string response received from the device.
-      /// </returns>
-      /// <exception cref="MethodNotImplementedException">If the method is not implemented</exception>
-      /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
-      /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
-      /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> </remarks>
-      public string CommandString(string command, bool raw)
-      {
-         CheckConnected("CommandBlind");
-         LogMessage("CommandString", string.Format("({0}, {1})", command, raw));
-         // it's a good idea to put all the low level communication with the device here,
-         // then all communication calls this function
-         // you need something to ensure that only one command is in progress at a time
-         return ProcessCommandString(command, raw);
-      }
+        /// <summary>
+        /// Transmits an arbitrary string to the device and waits for a string response.
+        /// Optionally, protocol framing characters may be added to the string before transmission.
+        /// </summary>
+        /// <param name="Command">The literal command string to be transmitted.</param>
+        /// <param name="Raw">
+        /// if set to <c>true</c> the string is transmitted 'as-is'.
+        /// If set to <c>false</c> then protocol framing characters may be added prior to transmission.
+        /// </param>
+        /// <returns>
+        /// Returns the string response received from the device.
+        /// </returns>
+        /// <exception cref="MethodNotImplementedException">If the method is not implemented</exception>
+        /// <exception cref="NotConnectedException">If the driver is not connected.</exception>
+        /// <exception cref="DriverException">Must throw an exception if the call was not successful</exception>
+        /// <remarks><p style="color:red"><b>Can throw a not implemented exception</b></p> </remarks>
+        public string CommandString(string command, bool raw)
+        {
+            CheckConnected("CommandBlind");
+            LogMessage("CommandString", string.Format("({0}, {1})", command, raw));
+            // it's a good idea to put all the low level communication with the device here,
+            // then all communication calls this function
+            // you need something to ensure that only one command is in progress at a time
+            return ProcessCommandString(command, raw);
+        }
 
-      public void Dispose()
-      {
-         // Clean up the tracelogger and util objects
-         //tl.Enabled = false;
-         //tl.Dispose();
-         //tl = null;
-         DisposeTimer();
-         DisposePulseGuidingTimer();
-         _AscomToolsCurrentPosition.Dispose();
-         _AscomToolsTargetPosition.Dispose();
-         TelescopeSettingsProvider.Current.Dispose();
-      }
+        public void Dispose()
+        {
+            // Clean up the tracelogger and util objects
+            //tl.Enabled = false;
+            //tl.Dispose();
+            //tl = null;
+            DisposeTimer();
+            DisposePulseGuidingTimer();
+            _AscomToolsCurrentPosition.Dispose();
+            _AscomToolsTargetPosition.Dispose();
+            TelescopeSettingsProvider.Current.Dispose();
+        }
 
-      public bool Connected
-      {
-         get
-         {
-            LogMessage("Connected", "Get {0}", IsConnected);
-            return IsConnected;
-         }
-         set
-         {
+        public bool Connected
+        {
+            get
+            {
+                LogMessage("Connected", "Get {0}", IsConnected);
+                return IsConnected;
+            }
+            set
+            {
+                lock (Controller)
+                {
+                    LogMessage("Connected", "Set {0}", value);
+                    if (value == IsConnected)
+                        return;
+
+                    if (value)
+                    {
+                        if (string.IsNullOrWhiteSpace(Settings.COMPort))
+                        {
+                            throw new ASCOM.ValueNotSetException("comPort");
+                        }
+                        LogMessage("Connected Set", "Connecting to port {0}", Settings.COMPort);
+                        int connectionResult = Controller.Connect(Settings.COMPort, (int)Settings.BaudRate, (int)Settings.Timeout, (int)Settings.Retry);
+                        if (connectionResult == Core.Constants.MOUNT_SUCCESS)
+                        {
+                            IsConnected = true;
+                            InitialiseCurrentPosition(true);
+                            _Timer.Enabled = true;
+                            // Set the polar scope brightness
+                            Controller.MCSetPolarScopeBrightness(Settings.PolarSlopeBrightness);
+
+                        }
+                        else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
+                        {
+                            IsConnected = true;
+                            InitialiseCurrentPosition(false);
+                            _Timer.Enabled = true;
+
+                        }
+                        else
+                        {
+                            // Something went wrong so not connected.
+                            IsConnected = false;
+                        }
+                    }
+                    else
+                    {
+                        _Timer.Enabled = false;
+                        Controller.Disconnect();
+                        LogMessage("Connected Set", "Disconnecting from port {0}", Settings.COMPort);
+                        IsConnected = false; ;
+                    }
+                }
+            }
+        }
+
+        public string Description
+        {
+            // TODO customise this device description
+            get
+            {
+                tl.LogMessage("Description Get", driverDescription);
+                return driverDescription;
+            }
+        }
+
+        public string DriverInfo
+        {
+            get
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendFormat("{0}, Version {1}.{2}\n", driverDescription,
+                   TelescopeSettingsProvider.MajorVersion,
+                   TelescopeSettingsProvider.MinorVersion);
+                sb.AppendLine(TelescopeSettingsProvider.CompanyName);
+                sb.AppendLine(TelescopeSettingsProvider.Copyright);
+                sb.AppendLine(TelescopeSettingsProvider.Comments);
+                string driverInfo = sb.ToString();
+                tl.LogMessage("DriverInfo Get", driverInfo);
+                return driverInfo;
+            }
+        }
+
+        public string DriverVersion
+        {
+            get
+            {
+                Version version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                string driverVersion = String.Format(CultureInfo.InvariantCulture, "{0}.{1}", version.Major, version.Minor);
+                tl.LogMessage("DriverVersion Get", driverVersion);
+                return driverVersion;
+            }
+        }
+
+        public short InterfaceVersion
+        {
+            // set by the driver wizard
+            get
+            {
+                LogMessage("InterfaceVersion Get", "3");
+                return Convert.ToInt16("3");
+            }
+        }
+
+        public string Name
+        {
+            get
+            {
+                string name = driverName;
+                tl.LogMessage("Name Get", name);
+                return name;
+            }
+        }
+
+        #endregion
+
+        #region ITelescope Implementation
+        public void AbortSlew()
+        {
+            tl.LogMessage("AbortSlew", "");
+            if (Settings.ParkStatus == ParkStatus.Parked)
+            {
+                throw new ASCOM.InvalidOperationException("Abort slew is invvalid when the scope is parked.");
+            }
+            AbortSlewInternal();
+        }
+
+
+        private AlignmentModes _AlignmentMode = AlignmentModes.algGermanPolar;
+        public AlignmentModes AlignmentMode
+        {
+            get
+            {
+                LogMessage("AlignmentMode", "Get - {0}", _AlignmentMode);
+                return _AlignmentMode;
+            }
+        }
+
+        public double Altitude
+        {
+            get
+            {
+                lock (Controller)
+                {
+                    double altitude = _CurrentPosition.AltAzimuth.Altitude.Value;
+                    tl.LogMessage("Altitude", "Get - " + _AscomToolsCurrentPosition.Util.DegreesToDMS(altitude, ":", ":"));
+                    return altitude;
+                }
+            }
+        }
+
+        public double ApertureArea
+        {
+            get
+            {
+                tl.LogMessage("ApertureArea Get", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("ApertureArea", false);
+            }
+        }
+
+        public double ApertureDiameter
+        {
+            get
+            {
+                tl.LogMessage("ApertureDiameter Get", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("ApertureDiameter", false);
+            }
+        }
+
+        public bool AtHome
+        {
+            get
+            {
+                tl.LogMessage("AtHome", "Get - " + false.ToString());
+                return false;
+            }
+        }
+
+        public bool AtPark
+        {
+            get
+            {
+                bool atPark = (Settings.ParkStatus == ParkStatus.Parked);
+                LogMessage("AtPark", "Get - {0}", atPark);
+                return atPark;
+            }
+        }
+
+        public IAxisRates AxisRates(TelescopeAxes axis)
+        {
+            LogMessage("Command", "AxisRates");
+            return _AxisRates[(int)axis];
+        }
+
+        public double Azimuth
+        {
+            get
+            {
+                lock (Controller)
+                {
+                    double azimuth = _CurrentPosition.AltAzimuth.Azimuth.Value;
+                    tl.LogMessage("Azimuth", "Get - " + _AscomToolsCurrentPosition.Util.DegreesToDMS(azimuth, ":", ":"));
+                    return azimuth;
+                }
+            }
+        }
+
+        public bool CanFindHome
+        {
+            get
+            {
+                tl.LogMessage("CanFindHome", "Get - " + false.ToString());
+                return false;
+            }
+        }
+
+        public bool CanMoveAxis(TelescopeAxes Axis)
+        {
+            bool canMove = false;
+            switch (Axis)
+            {
+                case TelescopeAxes.axisPrimary:
+                case TelescopeAxes.axisSecondary:
+                    canMove = true;
+                    break;
+                case TelescopeAxes.axisTertiary:
+                    break;
+                default: throw new InvalidValueException("CanMoveAxis", Axis.ToString(), "0 to 2");
+            }
+            LogMessage("CanMoveAxis", "Get - {0}:{1}", Axis, canMove);
+            return canMove;
+        }
+
+        private bool _CanPark = true;
+        public bool CanPark
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanPark", "Get - {0}", _CanPark);
+                return _CanPark;
+            }
+        }
+
+
+        private bool _CanPulseGuide = true;
+        public bool CanPulseGuide
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanPulseGuide", "Get - {0}", _CanPulseGuide);
+                return _CanPulseGuide;
+            }
+        }
+
+        private bool _CanSetDeclinationRate = true;
+        public bool CanSetDeclinationRate
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanSetDeclinationRate", "Get - {0}", _CanSetDeclinationRate);
+                return _CanSetDeclinationRate;
+            }
+        }
+
+        private bool _CanSetGuideRates = true;
+        public bool CanSetGuideRates
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanSetGuideRates", "Get - {0}", _CanSetGuideRates);
+                return _CanSetGuideRates;
+            }
+        }
+
+        private bool _CanSetPark = true;
+        public bool CanSetPark
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanSetPark", "Get - {0}", _CanSetPark);
+                return _CanSetPark;
+            }
+        }
+
+        public bool CanSetPierSide
+        {
+            get
+            {
+                //TODO: CanSetPierSide - Needs functionality to force a meridian flip.
+                LogMessage("CanSetPierSide", "Get - " + false.ToString());
+                return false;
+            }
+        }
+
+        private bool _CanSetRightAscensionRate = true;
+        public bool CanSetRightAscensionRate
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanSetRightAscensionRate", "Get - {0}", _CanSetRightAscensionRate);
+                return _CanSetRightAscensionRate;
+            }
+        }
+
+        private bool _CanSetTracking = true;
+        public bool CanSetTracking
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanSetTracking", "Get - {0}", _CanSetTracking);
+                return _CanSetTracking;
+            }
+        }
+
+        private bool _CanSlew = true;
+        public bool CanSlew
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanSlew", "Get - {0}", _CanSlew);
+                return _CanSlew;
+            }
+        }
+
+        private bool _CanSlewAltAz = false;
+        public bool CanSlewAltAz
+        {
+            get
+            {
+                LogMessage("CanSlewAltAz", "Get - {0}", _CanSlewAltAz);
+                return _CanSlewAltAz;
+            }
+        }
+
+        private bool _CanSlewAltAzAsync = false;
+        public bool CanSlewAltAzAsync
+        {
+            get
+            {
+                LogMessage("CanSlewAltAzAsync", "Get - {0}", _CanSlewAltAzAsync);
+                return _CanSlewAltAzAsync;
+            }
+        }
+
+
+        private bool _CanSlewAsync = true;
+        public bool CanSlewAsync
+        {
+            get
+            {
+                LogMessage("CanSlewAsync", "Get - {0}", _CanSlewAsync);
+                return _CanSlewAsync;
+            }
+        }
+
+
+        // TODO: Enable Synching
+        private bool _CanSync = false;
+        public bool CanSync
+        {
+            get
+            {
+                if (!Connected)
+                {
+                    throw new NotConnectedException("Astro EQ is not connected.");
+                }
+                LogMessage("CanSync", "Get - {0}", _CanSync);
+                return _CanSync;
+            }
+        }
+
+
+        private bool _CanSyncAltAz = false;
+        public bool CanSyncAltAz
+        {
+            get
+            {
+                LogMessage("CanSyncAltAz", "Get - {0}", _CanSyncAltAz);
+                return _CanSyncAltAz;
+            }
+        }
+
+        private bool _CanUnpark = true;
+        public bool CanUnpark
+        {
+            get
+            {
+                LogMessage("CanUnpark", "Get - {0}", _CanUnpark);
+                return _CanUnpark;
+            }
+        }
+
+        public double Declination
+        {
+            get
+            {
+                lock (Controller)
+                {
+                    double declination = _CurrentPosition.Equatorial.Declination;
+                    LogMessage("Declination", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
+                    // System.Diagnostics.Debug.WriteLine($"Declination Get - {_AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":")}");
+
+                    return declination;
+                }
+            }
+        }
+
+        public double DeclinationRate
+        {
+            get
+            {
+                LogMessage("DeclinationRate", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(Settings.DeclinationRate, ":", ":"));
+                return Settings.DeclinationRate;
+            }
+            set
+            {
+                LogMessage("DeclinationRate", "Set - {0}" + _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
+                if (value == Settings.DeclinationRate)
+                {
+                    return;
+                }
+                Settings.DeclinationRate = value;
+                SaveSettings();
+                if (Tracking)
+                {
+                    StartTracking();  // Force tracking to refresh with the new rate.
+                }
+            }
+        }
+
+        public PierSide DestinationSideOfPier(double rightAscension, double declination)
+        {
+            PierSide destinationSideOfPier = GetDestinationSideOfPier(rightAscension, declination);
+            LogMessage("DestinationSideOfPier", "Get - {0}", destinationSideOfPier);
+            return destinationSideOfPier;
+        }
+
+        private bool _DoesRefraction = false;
+        public bool DoesRefraction
+        {
+            get
+            {
+                LogMessage("DoesRefraction", "Get - {0}", _DoesRefraction);
+                return _DoesRefraction;
+            }
+            set
+            {
+                tl.LogMessage("DoesRefraction Set", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("DoesRefraction", true);
+            }
+        }
+
+        public EquatorialCoordinateType EquatorialSystem
+        {
+            get
+            {
+                EquatorialCoordinateType equatorialSystem = EquatorialCoordinateType.equTopocentric;
+                tl.LogMessage("DeclinationRate", "Get - " + equatorialSystem.ToString());
+                return equatorialSystem;
+            }
+        }
+
+        public void FindHome()
+        {
+            tl.LogMessage("FindHome", "Not implemented");
+            throw new ASCOM.MethodNotImplementedException("FindHome");
+        }
+
+        public double FocalLength
+        {
+            get
+            {
+                tl.LogMessage("FocalLength Get", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("FocalLength", false);
+            }
+        }
+
+        public double GuideRateDeclination
+        {
+            get
+            {
+                LogMessage("GuideRateDeclination", "Get - {0}", Settings.GuideRateDeclination);
+                return Settings.GuideRateDeclination;
+            }
+            set
+            {
+                if (value == Settings.GuideRateDeclination)
+                {
+                    return;
+                }
+                if (value < Settings.GuideRateDeclinationMin || value > Settings.GuideRateDeclinationMax)
+                {
+                    throw new ASCOM.InvalidValueException($"GuideRateDeclination must be in the range {Settings.GuideRateDeclinationMin} to {Settings.GuideRateDeclinationMax} degrees/sec.");
+                }
+                LogMessage("GuideRateDeclination", "Set -{0}", value);
+                Settings.GuideRateDeclination = value;
+                SaveSettings();
+            }
+        }
+
+        public double GuideRateRightAscension
+        {
+            get
+            {
+                LogMessage("GuideRateRightAscension", "Get - {0}", Settings.GuideRateRightAscension);
+                return Settings.GuideRateRightAscension;
+            }
+            set
+            {
+                if (value == Settings.GuideRateRightAscension)
+                {
+                    return;
+                }
+                if (value < Settings.GuideRateRightAscensionMin || value > Settings.GuideRateRightAscensionMax)
+                {
+                    throw new ASCOM.InvalidValueException($"GuideRateRightAscension must be in the range {Settings.GuideRateRightAscensionMin} to {Settings.GuideRateRightAscensionMax} degrees/sec.");
+                }
+                LogMessage("GuideRateRightAscension", "Set -{0}", value);
+                Settings.GuideRateRightAscension = value;
+                SaveSettings();
+            }
+        }
+
+        public bool IsPulseGuiding
+        {
+            get
+            {
+                bool isPulseGuiding = (_PulseGuidingStopwatch[RA_AXIS].IsRunning || _PulseGuidingStopwatch[DEC_AXIS].IsRunning);
+                LogMessage("IsPulseGuiding", "Get - {0}", isPulseGuiding);
+                return isPulseGuiding;
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="axis"></param>
+        /// <param name="rate">The rate in degrees per second</param>
+        public void MoveAxis(TelescopeAxes axis, double rate)
+        {
+            bool isRASlewing = false;
+            bool isDecSlewing = false;
+            if (axis == TelescopeAxes.axisTertiary)
+            {
+                throw new ASCOM.InvalidValueException("Driver does not support tertiary axis.");
+            }
+
+            if (Settings.ParkStatus != ParkStatus.Unparked)
+            {
+                throw new ASCOM.ParkedException("The mount is currently parked or parking.");
+            }
+
+            IRate limits = _AxisRates[(int)axis][1];  // IRate is 1 based.
+            double absRate = Math.Abs(rate);
+            if (absRate < limits.Minimum || absRate > limits.Maximum)
+            {
+                throw new ASCOM.InvalidValueException($"Method MoveAxis() rate must be in the range ±{limits.Minimum} to ±{limits.Maximum}.");
+            }
+
             lock (Controller)
             {
-               LogMessage("Connected", "Set {0}", value);
-               if (value == IsConnected)
-                  return;
+                // System.Diagnostics.Debug.WriteLine(String.Format("MoveAxis({0}, {1})", axis, rate));
+                LogMessage("MoveAxis", "({0}, {1})", axis, rate);
 
-               if (value)
-               {
-                  if (string.IsNullOrWhiteSpace(Settings.COMPort))
-                  {
-                     throw new ASCOM.ValueNotSetException("comPort");
-                  }
-                  LogMessage("Connected Set", "Connecting to port {0}", Settings.COMPort);
-                  int connectionResult = Controller.Connect(Settings.COMPort, (int)Settings.BaudRate, (int)Settings.Timeout, (int)Settings.Retry);
-                  if (connectionResult == Core.Constants.MOUNT_SUCCESS)
-                  {
-                     IsConnected = true;
-                     InitialiseCurrentPosition(true);
-                     _Timer.Enabled = true;
-                     // Set the polar scope brightness
-                     Controller.MCSetPolarScopeBrightness(Settings.PolarSlopeBrightness);
-
-                  }
-                  else if (connectionResult == Core.Constants.MOUNT_COMCONNECTED)
-                  {
-                     IsConnected = true;
-                     InitialiseCurrentPosition(false);
-                     _Timer.Enabled = true;
-
-                  }
-                  else
-                  {
-                     // Something went wrong so not connected.
-                     IsConnected = false;
-                  }
-               }
-               else
-               {
-                  _Timer.Enabled = false;
-                  Controller.Disconnect();
-                  LogMessage("Connected Set", "Disconnecting from port {0}", Settings.COMPort);
-                  IsConnected = false; ;
-               }
+                switch (axis)
+                {
+                    case TelescopeAxes.axisPrimary:
+                        isRASlewing = (rate != 0);
+                        Controller.MCAxisSlew(AxisId.Axis1_RA, rate, Hemisphere);
+                        break;
+                    case TelescopeAxes.axisSecondary:
+                        isDecSlewing = (rate != 0);
+                        Controller.MCAxisSlew(AxisId.Axis2_Dec, rate, Hemisphere);
+                        break;
+                    default:
+                        throw new ASCOM.InvalidValueException("Tertiary axis is not supported by MoveAxis command");
+                }
+                _IsMoveAxisSlewing = (isRASlewing || isDecSlewing);
             }
-         }
-      }
+        }
 
-      public string Description
-      {
-         // TODO customise this device description
-         get
-         {
-            tl.LogMessage("Description Get", driverDescription);
-            return driverDescription;
-         }
-      }
+        public void Park()
+        {
+            LogMessage("Command", "Park");
+            ParkInternal();
+        }
 
-      public string DriverInfo
-      {
-         get
-         {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendFormat("{0}, Version {1}.{2}\n", driverDescription,
-               TelescopeSettingsProvider.MajorVersion,
-               TelescopeSettingsProvider.MinorVersion);
-            sb.AppendLine(TelescopeSettingsProvider.CompanyName);
-            sb.AppendLine(TelescopeSettingsProvider.Copyright);
-            sb.AppendLine(TelescopeSettingsProvider.Comments);
-            string driverInfo = sb.ToString();
-            tl.LogMessage("DriverInfo Get", driverInfo);
-            return driverInfo;
-         }
-      }
-
-      public string DriverVersion
-      {
-         get
-         {
-            Version version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            string driverVersion = String.Format(CultureInfo.InvariantCulture, "{0}.{1}", version.Major, version.Minor);
-            tl.LogMessage("DriverVersion Get", driverVersion);
-            return driverVersion;
-         }
-      }
-
-      public short InterfaceVersion
-      {
-         // set by the driver wizard
-         get
-         {
-            LogMessage("InterfaceVersion Get", "3");
-            return Convert.ToInt16("3");
-         }
-      }
-
-      public string Name
-      {
-         get
-         {
-            string name = driverName;
-            tl.LogMessage("Name Get", name);
-            return name;
-         }
-      }
-
-#endregion
-
-#region ITelescope Implementation
-      public void AbortSlew()
-      {
-         tl.LogMessage("AbortSlew", "");
-         if (Settings.ParkStatus == ParkStatus.Parked)
-         {
-            throw new ASCOM.InvalidOperationException("Abort slew is invvalid when the scope is parked.");
-         }
-         AbortSlewInternal();
-      }
-
-
-      private AlignmentModes _AlignmentMode = AlignmentModes.algGermanPolar;
-      public AlignmentModes AlignmentMode
-      {
-         get
-         {
-            LogMessage("AlignmentMode", "Get - {0}", _AlignmentMode);
-            return _AlignmentMode;
-         }
-      }
-
-      public double Altitude
-      {
-         get
-         {
+        public void PulseGuide(GuideDirections direction, int duration)
+        {
+            if (Settings.ParkStatus != ParkStatus.Unparked)
+            {
+                throw new ASCOM.ParkedException("The mount is currently parked or parking.");
+            }
+            if (Slewing)
+            {
+                // Just return if slewing
+                return;
+            }
             lock (Controller)
             {
-               double altitude = _CurrentPosition.AltAzimuth.Altitude.Value;
-               tl.LogMessage("Altitude", "Get - " + _AscomToolsCurrentPosition.Util.DegreesToDMS(altitude, ":", ":"));
-               return altitude;
+                LogMessage("Command", "PulseGuide {0} {1}", direction, duration);
+                if (duration > 0)
+                {
+                    StartPulseGuiding(direction, duration);
+                }
+                else
+                {
+                    StopPulseGuiding(direction);
+                }
             }
-         }
-      }
+        }
 
-      public double ApertureArea
-      {
-         get
-         {
-            tl.LogMessage("ApertureArea Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("ApertureArea", false);
-         }
-      }
-
-      public double ApertureDiameter
-      {
-         get
-         {
-            tl.LogMessage("ApertureDiameter Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("ApertureDiameter", false);
-         }
-      }
-
-      public bool AtHome
-      {
-         get
-         {
-            tl.LogMessage("AtHome", "Get - " + false.ToString());
-            return false;
-         }
-      }
-
-      public bool AtPark
-      {
-         get
-         {
-            bool atPark = (Settings.ParkStatus == ParkStatus.Parked);
-            LogMessage("AtPark", "Get - {0}", atPark);
-            return atPark;
-         }
-      }
-
-      public IAxisRates AxisRates(TelescopeAxes axis)
-      {
-         LogMessage("Command", "AxisRates");
-         return _AxisRates[(int)axis];
-      }
-
-      public double Azimuth
-      {
-         get
-         {
-            lock (Controller)
+        public double RightAscension
+        {
+            get
             {
-               double azimuth = _CurrentPosition.AltAzimuth.Azimuth.Value;
-               tl.LogMessage("Azimuth", "Get - " + _AscomToolsCurrentPosition.Util.DegreesToDMS(azimuth, ":", ":"));
-               return azimuth;
+                lock (Controller)
+                {
+                    double rightAscension = _CurrentPosition.Equatorial.RightAscension.Value;
+                    LogMessage("RightAscension", "Get - {0}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension));
+                    // System.Diagnostics.Debug.WriteLine($"RightAscension Get - {_AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension)}");
+                    return rightAscension;
+                }
             }
-         }
-      }
+        }
 
-      public bool CanFindHome
-      {
-         get
-         {
-            tl.LogMessage("CanFindHome", "Get - " + false.ToString());
-            return false;
-         }
-      }
 
-      public bool CanMoveAxis(TelescopeAxes Axis)
-      {
-         bool canMove = false;
-         switch (Axis)
-         {
-            case TelescopeAxes.axisPrimary:
-            case TelescopeAxes.axisSecondary:
-               canMove = true;
-               break;
-            case TelescopeAxes.axisTertiary:
-               break;
-            default: throw new InvalidValueException("CanMoveAxis", Axis.ToString(), "0 to 2");
-         }
-         LogMessage("CanMoveAxis", "Get - {0}:{1}", Axis, canMove);
-         return canMove;
-      }
 
-      private bool _CanPark = true;
-      public bool CanPark
-      {
-         get
-         {
-            if (!Connected)
+        public double RightAscensionRate
+        {
+            get
             {
-               throw new NotConnectedException("Astro EQ is not connected.");
+                LogMessage("RightAscensionRate", "Get - {0}", Settings.RightAscensionRate);
+                return Settings.RightAscensionRate;
             }
-            LogMessage("CanPark", "Get - {0}", _CanPark);
-            return _CanPark;
-         }
-      }
-
-
-      private bool _CanPulseGuide = true;
-      public bool CanPulseGuide
-      {
-         get
-         {
-            if (!Connected)
+            set
             {
-               throw new NotConnectedException("Astro EQ is not connected.");
+                LogMessage("RightAscensionRate", "Set - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
+                if (value == Settings.RightAscensionRate)
+                {
+                    return;
+                }
+                Settings.RightAscensionRate = value;
+                SaveSettings();
+                if (Tracking)
+                {
+                    StartTracking();  // Restart tracking with the new rate.
+                }
             }
-            LogMessage("CanPulseGuide", "Get - {0}", _CanPulseGuide);
-            return _CanPulseGuide;
-         }
-      }
+        }
 
-      private bool _CanSetDeclinationRate = true;
-      public bool CanSetDeclinationRate
-      {
-         get
-         {
-            if (!Connected)
-            {
-               throw new NotConnectedException("Astro EQ is not connected.");
-            }
-            LogMessage("CanSetDeclinationRate", "Get - {0}", _CanSetDeclinationRate);
-            return _CanSetDeclinationRate;
-         }
-      }
-
-      private bool _CanSetGuideRates = true;
-      public bool CanSetGuideRates
-      {
-         get
-         {
-            if (!Connected)
-            {
-               throw new NotConnectedException("Astro EQ is not connected.");
-            }
-            LogMessage("CanSetGuideRates", "Get - {0}", _CanSetGuideRates);
-            return _CanSetGuideRates;
-         }
-      }
-
-      private bool _CanSetPark = true;
-      public bool CanSetPark
-      {
-         get
-         {
-            if (!Connected)
-            {
-               throw new NotConnectedException("Astro EQ is not connected.");
-            }
-            LogMessage("CanSetPark", "Get - {0}", _CanSetPark);
-            return _CanSetPark;
-         }
-      }
-
-      public bool CanSetPierSide
-      {
-         get
-         {
-            //TODO: CanSetPierSide - Needs functionality to force a meridian flip.
-            LogMessage("CanSetPierSide", "Get - " + false.ToString());
-            return false;
-         }
-      }
-
-      private bool _CanSetRightAscensionRate = true;
-      public bool CanSetRightAscensionRate
-      {
-         get
-         {
-            if (!Connected)
-            {
-               throw new NotConnectedException("Astro EQ is not connected.");
-            }
-            LogMessage("CanSetRightAscensionRate", "Get - {0}", _CanSetRightAscensionRate);
-            return _CanSetRightAscensionRate;
-         }
-      }
-
-      private bool _CanSetTracking = true;
-      public bool CanSetTracking
-      {
-         get
-         {
-            if (!Connected)
-            {
-               throw new NotConnectedException("Astro EQ is not connected.");
-            }
-            LogMessage("CanSetTracking", "Get - {0}", _CanSetTracking);
-            return _CanSetTracking;
-         }
-      }
-
-      private bool _CanSlew = true;
-      public bool CanSlew
-      {
-         get
-         {
-            if (!Connected)
-            {
-               throw new NotConnectedException("Astro EQ is not connected.");
-            }
-            LogMessage("CanSlew", "Get - {0}", _CanSlew);
-            return _CanSlew;
-         }
-      }
-
-      private bool _CanSlewAltAz = false;
-      public bool CanSlewAltAz
-      {
-         get
-         {
-            LogMessage("CanSlewAltAz", "Get - {0}", _CanSlewAltAz);
-            return _CanSlewAltAz;
-         }
-      }
-
-      private bool _CanSlewAltAzAsync = false;
-      public bool CanSlewAltAzAsync
-      {
-         get
-         {
-            LogMessage("CanSlewAltAzAsync", "Get - {0}", _CanSlewAltAzAsync);
-            return _CanSlewAltAzAsync;
-         }
-      }
-
-
-      private bool _CanSlewAsync = true;
-      public bool CanSlewAsync
-      {
-         get
-         {
-            LogMessage("CanSlewAsync", "Get - {0}", _CanSlewAsync);
-            return _CanSlewAsync;
-         }
-      }
-
-
-      // TODO: Enable Synching
-      private bool _CanSync = false;
-      public bool CanSync
-      {
-         get
-         {
-            if (!Connected)
-            {
-               throw new NotConnectedException("Astro EQ is not connected.");
-            }
-            LogMessage("CanSync", "Get - {0}", _CanSync);
-            return _CanSync;
-         }
-      }
-
-
-      private bool _CanSyncAltAz = false;
-      public bool CanSyncAltAz
-      {
-         get
-         {
-            LogMessage("CanSyncAltAz", "Get - {0}", _CanSyncAltAz);
-            return _CanSyncAltAz;
-         }
-      }
-
-      private bool _CanUnpark = true;
-      public bool CanUnpark
-      {
-         get
-         {
-            LogMessage("CanUnpark", "Get - {0}", _CanUnpark);
-            return _CanUnpark;
-         }
-      }
-
-      public double Declination
-      {
-         get
-         {
-            lock (Controller)
-            {
-               double declination = _CurrentPosition.Equatorial.Declination;
-               LogMessage("Declination", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":"));
-               // System.Diagnostics.Debug.WriteLine($"Declination Get - {_AscomToolsCurrentPosition.Util.DegreesToDMS(declination, ":", ":")}");
-
-               return declination;
-            }
-         }
-      }
-
-      public double DeclinationRate
-      {
-         get
-         {
-            LogMessage("DeclinationRate", "Get - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(Settings.DeclinationRate, ":", ":"));
-            return Settings.DeclinationRate;
-         }
-         set
-         {
-            LogMessage("DeclinationRate", "Set - {0}" + _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
-            if (value == Settings.DeclinationRate)
-            {
-               return;
-            }
-            Settings.DeclinationRate = value;
+        public void SetPark()
+        {
+            LogMessage("Command", "SetPark");
+            _ParkedAxisPosition = _CurrentPosition.ObservedAxes;
+            Settings.AxisParkPosition = _ParkedAxisPosition;
             SaveSettings();
-            if (Tracking)
+        }
+
+        public PierSide SideOfPier
+        {
+            get
             {
-               StartTracking();  // Force tracking to refresh with the new rate.
+                PierSide value = _CurrentPosition.GetPointingSideOfPier(false);
+                LogMessage("SideOfPier", "Get - {0}", value);
+                return value;
             }
-         }
-      }
-
-      public PierSide DestinationSideOfPier(double rightAscension, double declination)
-      {
-         PierSide destinationSideOfPier = GetDestinationSideOfPier(rightAscension, declination);
-         LogMessage("DestinationSideOfPier", "Get - {0}", destinationSideOfPier);
-         return destinationSideOfPier;
-      }
-
-      private bool _DoesRefraction = false;
-      public bool DoesRefraction
-      {
-         get
-         {
-            LogMessage("DoesRefraction", "Get - {0}", _DoesRefraction);
-            return _DoesRefraction;
-         }
-         set
-         {
-            tl.LogMessage("DoesRefraction Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("DoesRefraction", true);
-         }
-      }
-
-      public EquatorialCoordinateType EquatorialSystem
-      {
-         get
-         {
-            EquatorialCoordinateType equatorialSystem = EquatorialCoordinateType.equTopocentric;
-            tl.LogMessage("DeclinationRate", "Get - " + equatorialSystem.ToString());
-            return equatorialSystem;
-         }
-      }
-
-      public void FindHome()
-      {
-         tl.LogMessage("FindHome", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("FindHome");
-      }
-
-      public double FocalLength
-      {
-         get
-         {
-            tl.LogMessage("FocalLength Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("FocalLength", false);
-         }
-      }
-
-      public double GuideRateDeclination
-      {
-         get
-         {
-            LogMessage("GuideRateDeclination", "Get - {0}", Settings.GuideRateDeclination);
-            return Settings.GuideRateDeclination;
-         }
-         set
-         {
-            if (value == Settings.GuideRateDeclination)
+            set
             {
-               return;
+                LogMessage("SideOfPier Set", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("SideOfPier", true);
             }
-            if (value < Settings.GuideRateDeclinationMin || value > Settings.GuideRateDeclinationMax)
+        }
+
+        public double SiderealTime
+        {
+            get
             {
-               throw new ASCOM.InvalidValueException($"GuideRateDeclination must be in the range {Settings.GuideRateDeclinationMin} to {Settings.GuideRateDeclinationMax} degrees/sec.");
+                lock (Controller)
+                {
+                    double lst = _CurrentPosition.LocalApparentSiderialTime;
+                    tl.LogMessage("SiderealTime", "Get - " + _AscomToolsCurrentPosition.Util.HoursToHMS(lst));
+                    return lst;
+                }
             }
-            LogMessage("GuideRateDeclination", "Set -{0}", value);
-            Settings.GuideRateDeclination = value;
-            SaveSettings();
-         }
-      }
+        }
 
-      public double GuideRateRightAscension
-      {
-         get
-         {
-            LogMessage("GuideRateRightAscension", "Get - {0}", Settings.GuideRateRightAscension);
-            return Settings.GuideRateRightAscension;
-         }
-         set
-         {
-            if (value == Settings.GuideRateRightAscension)
+        public double SiteElevation
+        {
+            get
             {
-               return;
+                lock (Controller)
+                {
+                    LogMessage("SiteElevation", "Get {0}", Controller.ObservatoryElevation);
+                    return Controller.ObservatoryElevation;
+                }
             }
-            if (value < Settings.GuideRateRightAscensionMin || value > Settings.GuideRateRightAscensionMax)
+            set
             {
-               throw new ASCOM.InvalidValueException($"GuideRateRightAscension must be in the range {Settings.GuideRateRightAscensionMin} to {Settings.GuideRateRightAscensionMax} degrees/sec.");
+                lock (Controller)
+                {
+                    LogMessage("SiteElevation", "Set {0}", value);
+                    if (value < -300.0 || value > 10000.0)
+                    {
+                        throw new ASCOM.InvalidValueException("SiteElevation must be between -300m and 10,000m");
+                    }
+                    if (Controller.ObservatoryElevation == value)
+                    {
+                        return;
+                    }
+                    Controller.ObservatoryElevation = value;
+                    RelocateMounts(SiteLatitude, SiteLongitude, value);
+                }
             }
-            LogMessage("GuideRateRightAscension", "Set -{0}", value);
-            Settings.GuideRateRightAscension = value;
-            SaveSettings();
-         }
-      }
+        }
 
-      public bool IsPulseGuiding
-      {
-         get
-         {
-            bool isPulseGuiding = (_PulseGuidingStopwatch[RA_AXIS].IsRunning || _PulseGuidingStopwatch[DEC_AXIS].IsRunning);
-            LogMessage("IsPulseGuiding", "Get - {0}", isPulseGuiding);
-            return isPulseGuiding;
-         }
-      }
-
-
-      /// <summary>
-      /// 
-      /// </summary>
-      /// <param name="axis"></param>
-      /// <param name="rate">The rate in degrees per second</param>
-      public void MoveAxis(TelescopeAxes axis, double rate)
-      {
-         bool isRASlewing = false;
-         bool isDecSlewing = false;
-         if (axis == TelescopeAxes.axisTertiary)
-         {
-            throw new ASCOM.InvalidValueException("Driver does not support tertiary axis.");
-         }
-
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
-         }
-
-         IRate limits = _AxisRates[(int)axis][1];  // IRate is 1 based.
-         double absRate = Math.Abs(rate);
-         if (absRate < limits.Minimum || absRate > limits.Maximum)
-         {
-            throw new ASCOM.InvalidValueException($"Method MoveAxis() rate must be in the range ±{limits.Minimum} to ±{limits.Maximum}.");
-         }
-
-         lock (Controller)
-         {
-            // System.Diagnostics.Debug.WriteLine(String.Format("MoveAxis({0}, {1})", axis, rate));
-            LogMessage("MoveAxis", "({0}, {1})", axis, rate);
-
-            switch (axis)
+        public double SiteLatitude
+        {
+            get
             {
-               case TelescopeAxes.axisPrimary:
-                  isRASlewing = (rate != 0);
-                  Controller.MCAxisSlew(AxisId.Axis1_RA, rate, Hemisphere);
-                  break;
-               case TelescopeAxes.axisSecondary:
-                  isDecSlewing = (rate != 0);
-                  Controller.MCAxisSlew(AxisId.Axis2_Dec, rate, Hemisphere);
-                  break;
-               default:
-                  throw new ASCOM.InvalidValueException("Tertiary axis is not supported by MoveAxis command");
+                lock (Controller)
+                {
+                    LogMessage("SiteLatitude", "Get {0}", Controller.ObservatoryLatitude.Value);
+                    return Controller.ObservatoryLatitude.Value;
+                }
             }
-            _IsMoveAxisSlewing = (isRASlewing || isDecSlewing);
-         }
-      }
-
-      public void Park()
-      {
-         LogMessage("Command", "Park");
-         ParkInternal();
-      }
-
-      public void PulseGuide(GuideDirections direction, int duration)
-      {
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
-         }
-         if (Slewing)
-         {
-            // Just return if slewing
-            return;
-         }
-         lock (Controller)
-         {
-            LogMessage("Command", "PulseGuide {0} {1}", direction, duration);
-            if (duration > 0)
+            set
             {
-               StartPulseGuiding(direction, duration);
+                lock (Controller)
+                {
+                    LogMessage("SiteLatitude", "Set {0}", value);
+                    if (value < -90.0 || value > 90.0)
+                    {
+                        throw new ASCOM.InvalidValueException("Site Latitude must be in the range -90 to 90.");
+                    }
+                    if (Controller.ObservatoryLatitude.Value == value)
+                    {
+                        return;
+                    }
+                    Controller.ObservatoryLatitude = value;
+                    RelocateMounts(value, SiteLongitude, SiteElevation);
+                }
             }
-            else
+        }
+
+
+        public double SiteLongitude
+        {
+            get
             {
-               StopPulseGuiding(direction);
+                lock (Controller)
+                {
+                    LogMessage("SiteLongitude", "Get {0}", Controller.ObservatoryLongitude.Value);
+                    return Controller.ObservatoryLongitude.Value;
+                }
             }
-         }
-      }
-
-      public double RightAscension
-      {
-         get
-         {
-            lock (Controller)
+            set
             {
-               double rightAscension = _CurrentPosition.Equatorial.RightAscension.Value;
-               LogMessage("RightAscension", "Get - {0}", _AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension));
-               // System.Diagnostics.Debug.WriteLine($"RightAscension Get - {_AscomToolsCurrentPosition.Util.HoursToHMS(rightAscension)}");
-               return rightAscension;
+                lock (Controller)
+                {
+                    LogMessage("SiteLongitude", "Set {0}", value);
+                    if (value < -180.0 || value > 180.0)
+                    {
+                        throw new ASCOM.InvalidValueException("Site Longitude must be in the range -180.0 to 180.0.");
+                    }
+                    if (Controller.ObservatoryLongitude.Value == value)
+                    {
+                        return;
+                    }
+                    Controller.ObservatoryLongitude = value;
+                    RelocateMounts(SiteLatitude, value, SiteElevation);
+                }
             }
-         }
-      }
+        }
 
 
 
-      public double RightAscensionRate
-      {
-         get
-         {
-            LogMessage("RightAscensionRate", "Get - {0}", Settings.RightAscensionRate);
-            return Settings.RightAscensionRate;
-         }
-         set
-         {
-            LogMessage("RightAscensionRate", "Set - {0}", _AscomToolsCurrentPosition.Util.DegreesToDMS(value, ":", ":"));
-            if (value == Settings.RightAscensionRate)
+
+
+        public short SlewSettleTime
+        {
+            get
             {
-               return;
+                tl.LogMessage("SlewSettleTime Get", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("SlewSettleTime", false);
             }
-            Settings.RightAscensionRate = value;
-            SaveSettings();
-            if (Tracking)
+            set
             {
-               StartTracking();  // Restart tracking with the new rate.
+                tl.LogMessage("SlewSettleTime Set", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("SlewSettleTime", true);
             }
-         }
-      }
+        }
 
-      public void SetPark()
-      {
-         LogMessage("Command", "SetPark");
-         _ParkedAxisPosition = _CurrentPosition.ObservedAxes;
-         Settings.AxisParkPosition = _ParkedAxisPosition;
-         SaveSettings();
-      }
+        public void SlewToAltAz(double Azimuth, double Altitude)
+        {
+            tl.LogMessage("SlewToAltAz", "Not implemented");
+            throw new ASCOM.MethodNotImplementedException("SlewToAltAz");
+        }
 
-      public PierSide SideOfPier
-      {
-         get
-         {
-            PierSide value = _CurrentPosition.GetPointingSideOfPier(false);
-            LogMessage("SideOfPier", "Get - {0}", value);
-            return value;
-         }
-         set
-         {
-            LogMessage("SideOfPier Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SideOfPier", true);
-         }
-      }
+        public void SlewToAltAzAsync(double Azimuth, double Altitude)
+        {
+            tl.LogMessage("SlewToAltAzAsync", "Not implemented");
+            throw new ASCOM.MethodNotImplementedException("SlewToAltAzAsync");
+        }
 
-      public double SiderealTime
-      {
-         get
-         {
-            lock (Controller)
+        public void SlewToCoordinates(double rightAscension, double declination)
+        {
+            if (Settings.ParkStatus != ParkStatus.Unparked)
             {
-               double lst = _CurrentPosition.LocalApparentSiderialTime;
-               tl.LogMessage("SiderealTime", "Get - " + _AscomToolsCurrentPosition.Util.HoursToHMS(lst));
-               return lst;
+                throw new ASCOM.ParkedException("The mount is currently parked or parking.");
             }
-         }
-      }
-
-      public double SiteElevation
-      {
-         get
-         {
-            lock (Controller)
+            if (!Tracking)
             {
-               LogMessage("SiteElevation", "Get {0}", Controller.ObservatoryElevation);
-               return Controller.ObservatoryElevation;
+                throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
             }
-         }
-         set
-         {
-            lock (Controller)
+            LogMessage("Command", "SlewToCoordinates RA:{0}, Dec: {0}", rightAscension, declination);
+            SlewToEquatorialCoordinate(rightAscension, declination);
+            // Block until the slew completes
+            while (_IsSlewing)
             {
-               LogMessage("SiteElevation", "Set {0}", value);
-               if (value < -300.0 || value > 10000.0)
-               {
-                  throw new ASCOM.InvalidValueException("SiteElevation must be between -300m and 10,000m");
-               }
-               if (Controller.ObservatoryElevation == value)
-               {
-                  return;
-               }
-               Controller.ObservatoryElevation = value;
-               RelocateMounts(SiteLatitude, SiteLongitude, value);
+                Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
             }
-         }
-      }
-
-      public double SiteLatitude
-      {
-         get
-         {
-            lock (Controller)
+            // Refine the slew
+            SlewToEquatorialCoordinate(rightAscension, declination);
+            // Block until the slew completes
+            while (_IsSlewing)
             {
-               LogMessage("SiteLatitude", "Get {0}", Controller.ObservatoryLatitude.Value);
-               return Controller.ObservatoryLatitude.Value;
+                Thread.Sleep(1000);  // Allow time for main timer loop to update the axis state
             }
-         }
-         set
-         {
-            lock (Controller)
+
+        }
+
+        public void SlewToCoordinatesAsync(double rightAscension, double declination)
+        {
+            if (Settings.ParkStatus != ParkStatus.Unparked)
             {
-               LogMessage("SiteLatitude", "Set {0}", value);
-               if (value < -90.0 || value > 90.0)
-               {
-                  throw new ASCOM.InvalidValueException("Site Latitude must be in the range -90 to 90.");
-               }
-               if (Controller.ObservatoryLatitude.Value == value)
-               {
-                  return;
-               }
-               Controller.ObservatoryLatitude = value;
-               RelocateMounts(value, SiteLongitude, SiteElevation);
+                throw new ASCOM.ParkedException("The mount is currently parked or parking.");
             }
-         }
-      }
-
-
-      public double SiteLongitude
-      {
-         get
-         {
-            lock (Controller)
+            if (!Tracking)
             {
-               LogMessage("SiteLongitude", "Get {0}", Controller.ObservatoryLongitude.Value);
-               return Controller.ObservatoryLongitude.Value;
+                throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
             }
-         }
-         set
-         {
-            lock (Controller)
+            _RefineGoto = true;
+            LogMessage("Command", "SlewToCoordinatesAsync RA:{0}, Dec: {0}", rightAscension, declination);
+            SlewToEquatorialCoordinate(rightAscension, declination);
+        }
+
+        public void SlewToTarget()
+        {
+            if (Settings.ParkStatus != ParkStatus.Unparked)
             {
-               LogMessage("SiteLongitude", "Set {0}", value);
-               if (value < -180.0 || value > 180.0)
-               {
-                  throw new ASCOM.InvalidValueException("Site Longitude must be in the range -180.0 to 180.0.");
-               }
-               if (Controller.ObservatoryLongitude.Value == value)
-               {
-                  return;
-               }
-               Controller.ObservatoryLongitude = value;
-               RelocateMounts(SiteLatitude, value, SiteElevation);
+                throw new ASCOM.ParkedException("The mount is currently parked or parking.");
             }
-         }
-      }
-
-
-
-
-
-      public short SlewSettleTime
-      {
-         get
-         {
-            tl.LogMessage("SlewSettleTime Get", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SlewSettleTime", false);
-         }
-         set
-         {
-            tl.LogMessage("SlewSettleTime Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("SlewSettleTime", true);
-         }
-      }
-
-      public void SlewToAltAz(double Azimuth, double Altitude)
-      {
-         tl.LogMessage("SlewToAltAz", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SlewToAltAz");
-      }
-
-      public void SlewToAltAzAsync(double Azimuth, double Altitude)
-      {
-         tl.LogMessage("SlewToAltAzAsync", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SlewToAltAzAsync");
-      }
-
-      public void SlewToCoordinates(double rightAscension, double declination)
-      {
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
-         }
-         if (!Tracking)
-         {
-            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
-         }
-         LogMessage("Command", "SlewToCoordinates RA:{0}, Dec: {0}", rightAscension, declination);
-         SlewToEquatorialCoordinate(rightAscension, declination);
-         // Block until the slew completes
-         while (_IsSlewing)
-         {
-            Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
-         }
-         // Refine the slew
-         SlewToEquatorialCoordinate(rightAscension, declination);
-         // Block until the slew completes
-         while (_IsSlewing)
-         {
-            Thread.Sleep(1000);  // Allow time for main timer loop to update the axis state
-         }
-
-      }
-
-      public void SlewToCoordinatesAsync(double rightAscension, double declination)
-      {
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
-         }
-         if (!Tracking)
-         {
-            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
-         }
-         _RefineGoto = true;
-         LogMessage("Command", "SlewToCoordinatesAsync RA:{0}, Dec: {0}", rightAscension, declination);
-         SlewToEquatorialCoordinate(rightAscension, declination);
-      }
-
-      public void SlewToTarget()
-      {
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
-         }
-         if (!Tracking)
-         {
-            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
-         }
-         if (!_TargetRightAscension.HasValue)
-         {
-            throw new ASCOM.InvalidValueException("Target Right Ascension is not set.");
-         }
-         if (!_TargetDeclination.HasValue)
-         {
-            throw new ASCOM.InvalidValueException("Target Declination is not set.");
-         }
-         LogMessage("Command", "SlewToTarget", TargetRightAscension, TargetDeclination);
-         SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
-         // Block until the slew completes
-         while (_IsSlewing)
-         {
-            Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
-         }
-         // Refine the GOTO
-         SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
-         // Block until the slew completes
-         while (_IsSlewing)
-         {
-            Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
-         }
-
-      }
-
-      public void SlewToTargetAsync()
-      {
-         if (Settings.ParkStatus != ParkStatus.Unparked)
-         {
-            throw new ASCOM.ParkedException("The mount is currently parked or parking.");
-         }
-         if (!Tracking)
-         {
-            throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
-         }
-         if (!_TargetRightAscension.HasValue)
-         {
-            throw new ASCOM.InvalidValueException("Target Right Ascension is not set.");
-         }
-         if (!_TargetDeclination.HasValue)
-         {
-            throw new ASCOM.InvalidValueException("Target Declination is not set.");
-         }
-         LogMessage("Command", "SlewToTargetAsync", TargetRightAscension, TargetDeclination);
-         _RefineGoto = true;
-         SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
-      }
-
-      bool _IsSlewing;
-      bool _IsMoveAxisSlewing;
-
-      public bool Slewing
-      {
-         get
-         {
-            bool isSlewing = false;
-            switch (Settings.ParkStatus)
+            if (!Tracking)
             {
-               case ParkStatus.Unparked:
-                  isSlewing = _IsSlewing;
-                  if (!isSlewing)
-                  {
-                     isSlewing = _IsMoveAxisSlewing;
-                  }
-                  break;
-               case ParkStatus.Parked:
-               case ParkStatus.Unparking:
-                  isSlewing = false;
-                  break;
-               case ParkStatus.Parking:
-                  isSlewing = true;
-                  break;
+                throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
             }
-            LogMessage("Slewing", "Get - {0}", isSlewing);
-            return isSlewing;
-         }
-      }
-
-      public void SyncToAltAz(double Azimuth, double Altitude)
-      {
-         tl.LogMessage("SyncToAltAz", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SyncToAltAz");
-      }
-
-      public void SyncToCoordinates(double rightAscension, double declination)
-      {
-         LogMessage("COMMAND - ", "SyncToCoordinate({0},{1}", rightAscension, declination);
-         if (Settings.ParkStatus == ParkStatus.Unparked)
-         {
-            if (TrackingState == TrackingStatus.Off)
-            {
-               throw new ASCOM.InvalidOperationException("RaDec sync is not permitted if moumt is not Tracking.");
-            }
-            else
-            {
-               throw new ASCOM.MethodNotImplementedException("SyncToCoordinates");
-               //if (ValidateRADEC(rightAscension, declination))
-               //{
-               //   // TODO: HC.Add_Message("SynCoor: " & oLangDll.GetLangString(105) & "[ " & FmtSexa(RightAscension, False) & "] " & oLangDll.GetLangString(106) & "[ " & FmtSexa(Declination, True) & " ]")
-               //   if (SyncToRADEC(rightAscension, declination, SiteLongitude, Hemisphere))
-               //   {
-               //      // EQ_Beep(4)
-               //   }
-               //}
-               //else
-               //{
-               //   throw new ASCOM.InvalidValueException("Invalid value passed to SyncToCoordinates()");
-               //}
-            }
-         }
-         else
-         {
-            throw new ASCOM.InvalidOperationException("SyncToCoordinates() is not valid whilst the scope is parked.");
-         }
-
-      }
-
-      public void SyncToTarget()
-      {
-         tl.LogMessage("SyncToTarget", "Not implemented");
-         throw new ASCOM.MethodNotImplementedException("SyncToTarget");
-      }
-
-      private double? _TargetDeclination;
-      public double TargetDeclination
-      {
-         get
-         {
-            if (!_TargetDeclination.HasValue)
-            {
-               throw new ASCOM.InvalidOperationException("Target declination has not been set.");
-            }
-            LogMessage("TargetDeclination", " - Get {0}", _TargetDeclination.Value);
-            return _TargetDeclination.Value;
-         }
-         set
-         {
-            LogMessage("TargetDeclination", " - Set {0}", value);
-            if (value < -90.0 || value > 90.0)
-            {
-               throw new ASCOM.InvalidValueException("Target declination must be in the range -90.0 to 90.0.");
-            }
-            _TargetDeclination = value;
-         }
-      }
-
-      private double? _TargetRightAscension;
-      public double TargetRightAscension
-      {
-         get
-         {
             if (!_TargetRightAscension.HasValue)
             {
-               throw new ASCOM.InvalidOperationException("Target right ascention has not been set.");
+                throw new ASCOM.InvalidValueException("Target Right Ascension is not set.");
             }
-            LogMessage("TargetRightAscension", " - Get {0}", _TargetRightAscension.Value);
-            return _TargetRightAscension.Value;
-         }
-         set
-         {
-            LogMessage("TargetRightAscension", " - Set {0}", value);
-            if (value < 0.0 || value > 24.0)
+            if (!_TargetDeclination.HasValue)
             {
-               throw new ASCOM.InvalidValueException("Target right ascention must be in the range 0.0 to 24.0 hours.");
+                throw new ASCOM.InvalidValueException("Target Declination is not set.");
             }
-            _TargetRightAscension = value;
-         }
-      }
+            LogMessage("Command", "SlewToTarget", TargetRightAscension, TargetDeclination);
+            SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+            // Block until the slew completes
+            while (_IsSlewing)
+            {
+                Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
+            }
+            // Refine the GOTO
+            SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+            // Block until the slew completes
+            while (_IsSlewing)
+            {
+                Thread.Sleep(1000);// Allow time for main timer loop to update the axis state
+            }
 
-      public bool Tracking
-      {
-         get
-         {
-            bool tracking = (TrackingState != TrackingStatus.Off);
-            LogMessage("Tracking", "Get - {0}", tracking);
-            return tracking;
-         }
-         set
-         {
-            LogMessage("Tracking", "Set - {0}", value);
-            if (Settings.ParkStatus == ParkStatus.Unparked || (Settings.ParkStatus == ParkStatus.Parked && value))
+        }
+
+        public void SlewToTargetAsync()
+        {
+            if (Settings.ParkStatus != ParkStatus.Unparked)
             {
-               lock (Controller)
-               {
-                  if (value)
-                  {
-                     //if (Settings.DeclinationRate == 0)
-                     //{
-                     // track at sidereal
-                     StartTracking();   // This method takes into account RightAscensionRate as well.
-                     //}
-                     //else
-                     //{
-                     //   // DeclinationRate != 0.0 so tracking with both axes (i.e. custom tracking)
-                     //   StartCustomTracking();
-                     //   // track at custom rate
-                     //   //if (PECEnabled)
-                     //   //{
-                     //   //   PECStopTracking();
-                     //   //}
-                     //   // Call CustomMoveAxis(0, gRightAscensionRate, True, oLangDll.GetLangString(189))
-                     //   // Call CustomMoveAxis(1, gDeclinationRate, True, oLangDll.GetLangString(189))
-                     //}
-                  }
-                  else
-                  {
-                     Controller.MCAxisStop(AxisId.Both_Axes);
-                     // Announce tracking stopped
-                     Settings.TrackingState = TrackingStatus.Off;
-                     // not sure that we should be clearing the rate offests ASCOM Spec is no help
-                     SaveSettings();
-                  }
-               }
+                throw new ASCOM.ParkedException("The mount is currently parked or parking.");
+            }
+            if (!Tracking)
+            {
+                throw new ASCOM.InvalidValueException("Mount is not currently tracking.");
+            }
+            if (!_TargetRightAscension.HasValue)
+            {
+                throw new ASCOM.InvalidValueException("Target Right Ascension is not set.");
+            }
+            if (!_TargetDeclination.HasValue)
+            {
+                throw new ASCOM.InvalidValueException("Target Declination is not set.");
+            }
+            LogMessage("Command", "SlewToTargetAsync", TargetRightAscension, TargetDeclination);
+            _RefineGoto = true;
+            SlewToEquatorialCoordinate(TargetRightAscension, TargetDeclination);
+        }
+
+        bool _IsSlewing;
+        bool _IsMoveAxisSlewing;
+
+        public bool Slewing
+        {
+            get
+            {
+                bool isSlewing = false;
+                switch (Settings.ParkStatus)
+                {
+                    case ParkStatus.Unparked:
+                        isSlewing = _IsSlewing;
+                        if (!isSlewing)
+                        {
+                            isSlewing = _IsMoveAxisSlewing;
+                        }
+                        break;
+                    case ParkStatus.Parked:
+                    case ParkStatus.Unparking:
+                        isSlewing = false;
+                        break;
+                    case ParkStatus.Parking:
+                        isSlewing = true;
+                        break;
+                }
+                LogMessage("Slewing", "Get - {0}", isSlewing);
+                return isSlewing;
+            }
+        }
+
+        public void SyncToAltAz(double Azimuth, double Altitude)
+        {
+            tl.LogMessage("SyncToAltAz", "Not implemented");
+            throw new ASCOM.MethodNotImplementedException("SyncToAltAz");
+        }
+
+        public void SyncToCoordinates(double rightAscension, double declination)
+        {
+            LogMessage("COMMAND - ", "SyncToCoordinate({0},{1}", rightAscension, declination);
+            if (Settings.ParkStatus == ParkStatus.Unparked)
+            {
+                if (TrackingState == TrackingStatus.Off)
+                {
+                    throw new ASCOM.InvalidOperationException("RaDec sync is not permitted if moumt is not Tracking.");
+                }
+                else
+                {
+                    throw new ASCOM.MethodNotImplementedException("SyncToCoordinates");
+                    //if (ValidateRADEC(rightAscension, declination))
+                    //{
+                    //   // TODO: HC.Add_Message("SynCoor: " & oLangDll.GetLangString(105) & "[ " & FmtSexa(RightAscension, False) & "] " & oLangDll.GetLangString(106) & "[ " & FmtSexa(Declination, True) & " ]")
+                    //   if (SyncToRADEC(rightAscension, declination, SiteLongitude, Hemisphere))
+                    //   {
+                    //      // EQ_Beep(4)
+                    //   }
+                    //}
+                    //else
+                    //{
+                    //   throw new ASCOM.InvalidValueException("Invalid value passed to SyncToCoordinates()");
+                    //}
+                }
             }
             else
             {
-               throw new ASCOM.ParkedException("Tracking change not allowed when mount is parked.");
+                throw new ASCOM.InvalidOperationException("SyncToCoordinates() is not valid whilst the scope is parked.");
             }
-         }
-      }
 
-      public DriveRates TrackingRate
-      {
-         get
-         {
-            LogMessage("TrackingRate", "Get - {0}", Settings.TrackingRate);
-            return Settings.TrackingRate;
-         }
-         set
-         {
-            LogMessage("TrackingRate", "Set - {0}", value);
-            if (Tracking && value == Settings.TrackingRate)
+        }
+
+        public void SyncToTarget()
+        {
+            tl.LogMessage("SyncToTarget", "Not implemented");
+            throw new ASCOM.MethodNotImplementedException("SyncToTarget");
+        }
+
+        private double? _TargetDeclination;
+        public double TargetDeclination
+        {
+            get
             {
-               return;
+                if (!_TargetDeclination.HasValue)
+                {
+                    throw new ASCOM.InvalidOperationException("Target declination has not been set.");
+                }
+                LogMessage("TargetDeclination", " - Get {0}", _TargetDeclination.Value);
+                return _TargetDeclination.Value;
             }
-            switch (value)
+            set
             {
-               case DriveRates.driveSidereal:
-               case DriveRates.driveLunar:
-               case DriveRates.driveSolar:
-               case DriveRates.driveKing:
-                  Settings.TrackingRate = value;
-                  SaveSettings();
-                  break;
-               default:
-                  throw new ASCOM.InvalidValueException("TrackingRate");
+                LogMessage("TargetDeclination", " - Set {0}", value);
+                if (value < -90.0 || value > 90.0)
+                {
+                    throw new ASCOM.InvalidValueException("Target declination must be in the range -90.0 to 90.0.");
+                }
+                _TargetDeclination = value;
             }
-         }
-      }
+        }
 
-
-      public ITrackingRates TrackingRates
-      {
-         get
-         {
-            ITrackingRates trackingRates = new TrackingRates();
-            LogMessage("TrackingRates", "Get - ");
-            foreach (DriveRates driveRate in trackingRates)
+        private double? _TargetRightAscension;
+        public double TargetRightAscension
+        {
+            get
             {
-               LogMessage("TrackingRates", "Get - {0}", driveRate);
+                if (!_TargetRightAscension.HasValue)
+                {
+                    throw new ASCOM.InvalidOperationException("Target right ascention has not been set.");
+                }
+                LogMessage("TargetRightAscension", " - Get {0}", _TargetRightAscension.Value);
+                return _TargetRightAscension.Value;
             }
-            return trackingRates;
-         }
-      }
-
-      public DateTime UTCDate
-      {
-         get
-         {
-            DateTime utcDate = DateTime.UtcNow;
-            LogMessage("UTCDate", "Get - {0:}", utcDate.ToString("MM/dd/yy HH:mm:ss"));
-            return utcDate;
-         }
-         set
-         {
-            LogMessage("UTCDate Set", "Not implemented");
-            throw new ASCOM.PropertyNotImplementedException("UTCDate", true);
-         }
-      }
-
-      public void Unpark()
-      {
-         LogMessage("COMMAND", "Unpark");
-         if (Settings.ParkStatus == ParkStatus.Parked)
-         {
-            lock (Controller)
+            set
             {
-               //TODO: Sort out whether tracking should be restarted and restart if necessary.
-               Settings.ParkStatus = ParkStatus.Unparked;
-               SaveSettings();
+                LogMessage("TargetRightAscension", " - Set {0}", value);
+                if (value < 0.0 || value > 24.0)
+                {
+                    throw new ASCOM.InvalidValueException("Target right ascention must be in the range 0.0 to 24.0 hours.");
+                }
+                _TargetRightAscension = value;
             }
-         }
-      }
+        }
 
-#endregion
+        public bool Tracking
+        {
+            get
+            {
+                bool tracking = (TrackingState != TrackingStatus.Off);
+                LogMessage("Tracking", "Get - {0}", tracking);
+                return tracking;
+            }
+            set
+            {
+                LogMessage("Tracking", "Set - {0}", value);
+                if (Settings.ParkStatus == ParkStatus.Unparked || (Settings.ParkStatus == ParkStatus.Parked && value))
+                {
+                    lock (Controller)
+                    {
+                        if (value)
+                        {
+                            //if (Settings.DeclinationRate == 0)
+                            //{
+                            // track at sidereal
+                            StartTracking();   // This method takes into account RightAscensionRate as well.
+                                               //}
+                                               //else
+                                               //{
+                                               //   // DeclinationRate != 0.0 so tracking with both axes (i.e. custom tracking)
+                                               //   StartCustomTracking();
+                                               //   // track at custom rate
+                                               //   //if (PECEnabled)
+                                               //   //{
+                                               //   //   PECStopTracking();
+                                               //   //}
+                                               //   // Call CustomMoveAxis(0, gRightAscensionRate, True, oLangDll.GetLangString(189))
+                                               //   // Call CustomMoveAxis(1, gDeclinationRate, True, oLangDll.GetLangString(189))
+                                               //}
+                        }
+                        else
+                        {
+                            Controller.MCAxisStop(AxisId.Both_Axes);
+                            // Announce tracking stopped
+                            Settings.TrackingState = TrackingStatus.Off;
+                            // not sure that we should be clearing the rate offests ASCOM Spec is no help
+                            SaveSettings();
+                        }
+                    }
+                }
+                else
+                {
+                    throw new ASCOM.ParkedException("Tracking change not allowed when mount is parked.");
+                }
+            }
+        }
 
-#region Private properties and methods
+        public DriveRates TrackingRate
+        {
+            get
+            {
+                LogMessage("TrackingRate", "Get - {0}", Settings.TrackingRate);
+                return Settings.TrackingRate;
+            }
+            set
+            {
+                LogMessage("TrackingRate", "Set - {0}", value);
+                if (Tracking && value == Settings.TrackingRate)
+                {
+                    return;
+                }
+                switch (value)
+                {
+                    case DriveRates.driveSidereal:
+                    case DriveRates.driveLunar:
+                    case DriveRates.driveSolar:
+                    case DriveRates.driveKing:
+                        Settings.TrackingRate = value;
+                        SaveSettings();
+                        break;
+                    default:
+                        throw new ASCOM.InvalidValueException("TrackingRate");
+                }
+            }
+        }
 
-      // here are some useful properties and methods that can be used as required
-      // to help with driver development
 
-      /// <summary>
-      /// Returns true if there is a valid connection to the driver hardware
-      /// </summary>
-      private bool IsConnected { get; set; }
+        public ITrackingRates TrackingRates
+        {
+            get
+            {
+                ITrackingRates trackingRates = new TrackingRates();
+                LogMessage("TrackingRates", "Get - ");
+                foreach (DriveRates driveRate in trackingRates)
+                {
+                    LogMessage("TrackingRates", "Get - {0}", driveRate);
+                }
+                return trackingRates;
+            }
+        }
 
-      /// <summary>
-      /// Use this function to throw an exception if we aren't connected to the hardware
-      /// </summary>
-      /// <param name="message"></param>
-      private void CheckConnected(string message)
-      {
-         if (!IsConnected)
-         {
-            throw new ASCOM.NotConnectedException(message);
-         }
-      }
+        public DateTime UTCDate
+        {
+            get
+            {
+                DateTime utcDate = DateTime.UtcNow;
+                LogMessage("UTCDate", "Get - {0:}", utcDate.ToString("MM/dd/yy HH:mm:ss"));
+                return utcDate;
+            }
+            set
+            {
+                LogMessage("UTCDate Set", "Not implemented");
+                throw new ASCOM.PropertyNotImplementedException("UTCDate", true);
+            }
+        }
+
+        public void Unpark()
+        {
+            LogMessage("COMMAND", "Unpark");
+            if (Settings.ParkStatus == ParkStatus.Parked)
+            {
+                lock (Controller)
+                {
+                    //TODO: Sort out whether tracking should be restarted and restart if necessary.
+                    Settings.ParkStatus = ParkStatus.Unparked;
+                    SaveSettings();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Private properties and methods
+
+        // here are some useful properties and methods that can be used as required
+        // to help with driver development
+
+        /// <summary>
+        /// Returns true if there is a valid connection to the driver hardware
+        /// </summary>
+        private bool IsConnected { get; set; }
+
+        /// <summary>
+        /// Use this function to throw an exception if we aren't connected to the hardware
+        /// </summary>
+        /// <param name="message"></param>
+        private void CheckConnected(string message)
+        {
+            if (!IsConnected)
+            {
+                throw new ASCOM.NotConnectedException(message);
+            }
+        }
 
 
-      private void SaveSettings()
-      {
-         TelescopeSettingsProvider.Current.SaveSettings();
-      }
+        private void SaveSettings()
+        {
+            TelescopeSettingsProvider.Current.SaveSettings();
+        }
 
-      /// <summary>
-      /// Log helper function that takes formatted strings and arguments
-      /// </summary>
-      /// <param name="identifier"></param>
-      /// <param name="message"></param>
-      /// <param name="args"></param>
-      internal static void LogMessage(string identifier, string message)
-      {
-         tl.LogMessage(identifier, message);
-         // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
-      }
+        /// <summary>
+        /// Log helper function that takes formatted strings and arguments
+        /// </summary>
+        /// <param name="identifier"></param>
+        /// <param name="message"></param>
+        /// <param name="args"></param>
+        internal static void LogMessage(string identifier, string message)
+        {
+            tl.LogMessage(identifier, message);
+            // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
+        }
 
-      /// <summary>
-      /// Log helper function that takes formatted strings and arguments
-      /// </summary>
-      /// <param name="identifier"></param>
-      /// <param name="message"></param>
-      /// <param name="args"></param>
-      internal static void LogMessage(string identifier, string message, params object[] args)
-      {
-         string msg;
-         if (args != null && args.Length > 0)
-         {
-            msg = string.Format(message, args);
-         }
-         else
-         {
-            msg = message;
-         }
-         tl.LogMessage(identifier, msg);
-         // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
-      }
-#endregion
-   }
+        /// <summary>
+        /// Log helper function that takes formatted strings and arguments
+        /// </summary>
+        /// <param name="identifier"></param>
+        /// <param name="message"></param>
+        /// <param name="args"></param>
+        internal static void LogMessage(string identifier, string message, params object[] args)
+        {
+            string msg;
+            if (args != null && args.Length > 0)
+            {
+                msg = string.Format(message, args);
+            }
+            else
+            {
+                msg = message;
+            }
+            tl.LogMessage(identifier, msg);
+            // System.Diagnostics.Debug.WriteLine($"{identifier}: {msg}");
+        }
+        #endregion
+    }
 }

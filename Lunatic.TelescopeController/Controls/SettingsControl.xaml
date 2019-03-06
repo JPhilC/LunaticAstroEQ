@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              xmlns:local="clr-namespace:Lunatic.TelescopeController.Controls"
              mc:Ignorable="d"  
-             d:DesignHeight="300" d:DesignWidth="300">
+             d:DesignHeight="300" d:DesignWidth="450">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
     <GroupBox Header="Settings" Template="{StaticResource LunaticGroupBoxControlTemplate}">
         <Grid>
             <ScrollViewer Margin="0,0,0,0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <xctk:PropertyGrid x:Name="propertyGrid" Width="500"
+                <xctk:PropertyGrid x:Name="propertyGrid" MinWidth="475"
                                SelectedObject="{Binding}"
                                EditorDefinitions="{StaticResource PropertyGridPropertyEditors}"
                                PreparePropertyItem="propertyGrid_PreparePropertyItem"

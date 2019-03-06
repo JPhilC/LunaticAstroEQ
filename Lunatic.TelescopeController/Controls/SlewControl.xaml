@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                     </Grid.RowDefinitions>
                     <TextBlock>RA Rate</TextBlock>
                     <Slider Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" Orientation="Vertical" 
-                            Minimum="1" Maximum="800" Value="{Binding Settings.SlewRatePreset.RARate}"/>
+                            Minimum="1" Maximum="{Binding MaxRASlewRate}" Value="{Binding Settings.SlewRatePreset.RARate}"/>
                     <TextBlock Grid.Row="2" Margin="0,2,0,0"
                                Text="{Binding Settings.SlewRatePreset.RARate, Mode=OneWay}" Style="{StaticResource RedLEDValue}" MinWidth="30" Width="30" />
                 </Grid>
@@ -83,7 +83,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                     </Grid.RowDefinitions>
                     <TextBlock>DEC Rate</TextBlock>
                     <Slider Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" Orientation="Vertical" 
-                            Minimum ="1" Maximum="800" Value="{Binding Settings.SlewRatePreset.DecRate}"/>
+                            Minimum ="1" Maximum="{Binding MaxDecSlewRate}" Value="{Binding Settings.SlewRatePreset.DecRate}"/>
                     <TextBlock Grid.Row="2" Margin="0,2,0,0"
                                Text="{Binding Settings.SlewRatePreset.DecRate, Mode=OneWay}" Style="{StaticResource RedLEDValue}" MinWidth="30" Width="30" />
                 </Grid>
@@ -103,7 +103,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                 <TextBlock Grid.Column="4">DEC Reverse</TextBlock>
             </Grid>
             <!-- Tracking controls -->
-            <Grid Grid.Row="2" Margin="0,5,0,0">
+            <!--<Grid Grid.Row="2" Margin="0,5,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="5" />
@@ -128,7 +128,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                 </Grid.RowDefinitions>
                 <TextBlock HorizontalAlignment="Right">Some number</TextBlock>
                 <Slider Grid.Row="1"></Slider>
-            </Grid>
+            </Grid>-->
         </Grid>
     </GroupBox>
 </UserControl>

@@ -92,7 +92,6 @@ namespace ASCOM.LunaticAstroEQ.Core
       public const double ARCSECSTEP = 0.144;                  // .144 arcesconds / step
 
       // public const double SID_RATE = 15.041067;             // use SIDEREAL_RATE_ARCSECS instead
-      public const double MAX_RATE = (800 * SIDEREAL_RATE_ARCSECS);
 
       public const double SECONDS_PER_SIDERIAL_DAY = 86164.0905;
 
