@@ -75,10 +75,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
 
             <TextBlock Grid.Column="0" Grid.Row="10" Text="PierSide" Style="{StaticResource RedLEDLabelLarge}"/>
             <TextBlock Grid.Column="2" Grid.Row="10" Text="{Binding PierSide}" Style="{StaticResource RedLEDValueLarge}"/>
-
-            <TextBlock Grid.Column="0"  Grid.ColumnSpan="3"
-                       Grid.Row="0" Grid.RowSpan="11"
-                       Text="PARKED" Style="{StaticResource ParkedTextBlock}" Visibility="{Binding IsParked, Converter={StaticResource BooleanToVisiblityConverter}}" RenderTransformOrigin="0.5,0.5" />
         </Grid>
     </GroupBox>
 </UserControl>

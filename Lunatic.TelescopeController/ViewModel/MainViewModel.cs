@@ -115,6 +115,7 @@ namespace Lunatic.TelescopeController.ViewModel
             }
         }
 
+        private bool _IsParked;
         public bool IsParked
         {
             get
@@ -126,7 +127,15 @@ namespace Lunatic.TelescopeController.ViewModel
                 }
                 else
                 {
-                    return ((_Driver != null) && _Driver.AtPark);
+                    return _IsParked;
+                }
+            }
+            set
+            {
+                if (Set(ref _IsParked, value))
+                {
+                    ParkCommand.RaiseCanExecuteChanged();
+                    RefreshParkStatus();
                 }
             }
         }
@@ -770,6 +779,7 @@ namespace Lunatic.TelescopeController.ViewModel
                 _DisplayTimer.Interval = TimeSpan.FromMilliseconds(500);
                 _DisplayTimer.Tick += new EventHandler(this.DisplayTimer_Tick);
 
+                MessengerInstance.Register<AnnounceNotificationMessage>(this, message => { Announce(message.Notification);  });
             }
 
         }
@@ -825,12 +835,7 @@ namespace Lunatic.TelescopeController.ViewModel
                         // TODO: Log message
                     }
                 }
-                if (Driver.AtPark != IsParked)
-                {
-                    RaisePropertyChanged("IsParked");
-                    ParkCommand.RaiseCanExecuteChanged();
-                }
-                RefreshParkStatus();
+                IsParked = Driver.AtPark;
 
                 RaisePropertyChanged("IsSlewing");
                 RaiseCanExecuteChanged();
@@ -895,12 +900,7 @@ namespace Lunatic.TelescopeController.ViewModel
                         // TODO: Log message
                     }
                 }
-                if (Driver.AtPark != IsParked)
-                {
-                    RaisePropertyChanged("IsParked");
-                    ParkCommand.RaiseCanExecuteChanged();
-                }
-                RefreshParkStatus();
+                IsParked = Driver.AtPark;
 
                 RaisePropertyChanged("IsSlewing");
                 RaiseCanExecuteChanged();

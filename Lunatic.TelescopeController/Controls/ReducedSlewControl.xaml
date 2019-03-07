@@ -57,12 +57,32 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <!-- Reverse check boxes -->
-                <CheckBox ></CheckBox>
+                <CheckBox IsChecked="{Binding Settings.ReverseRA}"></CheckBox>
                 <TextBlock Grid.Column="2">RA Reverse</TextBlock>
-                <CheckBox Grid.Row="1" ></CheckBox>
+                <CheckBox Grid.Row="1" IsChecked="{Binding Settings.ReverseDec}"></CheckBox>
                 <TextBlock Grid.Row="1" Grid.Column="2">DEC Reverse</TextBlock>
-                <ComboBox Grid.Row="3" Grid.ColumnSpan="3" HorizontalAlignment="Left" Width="30" />
+                <ComboBox Grid.Row="3" Grid.ColumnSpan="3" HorizontalAlignment="Left" Width="40"
+                          ItemsSource="{Binding Settings.SlewRatePresets}"
+                          SelectedItem="{Binding Settings.SlewRatePreset}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Rate}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </Grid>
+            <TextBlock Grid.Column="0"  Grid.ColumnSpan="3"
+                       Grid.Row="0" Grid.RowSpan="3"
+                       Text="PARKED" Style="{StaticResource ParkedTextBlock}" Visibility="{Binding IsParked, Converter={StaticResource BooleanToVisiblityConverter}}" 
+                       RenderTransformOrigin="0.5,0.5" 
+                       >
+                <TextBlock.RenderTransform>
+                    <RotateTransform Angle="-20" />
+                </TextBlock.RenderTransform>
+            </TextBlock>
+
         </Grid>
     </GroupBox>
 </UserControl>

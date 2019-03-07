@@ -126,6 +126,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Classes\AnnounceNotificationMessage.cs" />
     <Compile Include="Classes\Converters\DisplayModeToBooleanConverter.cs" />
     <Compile Include="Classes\Converters\ReversedBooleanToVisibilityConverter.cs" />
     <Compile Include="Classes\Enums.cs" />

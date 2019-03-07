@@ -79,7 +79,7 @@
             <TransformGroup>
                 <ScaleTransform/>
                 <SkewTransform/>
-                <RotateTransform Angle="-45"/>
+                <RotateTransform Angle="-30"/>
                 <TranslateTransform/>
             </TransformGroup>
         </Setter.Value>
