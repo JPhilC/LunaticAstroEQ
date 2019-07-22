@@ -33,6 +33,8 @@ using Microsoft.Practices.ServiceLocation;
 using System;
 using System.Resources;
 using System.Reflection;
+using System.ComponentModel;
+using System.Windows;
 
 namespace Lunatic.TelescopeController.ViewModel
 {
@@ -60,11 +62,11 @@ namespace Lunatic.TelescopeController.ViewModel
       /// <summary>
       /// Initializes a new instance of the ViewModelLocator class.
       /// </summary>
-      public ViewModelLocator()
+      static ViewModelLocator()
       {
          ServiceLocator.SetLocatorProvider(() => SimpleIoc.Default);
 
-         if (ViewModelBase.IsInDesignModeStatic)
+         if (DesignerProperties.GetIsInDesignMode(new DependencyObject()))
          {
             // Create design time view services and models
             SimpleIoc.Default.Register<ISettingsProvider<TelescopeControlSettings>, SettingsProvider>();
@@ -78,7 +80,7 @@ namespace Lunatic.TelescopeController.ViewModel
          SimpleIoc.Default.Register<MainViewModel>();
       }
 
-
+      public ViewModelLocator() { }
 
       public MainViewModel Main
       {

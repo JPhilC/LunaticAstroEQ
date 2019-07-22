@@ -94,14 +94,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <localcontrols:ReducedSlewControl Grid.Row="0" Visibility="{Binding ReducedSlewVisibility}" IsEnabled="{Binding IsConnected}"/>
                 <localcontrols:MountPositionControl Grid.Row="1" Visibility="{Binding MountPositionVisibility}" IsEnabled="{Binding IsConnected}"/>
                 <localcontrols:AxisPositionControl Grid.Row="1" Visibility="{Binding AxisPositionVisibility}" IsEnabled="{Binding IsConnected}"/>
                 <localcontrols:SlewControl Grid.Row="2" Visibility="{Binding SlewVisibility}" IsEnabled="{Binding IsConnected}"/>
                 <localcontrols:TrackingControl Grid.Row="3" Visibility="{Binding TrackingVisibility}" IsEnabled="{Binding IsConnected}"/>
-                <localcontrols:ParkControl Grid.Row="4" Visibility="{Binding ParkStatusVisibility}" IsEnabled="{Binding IsConnected}"/>
+                <localcontrols:ParkControl Grid.Row="4" Visibility="{Binding ParkStatusVisibility}" IsEnabled="{Binding IsConnected}" VerticalAlignment="Top"/>
                 <Expander Grid.RowSpan="5" Grid.Column="1"
                           ExpandDirection="Right"
                           Visibility="{Binding ExpanderVisibility}">
