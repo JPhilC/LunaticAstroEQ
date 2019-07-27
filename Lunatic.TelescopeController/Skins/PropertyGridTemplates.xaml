@@ -37,6 +37,7 @@
         </xctk:EditorTemplateDefinition>
     </xctk:EditorDefinitionCollection>
 
+
     <DataTemplate x:Key="SiteDataTemplate">
         <xctk:PropertyGrid
                                 SelectedObject="{Binding Value}"
@@ -141,6 +142,135 @@
                  IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
     </DataTemplate>
 
+    <DataTemplate x:Key="GameControllerMappingCollectionDataTemplate">
+        <DockPanel>
+            <DataGrid ItemsSource="{Binding Value}"
+                      CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80"  Width="*" />
+                    <DataGridTextColumn Header="Button" Binding="{Binding Button}" IsReadOnly="True" MinWidth="80"   Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="GameControllerAxisRangeCollectionDataTemplate">
+        <DockPanel>
+            <DataGrid ItemsSource="{Binding Value}"
+                      CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  Width="*" />
+                    <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
+                    <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+    </DataTemplate>
+
+
+    <xctk:EditorDefinitionCollection x:Key="GameControllerPropertyGridPropertyEditors">
+        <xctk:EditorTemplateDefinition TargetProperties="Name">
+            <xctk:EditorTemplateDefinition.EditingTemplate>
+                <DataTemplate>
+                    <xctk:PropertyGridEditorTextBlock Text="{Binding Value}"/>
+                </DataTemplate>
+            </xctk:EditorTemplateDefinition.EditingTemplate>
+        </xctk:EditorTemplateDefinition>
+
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerMappingCollectionDataTemplate}">
+            <xctk:EditorTemplateDefinition.TargetProperties>
+                <xctk:TargetPropertyType Type="{x:Type ld:GameControllerMappingCollection}"/>
+            </xctk:EditorTemplateDefinition.TargetProperties>
+        </xctk:EditorTemplateDefinition>
+
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerAxisRangeCollectionDataTemplate}">
+            <xctk:EditorTemplateDefinition.TargetProperties>
+                <xctk:TargetPropertyType Type="{x:Type ld:GameControllerAxisRangeCollection}"/>
+            </xctk:EditorTemplateDefinition.TargetProperties>
+        </xctk:EditorTemplateDefinition>
+
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerMappingCollectionDataTemplate}"
+                                       TargetProperties="ActiveButtonMappings">
+        </xctk:EditorTemplateDefinition>
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerAxisRangeCollectionDataTemplate}"
+                                       TargetProperties="ActiveAxisRanges">
+        </xctk:EditorTemplateDefinition>
+
+    </xctk:EditorDefinitionCollection>
+
+    <DataTemplate x:Key="GameControllerDataTemplate">
+        <xctk:PropertyGrid
+                                SelectedObject="{Binding Value}"
+                                EditorDefinitions="{StaticResource GameControllerPropertyGridPropertyEditors}"
+                                AutoGenerateProperties="False"
+                                IsMiscCategoryLabelHidden="True"
+                                ShowSearchBox="False"
+                                ShowAdvancedOptions="False"
+                                ShowDescriptionByTooltip="True"
+                                ShowSortOptions="False"
+                                ShowSummary="False"
+                                ShowTitle="False" BorderThickness="0">
+            <xctk:PropertyGrid.PropertyDefinitions>
+                <xctk:PropertyDefinition TargetProperties="Name,
+                                         ActiveButtonMappings,
+                                         ActiveAxisRanges"/>
+            </xctk:PropertyGrid.PropertyDefinitions>
+        </xctk:PropertyGrid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="GameControllerCollectionDataTemplate">
+        <DockPanel>
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Value}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Expander Header="{Binding}"  Style="{StaticResource ExpanderStyle}">
+                            <Expander.HeaderTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="5" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="5" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <xctk:PropertyGridEditorCheckBox IsChecked="{Binding IsActiveGameController}" IsEnabled="{Binding IsConnected}"/>
+                                        <xctk:PropertyGridEditorTextBlock Grid.Column="2" Text="{Binding Name}" />
+                                        <Button Grid.Column="4" Content="Configure"
+                                                Style="{StaticResource HyperlinkLikeButton}"
+                                                Command="{Binding SelectedObject.ConfigureGameControllerCommand,
+                                                RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type xctk:PropertyGrid}}}"
+                                                CommandParameter="{Binding}" FontWeight="Normal"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </Expander.HeaderTemplate>
+                            <xctk:PropertyGrid
+                                SelectedObject="{Binding}"
+                                EditorDefinitions="{StaticResource GameControllerPropertyGridPropertyEditors}"
+                                AutoGenerateProperties="False"
+                                IsMiscCategoryLabelHidden="True"
+                                ShowSearchBox="False"
+                                ShowAdvancedOptions="False"
+                                ShowDescriptionByTooltip="True"
+                                ShowSortOptions="False"
+                                ShowSummary="False"
+                                ShowTitle="False" BorderThickness="0">
+                                <xctk:PropertyGrid.PropertyDefinitions>
+                                    <xctk:PropertyDefinition TargetProperties="Name,
+                                                             ActiveButtonMappings,
+                                                             ActiveAxisRanges"/>
+                                </xctk:PropertyGrid.PropertyDefinitions>
+                            </xctk:PropertyGrid>
+                        </Expander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DockPanel>
+    </DataTemplate>
 
     <xctk:EditorDefinitionCollection x:Key="PropertyGridPropertyEditors">
         <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource SiteCollectionDataTemplate}">
@@ -153,6 +283,20 @@
                 <xctk:TargetPropertyType Type="{x:Type ld:Site}"/>
             </xctk:EditorTemplateDefinition.TargetProperties>
         </xctk:EditorTemplateDefinition>
+        
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerCollectionDataTemplate}">
+            <xctk:EditorTemplateDefinition.TargetProperties>
+                <xctk:TargetPropertyType Type="{x:Type ld:GameControllerCollection}"/>
+            </xctk:EditorTemplateDefinition.TargetProperties>
+        </xctk:EditorTemplateDefinition>
+
+
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerDataTemplate}">
+            <xctk:EditorTemplateDefinition.TargetProperties>
+                <xctk:TargetPropertyType Type="{x:Type ld:GameController}"/>
+            </xctk:EditorTemplateDefinition.TargetProperties>
+        </xctk:EditorTemplateDefinition>
+        
         <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource VoiceNameDataTemplate}"
                                        TargetProperties="VoiceName">
         </xctk:EditorTemplateDefinition>

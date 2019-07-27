@@ -34,6 +34,10 @@ using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using CoreConstants = ASCOM.LunaticAstroEQ.Core.Constants;
 using System;
+using SharpDX.DirectInput;
+using System.Linq;
+using GalaSoft.MvvmLight.Command;
+using Lunatic.TelescopeController.Controls;
 
 namespace Lunatic.TelescopeController.ViewModel
 {
@@ -105,6 +109,7 @@ namespace Lunatic.TelescopeController.ViewModel
             RaisePropertyChanged();
          }
       }
+      
       #endregion
 
       #region Voice and announcement settings
@@ -233,62 +238,179 @@ namespace Lunatic.TelescopeController.ViewModel
             Announce("Voice speed is " + value.ToString(), true);
          }
       }
-        #endregion
+      #endregion
 
 
-        #region Tracking settings
-        private int _MaxRASlewRate = 1;
-        public int MaxRASlewRate
-        {
-            get
-            {
-                return _MaxRASlewRate;
-            }
-            set
-            {
-                Set(ref _MaxRASlewRate, value);
-            }
-        }
-        private int _MaxDecSlewRate = 1;
-        public int MaxDecSlewRate
-        {
-            get
-            {
-                return _MaxDecSlewRate;
-            }
-            set
-            {
-                Set(ref _MaxDecSlewRate, value);
-            }
-        }
+      #region Tracking settings
+      private int _MaxRASlewRate = 1;
+      public int MaxRASlewRate
+      {
+         get
+         {
+            return _MaxRASlewRate;
+         }
+         set
+         {
+            Set(ref _MaxRASlewRate, value);
+         }
+      }
+      private int _MaxDecSlewRate = 1;
+      public int MaxDecSlewRate
+      {
+         get
+         {
+            return _MaxDecSlewRate;
+         }
+         set
+         {
+            Set(ref _MaxDecSlewRate, value);
+         }
+      }
 
 
-        private void SetMaxSlewRates()
-        {
-            string result = Driver.CommandString("Lunatic:GetMaxRates", true);
-            string[] maxrates = result.Split(',');
-            MaxRASlewRate = (int)(Convert.ToDouble(maxrates[0]) / CoreConstants.SIDEREAL_RATE_DEGREES);
-            MaxDecSlewRate = (int)(Convert.ToDouble(maxrates[1]) / CoreConstants.SIDEREAL_RATE_DEGREES);
-            bool saveSettings = false;
-            foreach (SlewRatePreset rate in _Settings.SlewRatePresets)
+      private void SetMaxSlewRates()
+      {
+         string result = Driver.CommandString("Lunatic:GetMaxRates", true);
+         string[] maxrates = result.Split(',');
+         MaxRASlewRate = (int)(Convert.ToDouble(maxrates[0]) / CoreConstants.SIDEREAL_RATE_DEGREES);
+         MaxDecSlewRate = (int)(Convert.ToDouble(maxrates[1]) / CoreConstants.SIDEREAL_RATE_DEGREES);
+         bool saveSettings = false;
+         foreach (SlewRatePreset rate in _Settings.SlewRatePresets)
+         {
+            if (rate.RARate > MaxRASlewRate)
             {
-                if (rate.RARate > MaxRASlewRate)
-                {
-                    rate.RARate = MaxRASlewRate;
-                    saveSettings = true;
-                }
-                if (rate.DecRate > MaxDecSlewRate)
-                {
-                    rate.DecRate = MaxDecSlewRate;
-                    saveSettings = true;
-                }
+               rate.RARate = MaxRASlewRate;
+               saveSettings = true;
             }
-            if (saveSettings)
+            if (rate.DecRate > MaxDecSlewRate)
             {
-                SaveSettings();
+               rate.DecRate = MaxDecSlewRate;
+               saveSettings = true;
             }
-        }
-        #endregion
-        #endregion
-    }
+         }
+         if (saveSettings)
+         {
+            SaveSettings();
+         }
+      }
+      #endregion
+
+      #region Gamepad/Joystick control settings...
+
+      [Category("Game Controllers")]
+      [DisplayName("Active game controller")]
+      [Description("The currently selected telescope site.")]
+      [PropertyOrder(0)]
+      public GameController ActiveGameController
+      {
+         get
+         {
+            return _Settings.GameControllers.ActiveGameController;
+         }
+      }
+
+      [Category("Game Controllers")]
+      [DisplayName("Available game controllers")]
+      [Description("The list of available game controllers")]
+      [PropertyOrder(1)]
+      public GameControllerCollection GameControllers
+      {
+         get
+         {
+            return _Settings.GameControllers;
+         }
+      }
+
+      private bool _GameControllersAvailable = true;
+      public bool GameControllersAvailable
+      {
+         get
+         {
+            return _GameControllersAvailable;
+         }
+         private set
+         {
+            Set(ref _GameControllersAvailable, value);
+         }
+      }
+      public void GetAvailableGameControllers()
+      {
+         // Switch off active controller if it is not connected
+         Guid activeGameControllerId = Guid.Empty;
+         foreach (GameController gameController in _Settings.GameControllers)
+         {
+            if (gameController.IsActiveGameController)
+            {
+               activeGameControllerId = gameController.Id;
+            }
+            gameController.SetConnected(false, true);
+            gameController.InstanceGuid = Guid.Empty;
+         }
+
+         DirectInput directInput = new DirectInput();
+         foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
+         {
+            GameController existing = _Settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
+            if (existing == null)
+            {
+               _Settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.ProductName)
+               {
+                  InstanceGuid = deviceInstance.InstanceGuid
+               });
+            }
+            else
+            {
+               existing.SetConnected(true, true);
+               existing.InstanceGuid = deviceInstance.InstanceGuid;
+            }
+
+         }
+
+         // If Gamepad not found, look for a Joystick
+         foreach (var deviceInstance in directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices))
+         {
+            GameController existing = _Settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
+            if (existing == null)
+            {
+               _Settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.InstanceName)
+               {
+                  InstanceGuid = deviceInstance.InstanceGuid
+               });
+            }
+            else
+            {
+               existing.SetConnected(true, true);
+               existing.InstanceGuid = deviceInstance.InstanceGuid;
+            }
+         }
+
+         
+         GameControllersAvailable = _Settings.GameControllers.Any(c => c.IsConnected);
+         _Settings.GameControllers.SetActiveGameController(activeGameControllerId);
+      }
+
+      private RelayCommand<GameController> _ConfigureGameControllerCommand;
+
+      /// <summary>
+      /// Adds a new chart to the active model
+      /// </summary>
+      public RelayCommand<GameController> ConfigureGameControllerCommand
+      {
+         get
+         {
+            return _ConfigureGameControllerCommand
+                ?? (_ConfigureGameControllerCommand = new RelayCommand<GameController>(
+                                      (controller) =>
+                                      {
+                                         GameControllerViewModel vm = new GameControllerViewModel(controller);
+                                         GameControllerWindow contollerWindow = new GameControllerWindow(vm);
+                                         var result = contollerWindow.ShowDialog();
+                                      }
+
+                                      ));
+         }
+      }
+      #endregion
+      #endregion
+   }
 }

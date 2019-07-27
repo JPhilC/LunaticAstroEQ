@@ -103,6 +103,7 @@
     <Compile Include="Classes\Converters\GeoCoordinateTypeConverter.cs" />
     <Compile Include="Classes\Converters\HourAngleValueConverter.cs" />
     <Compile Include="Classes\CustomFormat.cs" />
+    <Compile Include="Classes\EnumHelper.cs" />
     <Compile Include="Classes\Enums.cs" />
     <Compile Include="Classes\Converters\EnumTypeConverter.cs" />
     <Compile Include="Classes\LunaticViewModelBase.cs" />
