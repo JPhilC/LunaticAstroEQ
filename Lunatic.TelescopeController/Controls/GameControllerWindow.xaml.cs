@@ -72,13 +72,21 @@ namespace Lunatic.TelescopeController.Controls
             });
          }
 
+         
+         
       }
 
+      
       protected override void OnClosed(EventArgs e)
       {
          base.OnClosed(e);
          _ViewModel.SaveAndCloseAction = null;
          _ViewModel.CancelAndCloseAction = null;
+      }
+
+      private async void Window_Loaded(object sender, RoutedEventArgs e)
+      {
+         await _ViewModel.StartGameControllerTask();
       }
 
       //private void InitializeController()

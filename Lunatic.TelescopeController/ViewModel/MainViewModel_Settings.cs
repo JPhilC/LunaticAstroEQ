@@ -109,7 +109,7 @@ namespace Lunatic.TelescopeController.ViewModel
             RaisePropertyChanged();
          }
       }
-      
+
       #endregion
 
       #region Voice and announcement settings
@@ -333,61 +333,6 @@ namespace Lunatic.TelescopeController.ViewModel
             Set(ref _GameControllersAvailable, value);
          }
       }
-      public void GetAvailableGameControllers()
-      {
-         // Switch off active controller if it is not connected
-         Guid activeGameControllerId = Guid.Empty;
-         foreach (GameController gameController in _Settings.GameControllers)
-         {
-            if (gameController.IsActiveGameController)
-            {
-               activeGameControllerId = gameController.Id;
-            }
-            gameController.SetConnected(false, true);
-            gameController.InstanceGuid = Guid.Empty;
-         }
-
-         DirectInput directInput = new DirectInput();
-         foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
-         {
-            GameController existing = _Settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
-            if (existing == null)
-            {
-               _Settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.ProductName)
-               {
-                  InstanceGuid = deviceInstance.InstanceGuid
-               });
-            }
-            else
-            {
-               existing.SetConnected(true, true);
-               existing.InstanceGuid = deviceInstance.InstanceGuid;
-            }
-
-         }
-
-         // If Gamepad not found, look for a Joystick
-         foreach (var deviceInstance in directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices))
-         {
-            GameController existing = _Settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
-            if (existing == null)
-            {
-               _Settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.InstanceName)
-               {
-                  InstanceGuid = deviceInstance.InstanceGuid
-               });
-            }
-            else
-            {
-               existing.SetConnected(true, true);
-               existing.InstanceGuid = deviceInstance.InstanceGuid;
-            }
-         }
-
-         
-         GameControllersAvailable = _Settings.GameControllers.Any(c => c.IsConnected);
-         _Settings.GameControllers.SetActiveGameController(activeGameControllerId);
-      }
 
       private RelayCommand<GameController> _ConfigureGameControllerCommand;
 
@@ -403,9 +348,15 @@ namespace Lunatic.TelescopeController.ViewModel
                                       (controller) =>
                                       {
                                          GameControllerViewModel vm = new GameControllerViewModel(controller);
-                                         GameControllerWindow contollerWindow = new GameControllerWindow(vm);
-                                         var result = contollerWindow.ShowDialog();
-                                      }
+                                         GameControllerWindow controllerWindow = new GameControllerWindow(vm);
+                                         controllerWindow.Owner = App.Current.MainWindow;
+                                         var result = controllerWindow.ShowDialog();
+                                         if (result.HasValue && result.Value)
+                                         {
+                                            SaveSettings();
+                                         }
+                                      },
+                                      (controller) => GameControllerService.IsInstanceConnected(controller.InstanceGuid)
 
                                       ));
          }

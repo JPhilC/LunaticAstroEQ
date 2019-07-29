@@ -133,8 +133,12 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Classes\AnnounceNotificationMessage.cs" />
+    <Compile Include="Classes\GameControllerService.cs" />
+    <Compile Include="Classes\NotificationMessages.cs" />
     <Compile Include="Classes\Converters\DisplayModeToBooleanConverter.cs" />
     <Compile Include="Classes\Converters\ReversedBooleanToVisibilityConverter.cs" />
+    <Compile Include="Classes\DeviceBroadcastStructures.cs" />
+    <Compile Include="Classes\DeviceNotificationService.cs" />
     <Compile Include="Classes\Enums.cs" />
     <Compile Include="Classes\SettingsProvider.cs" />
     <Compile Include="Classes\TelescopeControlSettings.cs" />

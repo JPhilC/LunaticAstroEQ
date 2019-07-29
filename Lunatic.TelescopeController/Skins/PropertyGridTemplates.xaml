@@ -60,7 +60,7 @@
             </xctk:PropertyGrid.PropertyDefinitions>
         </xctk:PropertyGrid>
     </DataTemplate>
-    
+
     <DataTemplate x:Key="SiteCollectionDataTemplate">
         <DockPanel>
             <Button DockPanel.Dock="Top" Content="Add Site" 
@@ -127,7 +127,7 @@
 
     <!-- Data templates -->
     <DataTemplate x:Key="VoiceNameDataTemplate">
-            <xctk:PropertyGridEditorComboBox SelectedItem="{Binding Value}"
+        <xctk:PropertyGridEditorComboBox SelectedItem="{Binding Value}"
                  ItemsSource="{Binding Path=DataContext.AvailableVoices, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"
                  IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
     </DataTemplate>
@@ -138,7 +138,7 @@
     </DataTemplate>
 
     <DataTemplate x:Key="VoiceRateDataTemplate">
-            <xctk:PropertyGridEditorIntegerUpDown Value="{Binding Value}" 
+        <xctk:PropertyGridEditorIntegerUpDown Value="{Binding Value}" 
                  IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
     </DataTemplate>
 
@@ -149,8 +149,8 @@
                           CanUserDeleteRows="False"
                           AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80"  Width="*" />
-                    <DataGridTextColumn Header="Button" Binding="{Binding Button}" IsReadOnly="True" MinWidth="80"   Width="*" />
+                    <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80" />
+                    <DataGridTextColumn Header="Button" Binding="{Binding Button}" IsReadOnly="True" MinWidth="80" />
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
@@ -163,9 +163,9 @@
                           CanUserDeleteRows="False"
                           AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  Width="*" />
-                    <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
-                    <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
+                    <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  />
+                    <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"/>
+                    <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80" />
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
@@ -203,7 +203,8 @@
     </xctk:EditorDefinitionCollection>
 
     <DataTemplate x:Key="GameControllerDataTemplate">
-        <xctk:PropertyGrid
+        <StackPanel>
+            <xctk:PropertyGrid
                                 SelectedObject="{Binding Value}"
                                 EditorDefinitions="{StaticResource GameControllerPropertyGridPropertyEditors}"
                                 AutoGenerateProperties="False"
@@ -214,12 +215,13 @@
                                 ShowSortOptions="False"
                                 ShowSummary="False"
                                 ShowTitle="False" BorderThickness="0">
-            <xctk:PropertyGrid.PropertyDefinitions>
-                <xctk:PropertyDefinition TargetProperties="Name,
+                <xctk:PropertyGrid.PropertyDefinitions>
+                    <xctk:PropertyDefinition TargetProperties="Name,
                                          ActiveButtonMappings,
                                          ActiveAxisRanges"/>
-            </xctk:PropertyGrid.PropertyDefinitions>
-        </xctk:PropertyGrid>
+                </xctk:PropertyGrid.PropertyDefinitions>
+            </xctk:PropertyGrid>
+        </StackPanel>
     </DataTemplate>
 
     <DataTemplate x:Key="GameControllerCollectionDataTemplate">
@@ -242,6 +244,7 @@
                                         <xctk:PropertyGridEditorTextBlock Grid.Column="2" Text="{Binding Name}" />
                                         <Button Grid.Column="4" Content="Configure"
                                                 Style="{StaticResource HyperlinkLikeButton}"
+                                                Visibility="{Binding IsConnected, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                 Command="{Binding SelectedObject.ConfigureGameControllerCommand,
                                                 RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type xctk:PropertyGrid}}}"
                                                 CommandParameter="{Binding}" FontWeight="Normal"/>
@@ -283,7 +286,7 @@
                 <xctk:TargetPropertyType Type="{x:Type ld:Site}"/>
             </xctk:EditorTemplateDefinition.TargetProperties>
         </xctk:EditorTemplateDefinition>
-        
+
         <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerCollectionDataTemplate}">
             <xctk:EditorTemplateDefinition.TargetProperties>
                 <xctk:TargetPropertyType Type="{x:Type ld:GameControllerCollection}"/>
@@ -296,7 +299,7 @@
                 <xctk:TargetPropertyType Type="{x:Type ld:GameController}"/>
             </xctk:EditorTemplateDefinition.TargetProperties>
         </xctk:EditorTemplateDefinition>
-        
+
         <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource VoiceNameDataTemplate}"
                                        TargetProperties="VoiceName">
         </xctk:EditorTemplateDefinition>

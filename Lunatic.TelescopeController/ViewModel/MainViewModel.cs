@@ -44,6 +44,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 using System.Globalization;
+using GalaSoft.MvvmLight.Messaging;
 
 namespace Lunatic.TelescopeController.ViewModel
 {
@@ -773,7 +774,8 @@ End Property
             #endregion
 
             #region Check for game controllers
-            GetAvailableGameControllers();
+            GameControllerService.UpdateAvailableGameControllers(_Settings);
+            GameControllersAvailable = _Settings.GameControllers.Any(c => c.IsConnected);
             #endregion
             // Get current temperature via call to OpenWeatherAPI
             RefreshTemperature();
@@ -783,6 +785,16 @@ End Property
             _DisplayTimer.Tick += new EventHandler(this.DisplayTimer_Tick);
 
             MessengerInstance.Register<AnnounceNotificationMessage>(this, message => { Announce(message.Notification); });
+            MessengerInstance.Register<ErrorNotificationMessage>(this, message => { MessageBox.Show(message.Notification, "Error", MessageBoxButton.OK, MessageBoxImage.Error); });
+            MessengerInstance.Register<NotificationMessage>(this, message => 
+            {
+               if (message.Notification == DeviceNotificationService.USBDeviceAddedNotification ||
+                     message.Notification == DeviceNotificationService.USBDeviceRemovedNotification)
+               {
+                  GameControllerService.UpdateAvailableGameControllers(_Settings, false);
+                  ConfigureGameControllerCommand.RaiseCanExecuteChanged(); ;
+               }
+            });
          }
 
       }
