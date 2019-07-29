@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
         d:DesignHeight="650" d:DesignWidth="750" 
         Background="Black"
         Icon="pack://application:,,,/Lunatic.TelescopeController;component/Skins/Images/LunaticMoon.ico"
+        Loaded="Windows_Loaded"
         Deactivated="Window_Deactivated"
         Closed="Window_Closed">
     <Window.Resources>

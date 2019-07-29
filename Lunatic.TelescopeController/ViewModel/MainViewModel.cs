@@ -776,7 +776,13 @@ End Property
             #region Check for game controllers
             GameControllerService.UpdateAvailableGameControllers(_Settings);
             GameControllersAvailable = _Settings.GameControllers.Any(c => c.IsConnected);
+            _Controller = _Settings.GameControllers.ActiveGameController;
+            if (_Controller != null)
+            {
+               ControllerConnected = GameControllerService.IsInstanceConnected(_Controller.InstanceGuid);
+            }
             #endregion
+
             // Get current temperature via call to OpenWeatherAPI
             RefreshTemperature();
 

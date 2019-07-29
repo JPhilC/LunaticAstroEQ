@@ -179,6 +179,7 @@
       <DependentUpon>TrackingControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="ViewModel\MainViewModel.cs" />
+    <Compile Include="ViewModel\MainViewModel_GameController.cs" />
     <Compile Include="ViewModel\MainViewModel_Settings.cs" />
     <Compile Include="ViewModel\GameControllerViewModel.cs" />
     <Compile Include="ViewModel\MapViewModel.cs" />

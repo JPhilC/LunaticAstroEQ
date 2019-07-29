@@ -519,7 +519,14 @@ namespace Lunatic.TelescopeController
    public enum GameControllerUpdateNotification
    {
       ConnectedChanged,
-      JoystickUpdate
+      JoystickUpdate,
+      CommandDown,
+      CommandUp,
+      AxisIncLow,
+      AxisIncHigh,
+      AxisDecLow,
+      AxisDecHigh,
+      AxisStop
    }
 
    public class GameControllerUpdate
@@ -528,10 +535,26 @@ namespace Lunatic.TelescopeController
 
       public JoystickUpdate Update { get; set; }
 
+      public GameControllerCommand Command { get; set; }
+
+      public GameControllerAxis Axis { get; set; }
+
       public GameControllerUpdate(JoystickUpdate update)
       {
          this.Notification = GameControllerUpdateNotification.JoystickUpdate;
          this.Update = update;
+      }
+
+      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerCommand command)
+      {
+         this.Notification = notification;
+         this.Command = command;
+      }
+
+      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerAxis axis)
+      {
+         this.Notification = notification;
+         this.Axis = axis;
       }
 
       public GameControllerUpdate()
@@ -602,16 +625,16 @@ namespace Lunatic.TelescopeController
          }
 
 
-         
+
          settings.GameControllers.SetActiveGameController(activeGameControllerId);
       }
-      
+
       public static bool IsInstanceConnected(Guid instanceGuid)
       {
          DirectInput directInput = new DirectInput();
          return directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices).Any(d => d.InstanceGuid == instanceGuid);
       }
-         
+
 
       public static void ListAvailableGameControllers()
       {
@@ -625,6 +648,6 @@ namespace Lunatic.TelescopeController
       }
 
 
-      
+
    }
 }

@@ -177,7 +177,7 @@ namespace Lunatic.TelescopeController.ViewModel
             {
                ProcessUpdate(value.Update);
             }
-            else
+            else if (value.Notification == GameControllerUpdateNotification.ConnectedChanged)
             {
                ControllerConnected = GameControllerService.IsInstanceConnected(_OriginalController.InstanceGuid);
             }
@@ -240,7 +240,7 @@ namespace Lunatic.TelescopeController.ViewModel
                               progress.Report(new GameControllerUpdate());
                            }
                         }
-                        catch (SharpDX.SharpDXException ex)
+                        catch (SharpDX.SharpDXException)
                         {
                            notResponding = true;
                            progress.Report(new GameControllerUpdate());
@@ -249,7 +249,7 @@ namespace Lunatic.TelescopeController.ViewModel
                         }
                      }
                   }
-                  catch (SharpDX.SharpDXException ex)
+                  catch (SharpDX.SharpDXException)
                   {
                      notResponding = true;
                      progress.Report(new GameControllerUpdate());

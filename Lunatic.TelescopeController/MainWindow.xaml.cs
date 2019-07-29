@@ -81,7 +81,13 @@ namespace Lunatic.TelescopeController
 
       private void Window_Closed(object sender, EventArgs e)
       {
+         _ViewModel.StopGameControllerTask();
          WeakEventManager<MainViewModel, System.ComponentModel.PropertyChangedEventArgs>.RemoveHandler(_ViewModel, "PropertyChanged", _ViewModel_PropertyChanged);
+      }
+
+      private async void Windows_Loaded(object sender, RoutedEventArgs e)
+      {
+         await _ViewModel.StartGameControllerTask();
       }
    }
 }
