@@ -240,7 +240,7 @@
                                             <ColumnDefinition Width="5" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <xctk:PropertyGridEditorCheckBox IsChecked="{Binding IsActiveGameController}" IsEnabled="{Binding IsConnected}"/>
+                                        <xctk:PropertyGridEditorCheckBox IsChecked="{Binding IsActiveGameController}" Visibility="{Binding IsConnected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         <xctk:PropertyGridEditorTextBlock Grid.Column="2" Text="{Binding Name}" />
                                         <Button Grid.Column="4" Content="Configure"
                                                 Style="{StaticResource HyperlinkLikeButton}"

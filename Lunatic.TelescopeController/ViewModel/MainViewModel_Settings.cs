@@ -299,13 +299,13 @@ namespace Lunatic.TelescopeController.ViewModel
 
       [Category("Game Controllers")]
       [DisplayName("Active game controller")]
-      [Description("The currently selected telescope site.")]
+      [Description("The currently selected game controller.")]
       [PropertyOrder(0)]
-      public GameController ActiveGameController
+      public string ActiveGameControllerName
       {
          get
          {
-            return _Settings.GameControllers.ActiveGameController;
+            return (_Settings.GameControllers.ActiveGameController != null ? _Settings.GameControllers.ActiveGameController.Name : "<No active game controller>");
          }
       }
 

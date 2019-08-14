@@ -38,6 +38,10 @@ namespace Lunatic.TelescopeController
 
       private DeviceNotificationService()
       {
+      }
+
+      public void Start()
+      {
          _ParentWindow = Application.Current.MainWindow;
 
          HwndSource source = PresentationSource.FromVisual(_ParentWindow) as HwndSource;
@@ -54,7 +58,14 @@ namespace Lunatic.TelescopeController
 
       public void Shutdown()
       {
-         UnregisterNotification();
+         if (_ParentWindow != null)
+         {
+            System.Diagnostics.Debug.WriteLine("DeviceNotificationService shutting down.");
+            UnregisterNotification();
+            _ParentWindow = null;
+            _Instance = null;
+            System.Diagnostics.Debug.WriteLine("DeviceNotificationService shutdown complete.");
+         }
       }
 
       private void RegisterNotification(Guid guid)

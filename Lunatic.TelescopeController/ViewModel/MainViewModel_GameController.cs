@@ -30,6 +30,10 @@ namespace Lunatic.TelescopeController.ViewModel
 
       public async Task StartGameControllerTask()
       {
+         if (_Controller == null)
+         {
+            return;
+         }
          var progressHandler = new Progress<GameControllerUpdate>(value =>
          {
             if (value.Notification == GameControllerUpdateNotification.ConnectedChanged)

@@ -10,8 +10,6 @@ namespace Lunatic.TelescopeController
    /// </summary>
    public partial class App : Application
    {
-      DeviceNotificationService _DeviceNotificationService = null;
-
       private void Application_Startup(object sender, StartupEventArgs e)
       {
          DispatcherHelper.Initialize();
@@ -22,20 +20,14 @@ namespace Lunatic.TelescopeController
 
       private void Application_Exit(object sender, ExitEventArgs e)
       {
-         if (_DeviceNotificationService != null)
-         {
-            _DeviceNotificationService.Shutdown();
-         }
+         DeviceNotificationService.Instance.Shutdown();
          ViewModelLocator.Cleanup();
       }
 
       private void Application_Activated(object sender, System.EventArgs e)
       {
-         // Activate the USB watching service the first time the application is activated.
-         if (_DeviceNotificationService == null)
-         {
-            _DeviceNotificationService = DeviceNotificationService.Instance;
-         }
+         //// Activate the USB watching service the first time the application is activated.
+         DeviceNotificationService.Instance.Start();
       }
    }
 }

@@ -256,13 +256,14 @@ namespace Lunatic.TelescopeController
       [DisplayName("Controller is connected")]
       [Description("Indicates whether the game controller is currently connected to the computer.")]
       [PropertyOrder(0)]
+      [JsonIgnore]
       public bool IsConnected
       {
          get
          {
             return _IsConnected;
          }
-         private set
+         set
          {
             Set<bool>(ref _IsConnected, value);
          }
@@ -283,6 +284,11 @@ namespace Lunatic.TelescopeController
             Set<bool>(ref _IsActiveGameController, value);
          }
       }
+
+      /// <summary>
+      /// Used internally when watching for controllers being connected.
+      /// </summary>
+      public bool WasActiveGameController { get; set; }
 
       private readonly GameControllerMappingCollection _ButtonMappings = new GameControllerMappingCollection();
 
@@ -381,25 +387,6 @@ namespace Lunatic.TelescopeController
 
       }
 
-      public void SetConnected(bool value, bool supressPropertyChangedEvents = false)
-      {
-         if (supressPropertyChangedEvents)
-         {
-            _IsConnected = value;
-            if (!value)
-            {
-               _IsActiveGameController = false;
-            }
-         }
-         else
-         {
-            IsConnected = value;
-            if (!value)
-            {
-               IsActiveGameController = false;
-            }
-         }
-      }
    }
 
    public class GameControllerCollection : ObservableCollection<GameController>
@@ -472,10 +459,12 @@ namespace Lunatic.TelescopeController
                resetingCurrentGameController = true;
                if (gameController.IsActiveGameController)
                {
-                  foreach (GameController switchoff in Items.Where(c => c.Id != gameController.Id && c.IsActiveGameController))
+                  foreach (GameController switchoff in Items.Where(c => c.Id != gameController.Id))
                   {
                      switchoff.IsActiveGameController = false;
+                     switchoff.WasActiveGameController = false;
                   }
+                  gameController.WasActiveGameController = true;
                   ActiveGameController = gameController;
                }
                else
@@ -496,12 +485,16 @@ namespace Lunatic.TelescopeController
          }
       }
 
-      public void SetActiveGameController(Guid id)
+      public void SetActiveGameController()
       {
-         GameController activeGameController = this.Items.Where(c => c.Id == id && c.IsConnected).FirstOrDefault();
+         GameController activeGameController = this.Items.Where(c =>  c.WasActiveGameController && c.IsConnected).FirstOrDefault();
          if (activeGameController != null)
          {
             activeGameController.IsActiveGameController = true;
+         }
+         else
+         {
+            ActiveGameController = null;
          }
       }
 
@@ -574,17 +567,17 @@ namespace Lunatic.TelescopeController
       {
       }
 
-      public static void UpdateAvailableGameControllers(TelescopeControlSettings settings, bool suppressNotifications = true)
+      public static void UpdateAvailableGameControllers(TelescopeControlSettings settings)
       {
          // Switch off active controller if it is not connected
-         Guid activeGameControllerId = Guid.Empty;
          foreach (GameController gameController in settings.GameControllers)
          {
             if (gameController.IsActiveGameController)
             {
-               activeGameControllerId = gameController.Id;
+               gameController.WasActiveGameController = true;
+               gameController.IsActiveGameController = false;
             }
-            gameController.SetConnected(false, suppressNotifications);
+            gameController.IsConnected = false;
             gameController.InstanceGuid = Guid.Empty;
          }
 
@@ -601,7 +594,7 @@ namespace Lunatic.TelescopeController
             }
             else
             {
-               existing.SetConnected(true, suppressNotifications);
+               existing.IsConnected = true;
                existing.InstanceGuid = deviceInstance.InstanceGuid;
             }
          }
@@ -619,14 +612,11 @@ namespace Lunatic.TelescopeController
             }
             else
             {
-               existing.SetConnected(true, suppressNotifications);
+               existing.IsConnected = true;
                existing.InstanceGuid = deviceInstance.InstanceGuid;
             }
          }
-
-
-
-         settings.GameControllers.SetActiveGameController(activeGameControllerId);
+         settings.GameControllers.SetActiveGameController();   // or Not
       }
 
       public static bool IsInstanceConnected(Guid instanceGuid)

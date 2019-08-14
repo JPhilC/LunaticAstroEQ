@@ -797,7 +797,8 @@ End Property
                if (message.Notification == DeviceNotificationService.USBDeviceAddedNotification ||
                      message.Notification == DeviceNotificationService.USBDeviceRemovedNotification)
                {
-                  GameControllerService.UpdateAvailableGameControllers(_Settings, false);
+                  GameControllerService.UpdateAvailableGameControllers(_Settings);
+                  RaisePropertyChanged("ActiveGameControllerName");
                   ConfigureGameControllerCommand.RaiseCanExecuteChanged(); ;
                }
             });
