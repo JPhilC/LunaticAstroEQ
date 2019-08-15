@@ -1,5 +1,6 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
                     xmlns:ld="clr-namespace:Lunatic.TelescopeController"
                     xmlns:lcc="clr-namespace:ASCOM.LunaticAstroEQ.Controls;assembly=ASCOM.LunaticAstroEQ.Core">
@@ -163,9 +164,10 @@
                           CanUserDeleteRows="False"
                           AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  />
-                    <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"/>
-                    <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80" />
+                    <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True"   />
+                    <DataGridTextColumn Header="Minimum" Binding="{Binding MinimumValue}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Maximum" Binding="{Binding MaximumValue}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Flip" Binding="{Binding SwapDirection}" IsReadOnly="True"/>
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
@@ -173,13 +175,14 @@
 
 
     <xctk:EditorDefinitionCollection x:Key="GameControllerPropertyGridPropertyEditors">
-        <xctk:EditorTemplateDefinition TargetProperties="Name">
+        <xctk:EditorTemplateDefinition TargetProperties="Name,SwapXYAxis,SwapXYRotation">
             <xctk:EditorTemplateDefinition.EditingTemplate>
                 <DataTemplate>
                     <xctk:PropertyGridEditorTextBlock Text="{Binding Value}"/>
                 </DataTemplate>
             </xctk:EditorTemplateDefinition.EditingTemplate>
         </xctk:EditorTemplateDefinition>
+
 
         <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerMappingCollectionDataTemplate}">
             <xctk:EditorTemplateDefinition.TargetProperties>
@@ -216,9 +219,10 @@
                                 ShowSummary="False"
                                 ShowTitle="False" BorderThickness="0">
                 <xctk:PropertyGrid.PropertyDefinitions>
-                    <xctk:PropertyDefinition TargetProperties="Name,
-                                         ActiveButtonMappings,
-                                         ActiveAxisRanges"/>
+                    <xctk:PropertyDefinition TargetProperties="ActiveButtonMappings,
+                                             ActiveAxisRanges,
+                                             SwapXYAxis,
+                                             SwapXYRotations"/>
                 </xctk:PropertyGrid.PropertyDefinitions>
             </xctk:PropertyGrid>
         </StackPanel>
@@ -263,9 +267,10 @@
                                 ShowSummary="False"
                                 ShowTitle="False" BorderThickness="0">
                                 <xctk:PropertyGrid.PropertyDefinitions>
-                                    <xctk:PropertyDefinition TargetProperties="Name,
-                                                             ActiveButtonMappings,
-                                                             ActiveAxisRanges"/>
+                                    <xctk:PropertyDefinition TargetProperties="ActiveButtonMappings,
+                                                             ActiveAxisRanges,
+                                                             SwapXYAxis,
+                                                             SwapXYRotation"/>
                                 </xctk:PropertyGrid.PropertyDefinitions>
                             </xctk:PropertyGrid>
                         </Expander>

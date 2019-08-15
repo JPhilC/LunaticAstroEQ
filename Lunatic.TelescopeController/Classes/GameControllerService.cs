@@ -217,6 +217,20 @@ namespace Lunatic.TelescopeController
          }
       }
 
+      private bool _SwapDirection;
+      [Description("Reverse")]
+      public bool SwapDirection
+      {
+         get
+         {
+            return _SwapDirection;
+         }
+         set
+         {
+            Set(ref _SwapDirection, value);
+         }
+      }
+
       public GameControllerAxisRange(GameControllerAxis axis)
       {
          this.Axis = axis;
@@ -339,6 +353,37 @@ namespace Lunatic.TelescopeController
             return _AxisDeadZones;
          }
       }
+
+      private bool _SwapXYAxis;
+      [PropertyOrder(4)]
+      [Description("Swap X & Y Axis")]
+      public bool SwapXYAxis
+      {
+         get
+         {
+            return _SwapXYAxis;
+         }
+         set
+         {
+            Set(ref _SwapXYAxis, value);
+         }
+      }
+
+      private bool _SwapXYRotation;
+      [PropertyOrder(5)]
+      [Description("Swap X & Y Rotations")]
+      public bool SwapXYRotation
+      {
+         get
+         {
+            return _SwapXYRotation;
+         }
+         set
+         {
+            Set(ref _SwapXYRotation, value);
+         }
+      }
+
 
       public GameController()
       {

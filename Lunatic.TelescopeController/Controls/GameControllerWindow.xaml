@@ -61,12 +61,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="5"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="5"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="5"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBlock Text="Command/button mappings" Style="{StaticResource RedLEDLabel}"/>
+        <TextBlock Grid.Row="0" Text="Friendly name" Style="{StaticResource RedLEDLabel}"/>
+        <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding Controller.Name}" />
+        <TextBlock Grid.Row="2" Text="Command/button mappings" Style="{StaticResource RedLEDLabel}"/>
 
-        <DataGrid Grid.Row="2" Grid.RowSpan="7" ItemsSource="{Binding Controller.ButtonMappings}"
+        <DataGrid Grid.Row="4" Grid.RowSpan="9" ItemsSource="{Binding Controller.ButtonMappings}"
                   IsEnabled="{Binding ControllerConnected}"
                   SelectedItem="{Binding SelectedButtonMapping}"
                   CanUserAddRows="False"
@@ -94,9 +100,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
             </DataGrid.Columns>
         </DataGrid>
 
-        <TextBlock Grid.Column="2" Text="Axis ranges" Style="{StaticResource RedLEDLabel}"/>
+        <TextBlock Grid.Row="2" Grid.Column="2" Text="Axis ranges" Style="{StaticResource RedLEDLabel}"/>
 
-        <DataGrid Grid.Row="2" Grid.Column="2" ItemsSource="{Binding Controller.AxisRanges}"
+        <DataGrid Grid.Row="4" Grid.Column="2" ItemsSource="{Binding Controller.AxisRanges}"
                   IsEnabled="{Binding ControllerConnected}"
                   SelectedItem="{Binding SelectedAxisRange}"
                   CanUserAddRows="False"
@@ -108,9 +114,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                 </i:EventTrigger>
             </i:Interaction.Triggers>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  Width="*" />
-                <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
-                <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
+                <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  Width="3*" />
+                <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"   Width="3*" />
+                <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80"   Width="3*" />
+                <DataGridCheckBoxColumn Header="Flip" Binding="{Binding SwapDirection, UpdateSourceTrigger=PropertyChanged}" MinWidth="30"   Width="*" />
                 <DataGridTemplateColumn>
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -125,9 +132,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
             </DataGrid.Columns>
         </DataGrid>
 
-        <TextBlock Grid.Column="2" Grid.Row="4" Text="Axis dead zone ranges" Style="{StaticResource RedLEDLabel}"/>
+        <Grid Grid.Row="6" Grid.Column="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Swap X and Y Axis" Style="{StaticResource RedLEDLabel}"/>
+            <CheckBox Grid.Column="2" IsChecked="{Binding Controller.SwapXYAxis}" />
+            <TextBlock Grid.Column="4" Text="Swap X and Y Rotations" Style="{StaticResource RedLEDLabel}"/>
+            <CheckBox Grid.Column="6" IsChecked="{Binding Controller.SwapXYRotation}" />
+        </Grid>
+        <TextBlock Grid.Column="2" Grid.Row="8" Text="Axis dead zone ranges" Style="{StaticResource RedLEDLabel}"/>
 
-        <DataGrid Grid.Row="6" Grid.Column="2" ItemsSource="{Binding Controller.AxisDeadZones}"
+        <DataGrid Grid.Row="10" Grid.Column="2" ItemsSource="{Binding Controller.AxisDeadZones}"
                   IsEnabled="{Binding ControllerConnected}"
                   SelectedItem="{Binding SelectedDeadZoneRange}"
                   CanUserAddRows="False"
@@ -155,7 +177,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <Grid Grid.RowSpan="9" Grid.ColumnSpan="3" Background="Black" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid Grid.RowSpan="13" Grid.ColumnSpan="3" Background="Black" HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock Margin="50"
                    Text="Controller is not responding"
                    Style="{StaticResource RedLEDLabelLargeFading}" 
@@ -166,7 +188,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
         </Grid>
         
         
-        <DockPanel Grid.Column="4" Grid.RowSpan="9">
+        <DockPanel Grid.Column="4" Grid.RowSpan="13">
             <StackPanel DockPanel.Dock="Bottom">
                 <Button Content="OK" Margin="0,0,0,10" Command="{Binding SaveChangesAndCloseCommand}" Width="80"/>
                 <Button Content="Cancel" Command="{Binding CancelChangesAndCloseCommand}" Width="80"/>

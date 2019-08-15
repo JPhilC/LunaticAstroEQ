@@ -557,6 +557,8 @@ namespace Lunatic.TelescopeController.ViewModel
       public void PopProperties()
       {
          _Controller = new GameController(_OriginalController.Id, _OriginalController.Name);
+         _Controller.SwapXYAxis = _OriginalController.SwapXYAxis;
+         _Controller.SwapXYRotation = _OriginalController.SwapXYRotation;
          foreach (GameControllerMapping originalMapping in _OriginalController.ButtonMappings)
          {
             GameControllerMapping newMapping = _Controller.ButtonMappings.Where(m => m.Command == originalMapping.Command).FirstOrDefault();
@@ -572,6 +574,7 @@ namespace Lunatic.TelescopeController.ViewModel
             {
                newRange.MinimumValue = originalRange.MinimumValue;
                newRange.MaximumValue = originalRange.MaximumValue;
+               newRange.SwapDirection = originalRange.SwapDirection;
             }
          }
          foreach (GameControllerAxisRange originalRange in _OriginalController.AxisDeadZones)
@@ -588,6 +591,9 @@ namespace Lunatic.TelescopeController.ViewModel
 
       public void PushProperties()
       {
+         _OriginalController.Name = _Controller.Name;
+         _OriginalController.SwapXYAxis = _Controller.SwapXYAxis;
+         _OriginalController.SwapXYRotation = _Controller.SwapXYRotation;
          foreach (GameControllerMapping newMapping in _Controller.ButtonMappings)
          {
             GameControllerMapping originalMapping = _OriginalController.ButtonMappings.Where(m => m.Command == newMapping.Command).FirstOrDefault();
@@ -603,6 +609,7 @@ namespace Lunatic.TelescopeController.ViewModel
             {
                originalRange.MinimumValue = newRange.MinimumValue;
                originalRange.MaximumValue = newRange.MaximumValue;
+               originalRange.SwapDirection = newRange.SwapDirection;
             }
          }
          foreach (GameControllerAxisRange newRange in _Controller.AxisDeadZones)
