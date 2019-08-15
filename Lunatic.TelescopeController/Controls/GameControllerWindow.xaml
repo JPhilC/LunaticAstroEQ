@@ -69,7 +69,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Text="Friendly name" Style="{StaticResource RedLEDLabel}"/>
-        <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding Controller.Name}" />
+        <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding Controller.Name}" Style="{StaticResource RedLEDTextBox}"/>
         <TextBlock Grid.Row="2" Text="Command/button mappings" Style="{StaticResource RedLEDLabel}"/>
 
         <DataGrid Grid.Row="4" Grid.RowSpan="9" ItemsSource="{Binding Controller.ButtonMappings}"
@@ -77,15 +77,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                   SelectedItem="{Binding SelectedButtonMapping}"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
-                  AutoGenerateColumns="False" >
+                  AutoGenerateColumns="False"
+                  Style="{DynamicResource DataGridStyle1}">
+            <!--ColumnHeaderStyle="{DynamicResource DataGridColumnHeaderStyle1}" 
+                  CellStyle="{DynamicResource DataGridCellStyle1}" 
+                  RowHeaderStyle="{DynamicResource DataGridRowHeaderStyle1}">-->
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="GotFocus">
                     <i:InvokeCommandAction Command="{Binding SetCurrentSettingCommand}" CommandParameter="{x:Static vm:GameControllerCurrentSetting.Command}"/>
                 </i:EventTrigger>
             </i:Interaction.Triggers>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80"  Width="*" />
-                <DataGridTextColumn Header="Button" Binding="{Binding Button}" IsReadOnly="True" MinWidth="80"   Width="*" />
+                <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80"  Width="*"  />
+                <DataGridTextColumn Header="Button" Binding="{Binding Button}" IsReadOnly="True" MinWidth="80"   Width="*"  />
                 <DataGridTemplateColumn>
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -107,7 +111,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                   SelectedItem="{Binding SelectedAxisRange}"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
-                  AutoGenerateColumns="False">
+                  AutoGenerateColumns="False" >
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="GotFocus">
                     <i:InvokeCommandAction Command="{Binding SetCurrentSettingCommand}" CommandParameter="{x:Static vm:GameControllerCurrentSetting.AxisRange}"/>
@@ -143,9 +147,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="Swap X and Y Axis" Style="{StaticResource RedLEDLabel}"/>
-            <CheckBox Grid.Column="2" IsChecked="{Binding Controller.SwapXYAxis}" />
+            <CheckBox Grid.Column="2" IsChecked="{Binding SwapXYAxis}"  
+                      Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}"
+                      />
             <TextBlock Grid.Column="4" Text="Swap X and Y Rotations" Style="{StaticResource RedLEDLabel}"/>
-            <CheckBox Grid.Column="6" IsChecked="{Binding Controller.SwapXYRotation}" />
+            <CheckBox Grid.Column="6" IsChecked="{Binding SwapXYRotation}"  
+                      Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}"/>
         </Grid>
         <TextBlock Grid.Column="2" Grid.Row="8" Text="Axis dead zone ranges" Style="{StaticResource RedLEDLabel}"/>
 
@@ -193,10 +200,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                 <Button Content="OK" Margin="0,0,0,10" Command="{Binding SaveChangesAndCloseCommand}" Width="80"/>
                 <Button Content="Cancel" Command="{Binding CancelChangesAndCloseCommand}" Width="80"/>
             </StackPanel>
-            <TextBlock VerticalAlignment="Top" Width="80" Height="Auto" TextWrapping="Wrap" Padding="10"
+            <TextBlock VerticalAlignment="Top" Width="80" Height="Auto" TextWrapping="Wrap" Padding="10" Style="{StaticResource RedLEDText}"
                        Text="To configure a button click on the command it to trigger then click the button or POV quandrant on the gamepad/joystick. 
                        To configure an axis range click on the axis range then move the matching joystick to it's extremities two or three times.
-                       When you are done click the OK button."  Margin="10,10,0,16" FontSize="9" Foreground="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"/>
+                       When you are done click the OK button."  Margin="10,10,0,16" FontSize="9" />
         </DockPanel>
     </Grid>
 </Window>
