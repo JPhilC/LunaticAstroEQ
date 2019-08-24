@@ -31,16 +31,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
              xmlns:local="clr-namespace:Lunatic.TelescopeController.Controls"
              mc:Ignorable="d"
              DataContext="{Binding Main, Source={StaticResource Locator}}">
-    <Grid Width="223">
+    <Grid>
         <GroupBox Template="{StaticResource LunaticGroupBoxControlTemplate}">
             <GroupBox.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Park Status: " />
-                    <TextBlock Text="{Binding ParkStatus}" />
+                    <TextBlock Text="Park Status: "/>
+                    <TextBlock Text="{Binding ParkStatus}"/>
                     <TextBlock Text="{Binding ParkStatusPosition}" Margin="5,0,0,0"/>
                 </StackPanel>
             </GroupBox.Header>
-            <Button Content="{Binding ParkCaption}" Height="20" Command="{Binding ParkCommand}"/>
+            <Button Content="{Binding ParkCaption}" Height="20" Command="{Binding ParkCommand}" Template="{StaticResource ButtonBaseControlTemplate1}" Style="{StaticResource RedButton}"/>
         </GroupBox>
     </Grid>
 </UserControl>

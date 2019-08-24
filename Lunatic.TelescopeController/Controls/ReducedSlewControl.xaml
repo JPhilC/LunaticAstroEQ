@@ -57,9 +57,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <!-- Reverse check boxes -->
-                <CheckBox IsChecked="{Binding Settings.ReverseRA}"></CheckBox>
+                <CheckBox IsChecked="{Binding Settings.ReverseRA}" Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}"/>
                 <TextBlock Grid.Column="2">RA Reverse</TextBlock>
-                <CheckBox Grid.Row="1" IsChecked="{Binding Settings.ReverseDec}"></CheckBox>
+                <CheckBox Grid.Row="1" IsChecked="{Binding Settings.ReverseDec}"  Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}"/>
                 <TextBlock Grid.Row="1" Grid.Column="2">DEC Reverse</TextBlock>
                 <ComboBox Grid.Row="3" Grid.ColumnSpan="3" HorizontalAlignment="Left" Width="40"
                           ItemsSource="{Binding Settings.SlewRatePresets}"

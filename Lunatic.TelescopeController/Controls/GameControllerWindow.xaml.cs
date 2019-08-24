@@ -30,6 +30,7 @@ using Lunatic.TelescopeController.ViewModel;
 using Microsoft.Maps.MapControl.WPF;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -76,7 +77,12 @@ namespace Lunatic.TelescopeController.Controls
          
       }
 
-      
+      protected override void OnClosing(CancelEventArgs e)
+      {
+         base.OnClosing(e);
+         _ViewModel.StopGameControllerTask();   // In case the window is closed with the X button.
+      }
+
       protected override void OnClosed(EventArgs e)
       {
          base.OnClosed(e);

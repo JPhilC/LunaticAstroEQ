@@ -1,6 +1,7 @@
 ﻿using ASCOM.LunaticAstroEQ.Controls;
 using ASCOM.LunaticAstroEQ.Core;
 using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Messaging;
 using Newtonsoft.Json;
 using SharpDX.DirectInput;
 using System;
@@ -20,7 +21,7 @@ namespace Lunatic.TelescopeController
 
    #region Game Controller classes and Enums ...
    [TypeConverter(typeof(EnumTypeConverter))]
-   public enum GameControllerCommand
+   public enum GameControllerButtonCommand
    {
       [Description("Emergency Stop")]
       EmergencyStop,
@@ -75,67 +76,88 @@ namespace Lunatic.TelescopeController
    }
 
    [TypeConverter(typeof(EnumTypeConverter))]
-   public enum GameControllerAxis
+   public enum GameControllerAxisCommand
    {
-      [Description("X-Axis")]
-      X,
-      [Description("Y-Axis")]
-      Y,
-      [Description("Z-Axis")]
-      Z,
-      [Description("Rotation X")]
-      RX,
-      [Description("Rotation Y")]
-      RY
+      [Description("Slew North/South (Low speed)")]
+      SlewNSLowSpeed,
+      [Description("Slew East/West (Low speed)")]
+      SlewEWLowSpeed,
+      [Description("Slew North/South (High speed)")]
+      SlewNSHighSpeed,
+      [Description("Slew East/West (High speed)")]
+      SlewEWHighSpeed,
+      [Description("Slew North/South (Dual speed)")]
+      SlewNSDualSpeed,
+      [Description("Slew East/West (Dual speed)")]
+      SlewEWDualSpeed
    }
 
    [TypeConverter(typeof(EnumTypeConverter))]
-   public enum GameControllerButton
+   public enum GameControllerPOVDirection
    {
       [Description("")]
-      UNMAPPED = -1,
-      [Description("Button 0")]
-      BUTTON_0,
-      [Description("Button 1")]
-      BUTTON_1,
-      [Description("Button 2")]
-      BUTTON_2,
-      [Description("Button 3")]
-      BUTTON_3,
-      [Description("Button 4")]
-      BUTTON_4,
-      [Description("Button 5")]
-      BUTTON_5,
-      [Description("Button 6")]
-      BUTTON_6,
-      [Description("Button 7")]
-      BUTTON_7,
-      [Description("Button 8")]
-      BUTTON_8,
-      [Description("Button 9")]
-      BUTTON_9,
-      [Description("PoV North")]
-      POV_N,
-      [Description("PoV South")]
-      POV_S,
-      [Description("PoV West")]
-      POV_W,
-      [Description("PoV East")]
-      POV_E,
-      [Description("PoV Northwest")]
-      POV_NW,
-      [Description("PoV NorthEast")]
-      POV_NE,
-      [Description("PoV Southwest")]
-      POV_SW,
-      [Description("PoV Southeast")]
-      POV_SE
+      UNMAPPED = 0,
+      [Description("North")]
+      N,
+      [Description("South")]
+      S,
+      [Description("West")]
+      W,
+      [Description("East")]
+      E,
+      [Description("Northwest")]
+      NW,
+      [Description("NorthEast")]
+      NE,
+      [Description("Southwest")]
+      SW,
+      [Description("Southeast")]
+      SE
    }
 
-   public class GameControllerMapping : ObservableObject
+
+   public abstract class GameControllerMapping : ObservableObject
    {
-      private GameControllerCommand _Command;
-      public GameControllerCommand Command
+
+      private JoystickOffset? _JoystickOffset;
+      public JoystickOffset? JoystickOffset
+      {
+         get
+         {
+            return _JoystickOffset;
+         }
+         set
+         {
+            if (Set(ref _JoystickOffset, value))
+            {
+               if (!_JoystickOffset.HasValue)
+               {
+                  Name = null;
+               }
+            }
+         }
+      }
+
+      private string _Name;
+      [Description("Name")]
+      public string Name
+      {
+         get
+         {
+            return _Name;
+         }
+         set
+         {
+            Set(ref _Name, value);
+         }
+      }
+
+   }
+
+   public class GameControllerButtonMapping : GameControllerMapping
+   {
+      private GameControllerButtonCommand _Command;
+      public GameControllerButtonCommand Command
       {
          get
          {
@@ -147,104 +169,113 @@ namespace Lunatic.TelescopeController
          }
       }
 
-      private GameControllerButton _Button;
-      public GameControllerButton Button
+      private GameControllerPOVDirection _POVDirection;
+      [Description("POV Direction")]
+      public GameControllerPOVDirection POVDirection
       {
          get
          {
-            return _Button;
+            return _POVDirection;
          }
          set
          {
-            Set(ref _Button, value);
+            if (Set(ref _POVDirection, value))
+            {
+               RaisePropertyChanged("DisplayName");
+            }
          }
       }
 
-
-      public GameControllerMapping(GameControllerCommand command)
+      public GameControllerButtonMapping(GameControllerButtonCommand command) : base()
       {
          this.Command = command;
-         this.Button = GameControllerButton.UNMAPPED;
       }
 
    }
 
-   public class GameControllerMappingCollection : ObservableCollection<GameControllerMapping>
+   public class GameControllerButtonMappingCollection : ObservableCollection<GameControllerButtonMapping>
    {
    }
 
-   public class GameControllerAxisRange : ObservableObject
+
+   public class GameControllerAxisMapping : GameControllerMapping
    {
-      private GameControllerAxis _Axis;
-      [Description("Axis")]
-      public GameControllerAxis Axis
+      private GameControllerAxisCommand _Command;
+      public GameControllerAxisCommand Command
       {
          get
          {
-            return _Axis;
+            return _Command;
          }
          private set
          {
-            Set(ref _Axis, value);
+            Set(ref _Command, value);
          }
       }
 
-      private int? _MinimumValue;
-      [Description("Minimum value")]
-      public int? MinimumValue
+      private bool _ReverseDirection;
+      [Description("Reverse Direction")]
+      public bool ReverseDirection
       {
          get
          {
-            return _MinimumValue;
+            return _ReverseDirection;
          }
          set
          {
-            Set(ref _MinimumValue, value);
+            Set(ref _ReverseDirection, value);
          }
       }
 
-      private int? _MaximumValue;
-      [Description("Maximum value")]
-      public int? MaximumValue
+      public GameControllerAxisMapping(GameControllerAxisCommand command, bool reverseDirection) : base()
       {
-         get
-         {
-            return _MaximumValue;
-         }
-         set
-         {
-            Set(ref _MaximumValue, value);
-         }
-      }
-
-      private bool _SwapDirection;
-      [Description("Reverse")]
-      public bool SwapDirection
-      {
-         get
-         {
-            return _SwapDirection;
-         }
-         set
-         {
-            Set(ref _SwapDirection, value);
-         }
-      }
-
-      public GameControllerAxisRange(GameControllerAxis axis)
-      {
-         this.Axis = axis;
+         this.Command = command;
+         this.ReverseDirection = reverseDirection;
       }
    }
 
-   public class GameControllerAxisRangeCollection : ObservableCollection<GameControllerAxisRange>
-   { }
+   public class GameControllerAxisMappingCollection : ObservableCollection<GameControllerAxisMapping>
+   {
+   }
+
 
    public class GameController : ObservableObject
    {
 
+      public static GameControllerPOVDirection GetPOVDirection(JoystickUpdate update)
+      {
+         GameControllerPOVDirection direction = GameControllerPOVDirection.UNMAPPED;
+         switch (update.Value)
+         {
+            case 0:
+               direction = GameControllerPOVDirection.N;
+               break;
+            case 4500:
+               direction = GameControllerPOVDirection.NE;
+               break;
+            case 9000:
+               direction = GameControllerPOVDirection.E;
+               break;
+            case 13500:
+               direction = GameControllerPOVDirection.SE;
+               break;
+            case 18000:
+               direction = GameControllerPOVDirection.S;
+               break;
+            case 22500:
+               direction = GameControllerPOVDirection.SW;
+               break;
+            case 27000:
+               direction = GameControllerPOVDirection.W;
+               break;
+            case 31500:
+               direction = GameControllerPOVDirection.NW;
+               break;
+         }
+         return direction;
+      }
 
-      [DisplayName("Controller product Id")]
+      [DisplayName("Controller instance Id")]
       public Guid Id { get; set; }
 
       private string _Name;
@@ -261,9 +292,6 @@ namespace Lunatic.TelescopeController
             Set(ref _Name, value);
          }
       }
-
-      [JsonIgnore]
-      public Guid InstanceGuid { get; set; }
 
 
       private bool _IsConnected;
@@ -295,7 +323,10 @@ namespace Lunatic.TelescopeController
          }
          set
          {
-            Set<bool>(ref _IsActiveGameController, value);
+            if (Set<bool>(ref _IsActiveGameController, value))
+            {
+               WasActiveGameController = false;
+            }
          }
       }
 
@@ -304,9 +335,9 @@ namespace Lunatic.TelescopeController
       /// </summary>
       public bool WasActiveGameController { get; set; }
 
-      private readonly GameControllerMappingCollection _ButtonMappings = new GameControllerMappingCollection();
+      private readonly GameControllerButtonMappingCollection _ButtonMappings = new GameControllerButtonMappingCollection();
 
-      public GameControllerMappingCollection ButtonMappings
+      public GameControllerButtonMappingCollection ButtonMappings
       {
          get
          {
@@ -315,75 +346,51 @@ namespace Lunatic.TelescopeController
       }
 
       [PropertyOrder(2)]
+      [Description("Configured buttons")]
       [JsonIgnore]
-      public IEnumerable<GameControllerMapping> ActiveButtonMappings
+      public IEnumerable<GameControllerButtonMapping> ActiveButtonMappings
       {
          get
          {
-            return _ButtonMappings.Where(m => m.Button != GameControllerButton.UNMAPPED);
+            return _ButtonMappings.Where(m => m.JoystickOffset.HasValue);
          }
       }
 
-      private readonly GameControllerAxisRangeCollection _AxisRanges = new GameControllerAxisRangeCollection();
+      private readonly GameControllerAxisMappingCollection _AxisMappings = new GameControllerAxisMappingCollection();
 
-      public GameControllerAxisRangeCollection AxisRanges
+      public GameControllerAxisMappingCollection AxisMappings
       {
          get
          {
-            return _AxisRanges;
+            return _AxisMappings;
          }
       }
 
       [PropertyOrder(3)]
+      [Description("Configured axes")]
       [JsonIgnore]
-      public IEnumerable<GameControllerAxisRange> ActiveAxisRanges
+      public IEnumerable<GameControllerAxisMapping> ActiveAxisMappings
       {
          get
          {
-            return _AxisRanges.Where(r => r.MinimumValue.HasValue && r.MaximumValue.HasValue);
+            return _AxisMappings.Where(m => m.JoystickOffset.HasValue);
          }
       }
 
-      private readonly GameControllerAxisRangeCollection _AxisDeadZones = new GameControllerAxisRangeCollection();
 
-      public GameControllerAxisRangeCollection AxisDeadZones
+      private Dictionary<JoystickOffset, string> _JoystickObjects = new Dictionary<JoystickOffset, string>();
+      /// <summary>
+      /// Internal list of objects found on game controller by Joystick offset
+      /// populated whenever the device is activated on the PC.
+      /// </summary>
+      [JsonIgnore]
+      public Dictionary<JoystickOffset, string> JoystickObjects
       {
          get
          {
-            return _AxisDeadZones;
+            return _JoystickObjects;
          }
       }
-
-      private bool _SwapXYAxis;
-      [PropertyOrder(4)]
-      [Description("Swap X & Y Axis")]
-      public bool SwapXYAxis
-      {
-         get
-         {
-            return _SwapXYAxis;
-         }
-         set
-         {
-            Set(ref _SwapXYAxis, value);
-         }
-      }
-
-      private bool _SwapXYRotation;
-      [PropertyOrder(5)]
-      [Description("Swap X & Y Rotations")]
-      public bool SwapXYRotation
-      {
-         get
-         {
-            return _SwapXYRotation;
-         }
-         set
-         {
-            Set(ref _SwapXYRotation, value);
-         }
-      }
-
 
       public GameController()
       {
@@ -397,36 +404,32 @@ namespace Lunatic.TelescopeController
          this.Id = id;
          this.Name = name;
          this.IsConnected = true;
-         foreach (var command in EnumHelper.ToList(typeof(GameControllerCommand)))
+         foreach (var command in EnumHelper.ToList(typeof(GameControllerButtonCommand)))
          {
-            ButtonMappings.Add(new GameControllerMapping((GameControllerCommand)command.Key));
+            ButtonMappings.Add(new GameControllerButtonMapping((GameControllerButtonCommand)command.Key));
          }
-         foreach (var axis in EnumHelper.ToList(typeof(GameControllerAxis)))
+         foreach (var command in EnumHelper.ToList(typeof(GameControllerAxisCommand)))
          {
-            AxisRanges.Add(new GameControllerAxisRange((GameControllerAxis)axis.Key));
-            AxisDeadZones.Add(new GameControllerAxisRange((GameControllerAxis)axis.Key));
+            AxisMappings.Add(new GameControllerAxisMapping((GameControllerAxisCommand)command.Key, false));
          }
       }
 
       [OnDeserialized]
       private void Deserialized(StreamingContext context)
       {
-         foreach (var command in EnumHelper.ToList(typeof(GameControllerCommand)))
+         foreach (var command in EnumHelper.ToList(typeof(GameControllerButtonCommand)))
          {
-            if (!ButtonMappings.Any(m => m.Command == (GameControllerCommand)command.Key))
+            if (!ButtonMappings.Any(m => m.Command == (GameControllerButtonCommand)command.Key))
             {
-               ButtonMappings.Add(new GameControllerMapping((GameControllerCommand)command.Key));
+               ButtonMappings.Add(new GameControllerButtonMapping((GameControllerButtonCommand)command.Key));
             }
          }
-         foreach (var axis in EnumHelper.ToList(typeof(GameControllerAxis)))
+
+         foreach (var command in EnumHelper.ToList(typeof(GameControllerAxisCommand)))
          {
-            if (!AxisRanges.Any(r => r.Axis == (GameControllerAxis)axis.Key))
+            if (!AxisMappings.Any(m => m.Command == (GameControllerAxisCommand)command.Key))
             {
-               AxisRanges.Add(new GameControllerAxisRange((GameControllerAxis)axis.Key));
-            }
-            if (!AxisDeadZones.Any(r => r.Axis == (GameControllerAxis)axis.Key))
-            {
-               AxisDeadZones.Add(new GameControllerAxisRange((GameControllerAxis)axis.Key));
+               AxisMappings.Add(new GameControllerAxisMapping((GameControllerAxisCommand)command.Key, false));
             }
          }
 
@@ -451,12 +454,14 @@ namespace Lunatic.TelescopeController
          }
          private set
          {
+            GameController oldValue = _ActiveGameController;
             if (ReferenceEquals(_ActiveGameController, value))
             {
                return;
             }
             _ActiveGameController = value;
             RaisePropertyChanged("ActiveGameController");
+            Messenger.Default.Send<ActiveGameControllerChangedMessage>(new ActiveGameControllerChangedMessage(this, oldValue, _ActiveGameController));
          }
       }
 
@@ -530,18 +535,6 @@ namespace Lunatic.TelescopeController
          }
       }
 
-      public void SetActiveGameController()
-      {
-         GameController activeGameController = this.Items.Where(c =>  c.WasActiveGameController && c.IsConnected).FirstOrDefault();
-         if (activeGameController != null)
-         {
-            activeGameController.IsActiveGameController = true;
-         }
-         else
-         {
-            ActiveGameController = null;
-         }
-      }
 
       private void OnActiveGameControllerChanged()
       {
@@ -560,11 +553,6 @@ namespace Lunatic.TelescopeController
       JoystickUpdate,
       CommandDown,
       CommandUp,
-      AxisIncLow,
-      AxisIncHigh,
-      AxisDecLow,
-      AxisDecHigh,
-      AxisStop
    }
 
    public class GameControllerUpdate
@@ -573,9 +561,8 @@ namespace Lunatic.TelescopeController
 
       public JoystickUpdate Update { get; set; }
 
-      public GameControllerCommand Command { get; set; }
-
-      public GameControllerAxis Axis { get; set; }
+      public GameControllerButtonCommand ButtonCommand { get; set; }
+      public GameControllerAxisCommand AxisCommand { get; set; }
 
       public GameControllerUpdate(JoystickUpdate update)
       {
@@ -583,16 +570,16 @@ namespace Lunatic.TelescopeController
          this.Update = update;
       }
 
-      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerCommand command)
+      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerButtonCommand command)
       {
          this.Notification = notification;
-         this.Command = command;
+         this.ButtonCommand = command;
       }
 
-      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerAxis axis)
+      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerAxisCommand command)
       {
          this.Notification = notification;
-         this.Axis = axis;
+         this.AxisCommand = command;
       }
 
       public GameControllerUpdate()
@@ -601,10 +588,57 @@ namespace Lunatic.TelescopeController
       }
 
    }
+
+   public class ActiveGameControllerChangedMessage
+   {
+      public object Sender { get; private set; }
+      public GameController OldController { get; private set; }
+      public GameController NewController { get; private set; }
+
+      public ActiveGameControllerChangedMessage(object sender, GameController oldController, GameController newController)
+      {
+         Sender = sender;
+         OldController = oldController;
+         NewController = newController;
+      }
+   }
    #endregion
+
    public class GameControllerService
    {
-
+      public static Dictionary<int, JoystickOffset> USAGE_OFFSET = new Dictionary<int, JoystickOffset>
+      {
+         {1,JoystickOffset.Buttons0 },
+         {2,JoystickOffset.Buttons1 },
+         {3,JoystickOffset.Buttons2 },
+         {4,JoystickOffset.Buttons3 },
+         {5,JoystickOffset.Buttons4 },
+         {6,JoystickOffset.Buttons5 },
+         {7,JoystickOffset.Buttons6 },
+         {8,JoystickOffset.Buttons7 },
+         {9,JoystickOffset.Buttons8 },
+         {10,JoystickOffset.Buttons9 },
+         {11,JoystickOffset.Buttons10 },
+         {12,JoystickOffset.Buttons11 },
+         {13,JoystickOffset.Buttons12 },
+         {14,JoystickOffset.Buttons13 },
+         {15,JoystickOffset.Buttons14 },
+         {16,JoystickOffset.Buttons15 },
+         {17,JoystickOffset.Buttons16 },
+         {18,JoystickOffset.Buttons17 },
+         {19,JoystickOffset.Buttons18 },
+         {20,JoystickOffset.Buttons19 },
+         {48,JoystickOffset.X },
+         {49,JoystickOffset.Y },
+         {50,JoystickOffset.Z },
+         {51,JoystickOffset.RotationX },
+         {52,JoystickOffset.RotationY },
+         {53,JoystickOffset.RotationZ },
+         {57,JoystickOffset.PointOfViewControllers0 },
+         {58,JoystickOffset.PointOfViewControllers1 },
+         {59,JoystickOffset.PointOfViewControllers2 },
+         {60,JoystickOffset.PointOfViewControllers3 }
+      };
 
       private List<Guid> _AvailableInstances = new List<Guid>();
 
@@ -612,7 +646,112 @@ namespace Lunatic.TelescopeController
       {
       }
 
-      public static void UpdateAvailableGameControllers(TelescopeControlSettings settings)
+      public static void UpdateAvailableGameControllers(TelescopeControlSettings settings, bool announce = false)
+      {
+         bool setActiveController = false;
+         string announcement = "";
+
+         List<Guid> existingConnectedIds = settings.GameControllers.Where(c => c.IsConnected).Select(c => c.Id).ToList();
+         List<Guid> connectedIds = new List<Guid>();
+         List<GameController> newControllers = new List<GameController>();
+         GameController controller;
+
+         using (DirectInput directInput = new DirectInput())
+         {
+            ProcessDevices(directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices), settings, announce, ref existingConnectedIds, ref connectedIds, ref newControllers);
+            ProcessDevices(directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices), settings, announce, ref existingConnectedIds, ref connectedIds, ref newControllers);
+
+
+            // Disconnect any remaining existing connections as they are not now connected
+            foreach (Guid existingId in existingConnectedIds)
+            {
+               controller = settings.GameControllers.Where(c => c.Id == existingId).FirstOrDefault();
+               if (controller != null)
+               {
+                  if (controller.IsActiveGameController)
+                  {
+                     // We'll need to set the active controller to the first new Controller
+                     setActiveController = true;
+                     // controller.WasActiveGameController = true MUST follow controller.IsActiveGameController otherwise the flag will be cleared in the IsActive... setter.
+                     controller.IsActiveGameController = false;
+                     controller.WasActiveGameController = true;
+                     announcement = $"The active {controller.Name} has disconnected.";
+                  }
+                  else
+                  {
+                     announcement = $"{controller.Name} has disconnected.";
+                  }
+                  controller.IsConnected = false;
+               }
+               if (announce)
+               {
+                  Messenger.Default.Send<AnnounceNotificationMessage>(new AnnounceNotificationMessage(announcement));
+               }
+            }
+            // Add any new controllers
+            foreach (GameController newController in newControllers)
+            {
+               settings.GameControllers.Add(newController);
+               if (setActiveController)
+               {
+                  newController.IsActiveGameController = true;
+                  setActiveController = false;
+                  announcement = $"{newController.Name} is now connected and active.";
+               }
+               else
+               {
+                  announcement = $"{newController.Name} is now connected.";
+               }
+               if (announce)
+               {
+                  Messenger.Default.Send<AnnounceNotificationMessage>(new AnnounceNotificationMessage(announcement));
+               }
+            }
+         }
+      }
+
+
+      private static void ProcessDevices(IList<DeviceInstance> devices, TelescopeControlSettings settings, bool announce, ref List<Guid> existingConnectedIds, ref List<Guid> connectedIDs, ref List<GameController> newControllers)
+      {
+         GameController controller;
+         string announcement = "";
+         foreach (DeviceInstance deviceInstance in devices)
+         {
+            controller = settings.GameControllers.Where(c => c.Id == deviceInstance.InstanceGuid).FirstOrDefault();
+            if (controller == null)
+            {
+               controller = new GameController(deviceInstance.InstanceGuid, deviceInstance.ProductName);
+               newControllers.Add(controller);
+            }
+            else
+            {
+               // Remove from list that should be disconnected
+               existingConnectedIds.Remove(controller.Id);
+               if (!controller.IsConnected)
+               {
+                  if (controller.WasActiveGameController)
+                  {
+                     controller.IsActiveGameController = true;
+                     announcement = $"{controller.Name} is now connected and active.";
+                  }
+                  else
+                  {
+                     announcement = $"{controller.Name} is now connected.";
+                  }
+                  if (announce)
+                  {
+                     Messenger.Default.Send<AnnounceNotificationMessage>(new AnnounceNotificationMessage(announcement));
+                  }
+               }
+            }
+            controller.IsConnected = true;
+            connectedIDs.Add(controller.Id);
+         }
+
+      }
+
+      /*
+      public static void UpdateAvailableGameControllers_Old(TelescopeControlSettings settings)
       {
          // Switch off active controller if it is not connected
          foreach (GameController gameController in settings.GameControllers)
@@ -626,60 +765,68 @@ namespace Lunatic.TelescopeController
             gameController.InstanceGuid = Guid.Empty;
          }
 
-         DirectInput directInput = new DirectInput();
-         foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
+         using (DirectInput directInput = new DirectInput())
          {
-            GameController existing = settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
-            if (existing == null)
+            foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
             {
-               settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.ProductName)
+               GameController controller = settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
+               if (controller == null)
                {
-                  InstanceGuid = deviceInstance.InstanceGuid
-               });
+                  controller = new GameController(deviceInstance.ProductGuid, deviceInstance.ProductName)
+                  {
+                     InstanceGuid = deviceInstance.InstanceGuid
+                  };
+                  settings.GameControllers.Add(controller);
+               }
+               else
+               {
+                  controller.IsConnected = true;
+                  controller.InstanceGuid = deviceInstance.InstanceGuid;
+               }
             }
-            else
-            {
-               existing.IsConnected = true;
-               existing.InstanceGuid = deviceInstance.InstanceGuid;
-            }
-         }
 
-         // If Gamepad not found, look for a Joystick
-         foreach (var deviceInstance in directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices))
-         {
-            GameController existing = settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
-            if (existing == null)
+            // If Gamepad not found, look for a Joystick
+            foreach (var deviceInstance in directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices))
             {
-               settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.InstanceName)
+               GameController existing = settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
+               if (existing == null)
                {
-                  InstanceGuid = deviceInstance.InstanceGuid
-               });
-            }
-            else
-            {
-               existing.IsConnected = true;
-               existing.InstanceGuid = deviceInstance.InstanceGuid;
+                  settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.InstanceName)
+                  {
+                     InstanceGuid = deviceInstance.InstanceGuid
+                  });
+               }
+               else
+               {
+                  existing.IsConnected = true;
+                  existing.InstanceGuid = deviceInstance.InstanceGuid;
+               }
             }
          }
          settings.GameControllers.SetActiveGameController();   // or Not
       }
+      */
 
       public static bool IsInstanceConnected(Guid instanceGuid)
       {
-         DirectInput directInput = new DirectInput();
-         return directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices).Any(d => d.InstanceGuid == instanceGuid);
+         using (DirectInput directInput = new DirectInput())
+         {
+            return directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices).Any(d => d.InstanceGuid == instanceGuid);
+         }
       }
 
 
       public static void ListAvailableGameControllers()
       {
-         DirectInput directInput = new DirectInput();
-         System.Diagnostics.Debug.WriteLine("GAME CONTROLLERS");
-         foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
+         using (DirectInput directInput = new DirectInput())
          {
-            System.Diagnostics.Debug.WriteLine($"{deviceInstance.ProductName} - Instance Id: {deviceInstance.InstanceGuid}, instance name: {deviceInstance.InstanceName}");
+            System.Diagnostics.Debug.WriteLine("GAME CONTROLLERS");
+            foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
+            {
+               System.Diagnostics.Debug.WriteLine($"{deviceInstance.ProductName} - Instance Id: {deviceInstance.InstanceGuid}, instance name: {deviceInstance.InstanceName}");
+            }
+            System.Diagnostics.Debug.WriteLine("");
          }
-         System.Diagnostics.Debug.WriteLine("");
       }
 
 

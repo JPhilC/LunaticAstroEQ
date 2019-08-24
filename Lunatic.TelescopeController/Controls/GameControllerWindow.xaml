@@ -38,172 +38,134 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
         WindowStartupLocation="CenterOwner" Topmost="True"
         Style="{DynamicResource PropertyDialogStyle}"
         Loaded="Window_Loaded">
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Skins/MainSkin.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
-    <Grid Margin="10">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*" />
-            <ColumnDefinition Width="5" />
-            <ColumnDefinition Width="3*" />
-            <ColumnDefinition Width="5" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="5"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="5"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="5"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="10"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="5"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="5"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="Friendly name" Style="{StaticResource RedLEDLabel}"/>
-        <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding Controller.Name}" Style="{StaticResource RedLEDTextBox}"/>
-        <TextBlock Grid.Row="2" Text="Command/button mappings" Style="{StaticResource RedLEDLabel}"/>
+   <Window.Resources>
+      <ResourceDictionary>
+         <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="../Skins/MainSkin.xaml" />
+         </ResourceDictionary.MergedDictionaries>
+      </ResourceDictionary>
+   </Window.Resources>
+   <Grid Margin="10">
+      <Grid.ColumnDefinitions>
+         <ColumnDefinition Width="2*" />
+         <ColumnDefinition Width="5" />
+         <ColumnDefinition Width="3*" />
+         <ColumnDefinition Width="5" />
+         <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+         <RowDefinition Height="Auto"/>
+         <RowDefinition Height="5"/>
+         <RowDefinition Height="Auto"/>
+         <RowDefinition Height="5"/>
+         <RowDefinition Height="Auto"/>
+         <RowDefinition Height="5"/>
+         <RowDefinition Height="Auto"/>
+         <RowDefinition Height="10"/>
+         <RowDefinition Height="Auto"/>
+         <RowDefinition Height="5"/>
+         <RowDefinition Height="Auto"/>
+         <RowDefinition Height="5"/>
+         <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+      <TextBlock Grid.Row="0" Text="Friendly name" Style="{StaticResource RedLEDLabel}"/>
+      <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding Controller.Name}" Style="{StaticResource RedLEDTextBox}"/>
+      <TextBlock Grid.Row="2" Text="Command/button mappings" Style="{StaticResource RedLEDLabel}"/>
 
-        <DataGrid Grid.Row="4" Grid.RowSpan="9" ItemsSource="{Binding Controller.ButtonMappings}"
+      <DataGrid Grid.Row="4" Grid.RowSpan="9" ItemsSource="{Binding Controller.ButtonMappings}"
                   IsEnabled="{Binding ControllerConnected}"
                   SelectedItem="{Binding SelectedButtonMapping}"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
                   AutoGenerateColumns="False"
                   Style="{DynamicResource DataGridStyle1}">
-            <!--ColumnHeaderStyle="{DynamicResource DataGridColumnHeaderStyle1}" 
+         <!--ColumnHeaderStyle="{DynamicResource DataGridColumnHeaderStyle1}" 
                   CellStyle="{DynamicResource DataGridCellStyle1}" 
                   RowHeaderStyle="{DynamicResource DataGridRowHeaderStyle1}">-->
-            <i:Interaction.Triggers>
-                <i:EventTrigger EventName="GotFocus">
-                    <i:InvokeCommandAction Command="{Binding SetCurrentSettingCommand}" CommandParameter="{x:Static vm:GameControllerCurrentSetting.Command}"/>
-                </i:EventTrigger>
-            </i:Interaction.Triggers>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80"  Width="*"  />
-                <DataGridTextColumn Header="Button" Binding="{Binding Button}" IsReadOnly="True" MinWidth="80"   Width="*"  />
-                <DataGridTemplateColumn>
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button
+         <i:Interaction.Triggers>
+            <i:EventTrigger EventName="GotFocus">
+               <i:InvokeCommandAction Command="{Binding SetCurrentSettingCommand}" CommandParameter="{x:Static vm:GameControllerCurrentSetting.ButtonCommand}"/>
+            </i:EventTrigger>
+         </i:Interaction.Triggers>
+         <DataGrid.Columns>
+            <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80"  Width="*"  />
+            <DataGridTextColumn Header="Button" Binding="{Binding Name}" IsReadOnly="True" MinWidth="80"   Width="*"  />
+            <DataGridTemplateColumn>
+               <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                     <Button
                                 Style="{StaticResource HyperlinkLikeButton}" Content="Clear"
                                 Command="{Binding DataContext.ClearCommandCommand, RelativeSource={RelativeSource AncestorType=controls:GameControllerWindow}}"
                                 CommandParameter="{Binding}" Margin="10,0">
-                            </Button>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                     </Button>
+                  </DataTemplate>
+               </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+         </DataGrid.Columns>
+      </DataGrid>
 
-        <TextBlock Grid.Row="2" Grid.Column="2" Text="Axis ranges" Style="{StaticResource RedLEDLabel}"/>
+      <TextBlock Grid.Row="2" Grid.Column="2" Text="Axis ranges" Style="{StaticResource RedLEDLabel}"/>
 
-        <DataGrid Grid.Row="4" Grid.Column="2" ItemsSource="{Binding Controller.AxisRanges}"
+      <DataGrid Grid.Row="4" Grid.Column="2" ItemsSource="{Binding Controller.AxisMappings}"
                   IsEnabled="{Binding ControllerConnected}"
-                  SelectedItem="{Binding SelectedAxisRange}"
+                  SelectedItem="{Binding SelectedAxisMapping}"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
-                  AutoGenerateColumns="False" >
-            <i:Interaction.Triggers>
-                <i:EventTrigger EventName="GotFocus">
-                    <i:InvokeCommandAction Command="{Binding SetCurrentSettingCommand}" CommandParameter="{x:Static vm:GameControllerCurrentSetting.AxisRange}"/>
-                </i:EventTrigger>
-            </i:Interaction.Triggers>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  Width="3*" />
-                <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"   Width="3*" />
-                <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80"   Width="3*" />
-                <DataGridCheckBoxColumn Header="Flip" Binding="{Binding SwapDirection, UpdateSourceTrigger=PropertyChanged}" MinWidth="30"   Width="*" />
-                <DataGridTemplateColumn>
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button
-                                Style="{StaticResource HyperlinkLikeButton}" Content="Clear"
-                                Command="{Binding DataContext.ClearAxisRangeCommand, RelativeSource={RelativeSource AncestorType=controls:GameControllerWindow}}"
-                                CommandParameter="{Binding}" Margin="10,0">
-                            </Button>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                  AutoGenerateColumns="False" 
+                Style="{DynamicResource DataGridStyle1}">
+         <i:Interaction.Triggers>
+            <i:EventTrigger EventName="GotFocus">
+               <i:InvokeCommandAction Command="{Binding SetCurrentSettingCommand}" CommandParameter="{x:Static vm:GameControllerCurrentSetting.AxisCommand}"/>
+            </i:EventTrigger>
+         </i:Interaction.Triggers>
+         <DataGrid.Columns>
+            <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80"  Width="*"  />
+            <DataGridTextColumn Header="Axis" Binding="{Binding Name}" IsReadOnly="True" MinWidth="80"   Width="*"  />
+            <DataGridTemplateColumn Header="Reverse" HeaderStyle="{StaticResource DataGridColumnHeaderCentered}">
+               <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                     <CheckBox IsChecked="{Binding ReverseDirection, UpdateSourceTrigger=PropertyChanged}" 
+                               Style="{StaticResource RedLEDCheckBox}"  HorizontalAlignment="Center"
+                               Template="{StaticResource StyleableCheckBoxControlTemplate}"/>
+                  </DataTemplate>
+               </DataGridTemplateColumn.CellTemplate>
 
-        <Grid Grid.Row="6" Grid.Column="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="5" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="5" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="Swap X and Y Axis" Style="{StaticResource RedLEDLabel}"/>
-            <CheckBox Grid.Column="2" IsChecked="{Binding SwapXYAxis}"  
-                      Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}"
-                      />
-            <TextBlock Grid.Column="4" Text="Swap X and Y Rotations" Style="{StaticResource RedLEDLabel}"/>
-            <CheckBox Grid.Column="6" IsChecked="{Binding SwapXYRotation}"  
-                      Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}"/>
-        </Grid>
-        <TextBlock Grid.Column="2" Grid.Row="8" Text="Axis dead zone ranges" Style="{StaticResource RedLEDLabel}"/>
-
-        <DataGrid Grid.Row="10" Grid.Column="2" ItemsSource="{Binding Controller.AxisDeadZones}"
-                  IsEnabled="{Binding ControllerConnected}"
-                  SelectedItem="{Binding SelectedDeadZoneRange}"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  AutoGenerateColumns="False">
-            <i:Interaction.Triggers>
-                <i:EventTrigger EventName="GotFocus">
-                    <i:InvokeCommandAction Command="{Binding SetCurrentSettingCommand}" CommandParameter="{x:Static vm:GameControllerCurrentSetting.DeadZone}"/>
-                </i:EventTrigger>
-            </i:Interaction.Triggers>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True" MinWidth="80"  Width="*" />
-                <DataGridTextColumn Header="Min. value" Binding="{Binding MinimumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
-                <DataGridTextColumn Header="Max. value" Binding="{Binding MaximumValue}" IsReadOnly="True" MinWidth="80"   Width="*" />
-                <DataGridTemplateColumn>
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button
-                                Style="{StaticResource HyperlinkLikeButton}" Content="Clear"
-                                Command="{Binding DataContext.ClearDeadZoneCommand, RelativeSource={RelativeSource AncestorType=controls:GameControllerWindow}}"
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn>
+               <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                     <Button
+                                Style="{StaticResource HyperlinkLikeButton}" Content="Clear" 
+                                Command="{Binding DataContext.ClearCommandCommand, RelativeSource={RelativeSource AncestorType=controls:GameControllerWindow}}"
                                 CommandParameter="{Binding}" Margin="10,0">
-                            </Button>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
-        <Grid Grid.RowSpan="13" Grid.ColumnSpan="3" Background="Black" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <TextBlock Margin="50"
+                     </Button>
+                  </DataTemplate>
+               </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+         </DataGrid.Columns>
+      </DataGrid>
+
+      <Button Grid.Row="6" Grid.Column="2" Content="Link Button" Style="{StaticResource HyperlinkLikeButton}" Height="30"/>
+      <Grid Grid.RowSpan="13" Grid.ColumnSpan="3" Background="Black" HorizontalAlignment="Center" VerticalAlignment="Center">
+         <TextBlock Margin="50"
                    Text="Controller is not responding"
                    Style="{StaticResource RedLEDLabelLargeFading}" 
                        Background="Black"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                    Visibility="{Binding ControllerConnected, Converter={StaticResource ReversedBooleanToVisiblityConverter}}"
                    />
-        </Grid>
-        
-        
-        <DockPanel Grid.Column="4" Grid.RowSpan="13">
-            <StackPanel DockPanel.Dock="Bottom">
-                <Button Content="OK" Margin="0,0,0,10" Command="{Binding SaveChangesAndCloseCommand}" Width="80"/>
-                <Button Content="Cancel" Command="{Binding CancelChangesAndCloseCommand}" Width="80"/>
-            </StackPanel>
-            <TextBlock VerticalAlignment="Top" Width="80" Height="Auto" TextWrapping="Wrap" Padding="10" Style="{StaticResource RedLEDText}"
+      </Grid>
+
+
+      <DockPanel Grid.Column="4" Grid.RowSpan="13">
+         <StackPanel DockPanel.Dock="Bottom">
+            <Button Content="OK" Margin="0,0,0,10" Command="{Binding SaveChangesAndCloseCommand}" Width="80" Template="{DynamicResource ButtonBaseControlTemplate1}" Style="{StaticResource RedButton}"/>
+            <Button Content="Cancel" Command="{Binding CancelChangesAndCloseCommand}" Width="80" Template="{DynamicResource ButtonBaseControlTemplate1}" Style="{StaticResource RedButton}"/>
+         </StackPanel>
+         <TextBlock VerticalAlignment="Top" Width="80" Height="Auto" TextWrapping="Wrap" Padding="10" Style="{StaticResource RedLEDText}"
                        Text="To configure a button click on the command it to trigger then click the button or POV quandrant on the gamepad/joystick. 
                        To configure an axis range click on the axis range then move the matching joystick to it's extremities two or three times.
                        When you are done click the OK button."  Margin="10,10,0,16" FontSize="9" />
-        </DockPanel>
-    </Grid>
+      </DockPanel>
+   </Grid>
 </Window>

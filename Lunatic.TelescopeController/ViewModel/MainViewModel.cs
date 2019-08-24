@@ -779,7 +779,7 @@ End Property
             _Controller = _Settings.GameControllers.ActiveGameController;
             if (_Controller != null)
             {
-               ControllerConnected = GameControllerService.IsInstanceConnected(_Controller.InstanceGuid);
+               ControllerConnected = GameControllerService.IsInstanceConnected(_Controller.Id);
             }
             #endregion
 
@@ -792,15 +792,20 @@ End Property
 
             MessengerInstance.Register<AnnounceNotificationMessage>(this, message => { Announce(message.Notification); });
             MessengerInstance.Register<ErrorNotificationMessage>(this, message => { MessageBox.Show(message.Notification, "Error", MessageBoxButton.OK, MessageBoxImage.Error); });
-            MessengerInstance.Register<NotificationMessage>(this, message => 
+            MessengerInstance.Register<NotificationMessage>(this, message =>
             {
                if (message.Notification == DeviceNotificationService.USBDeviceAddedNotification ||
                      message.Notification == DeviceNotificationService.USBDeviceRemovedNotification)
                {
-                  GameControllerService.UpdateAvailableGameControllers(_Settings);
+                  GameControllerService.UpdateAvailableGameControllers(_Settings, true);
                   RaisePropertyChanged("ActiveGameControllerName");
                   ConfigureGameControllerCommand.RaiseCanExecuteChanged(); ;
                }
+            });
+            MessengerInstance.Register<ActiveGameControllerChangedMessage>(this, message =>
+            {
+               System.Diagnostics.Debug.WriteLine($"Old active controller = {message.OldController?.Name}");
+               System.Diagnostics.Debug.WriteLine($"New active controller = {message.NewController?.Name}");
             });
          }
 
@@ -878,16 +883,16 @@ End Property
                   _Settings.CurrentSite.Longitude);
                DispatcherHelper.CheckBeginInvokeOnUI(() =>
                {
-               if (!double.IsNaN(temp))
-               {
-                  _Settings.CurrentSite.Temperature = temp;
-               }
-               else
-               {
-                      // Temperatures are not available so don't bother trying to update in future
-                      IsWeatherAPIAvailable = false;
-               }
-            });
+                  if (!double.IsNaN(temp))
+                  {
+                     _Settings.CurrentSite.Temperature = temp;
+                  }
+                  else
+                  {
+                     // Temperatures are not available so don't bother trying to update in future
+                     IsWeatherAPIAvailable = false;
+                  }
+               });
             });
          }
       }
@@ -1166,13 +1171,13 @@ End Property
                   Driver = new Telescope();
 
 #else
-                      string driverId = ASCOM.DriverAccess.Telescope.Choose(DriverId);
+                  string driverId = ASCOM.DriverAccess.Telescope.Choose(DriverId);
                   if (!string.IsNullOrEmpty(driverId))
                   {
                      Driver = new ASCOM.DriverAccess.Telescope(driverId);
                      DriverName = Driver.Description;
                      DriverId = driverId; // Triggers a refresh of menu options etc so must happen AFTER updating the driver name.
-                         Connect();
+                     Connect();
                   }
                   else
                   {
@@ -1181,7 +1186,7 @@ End Property
                      DriverId = string.Empty;
                   }
 #endif
-                      RaiseCanExecuteChanged();
+                  RaiseCanExecuteChanged();
                }, () => { return !IsConnected; }));
          }
       }
@@ -1311,7 +1316,7 @@ End Property
                ?? (_StartSlewCommand = new RelayCommand<SlewButton>((button) =>
                {
                   double rate;      // 10 x Sidereal;
-                      switch (button)
+                  switch (button)
                   {
                      case SlewButton.North:
                      case SlewButton.South:
@@ -1615,5 +1620,7 @@ End Property
          }
       }
       #endregion
+
+      
    }
 }

@@ -112,6 +112,9 @@ namespace ASCOM.LunaticAstroEQ.Core
 
       #endregion
 
-
+      public override void Cleanup()
+      {
+         base.Cleanup();
+      }
    }
 }

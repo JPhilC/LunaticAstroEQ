@@ -356,8 +356,9 @@ namespace Lunatic.TelescopeController.ViewModel
                                             SaveSettings();
                                             RaisePropertyChanged("ActiveGameControllerName");
                                          }
+                                         vm.Cleanup();   // Unregister any messages etc.
                                       },
-                                      (controller) => GameControllerService.IsInstanceConnected(controller.InstanceGuid)
+                                      (controller) => GameControllerService.IsInstanceConnected(controller.Id)
 
                                       ));
          }

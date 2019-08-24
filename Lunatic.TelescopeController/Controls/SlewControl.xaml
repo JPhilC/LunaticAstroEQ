@@ -97,9 +97,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -->
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <CheckBox IsChecked="{Binding Settings.ReverseRA}"></CheckBox>
+                <CheckBox IsChecked="{Binding Settings.ReverseRA}" Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}" />
                 <TextBlock Grid.Column="1">RA Reverse</TextBlock>
-                <CheckBox Grid.Column="3" IsChecked="{Binding Settings.ReverseDec}"></CheckBox>
+                <CheckBox Grid.Column="3" IsChecked="{Binding Settings.ReverseDec}" Style="{StaticResource RedLEDCheckBox}"  Template="{StaticResource StyleableCheckBoxControlTemplate}"/>
                 <TextBlock Grid.Column="4">DEC Reverse</TextBlock>
             </Grid>
             <!-- Tracking controls -->

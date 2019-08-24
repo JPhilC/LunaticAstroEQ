@@ -142,31 +142,30 @@
                  IsEnabled="{Binding Path=DataContext.VoicesAvailable, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}"/>
     </DataTemplate>
 
-    <DataTemplate x:Key="GameControllerMappingCollectionDataTemplate">
+    <DataTemplate x:Key="GameControllerButtonMappingCollectionDataTemplate">
         <DockPanel>
             <DataGrid ItemsSource="{Binding Value}"
                       CanUserAddRows="False"
                           CanUserDeleteRows="False"
                           AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80" />
-                    <DataGridTextColumn Header="Button" Binding="{Binding Button}" IsReadOnly="True" MinWidth="80" />
+               <DataGridTextColumn Header="Button" Binding="{Binding Name}" IsReadOnly="True" MinWidth="80" />
+               <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True" MinWidth="80" />
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
     </DataTemplate>
 
-    <DataTemplate x:Key="GameControllerAxisRangeCollectionDataTemplate">
+    <DataTemplate x:Key="GameControllerAxisMappingCollectionDataTemplate">
         <DockPanel>
             <DataGrid ItemsSource="{Binding Value}"
                       CanUserAddRows="False"
                           CanUserDeleteRows="False"
                           AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Axis" Binding="{Binding Axis}" IsReadOnly="True"   />
-                    <DataGridTextColumn Header="Minimum" Binding="{Binding MinimumValue}" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Maximum" Binding="{Binding MaximumValue}" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Flip" Binding="{Binding SwapDirection}" IsReadOnly="True"/>
+               <DataGridTextColumn Header="Axis" Binding="{Binding Name}" IsReadOnly="True"/>
+               <DataGridTextColumn Header="Command" Binding="{Binding Command}" IsReadOnly="True"   />
+                    <DataGridTextColumn Header="Reverse" Binding="{Binding ReversedDirection}" IsReadOnly="True"/>
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
@@ -174,7 +173,7 @@
 
 
     <xctk:EditorDefinitionCollection x:Key="GameControllerPropertyGridPropertyEditors">
-        <xctk:EditorTemplateDefinition TargetProperties="Name,SwapXYAxis,SwapXYRotation">
+        <xctk:EditorTemplateDefinition TargetProperties="Name">
             <xctk:EditorTemplateDefinition.EditingTemplate>
                 <DataTemplate>
                     <xctk:PropertyGridEditorTextBlock Text="{Binding Value}"/>
@@ -183,23 +182,23 @@
         </xctk:EditorTemplateDefinition>
 
 
-        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerMappingCollectionDataTemplate}">
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerButtonMappingCollectionDataTemplate}">
             <xctk:EditorTemplateDefinition.TargetProperties>
-                <xctk:TargetPropertyType Type="{x:Type ld:GameControllerMappingCollection}"/>
+                <xctk:TargetPropertyType Type="{x:Type ld:GameControllerButtonMappingCollection}"/>
             </xctk:EditorTemplateDefinition.TargetProperties>
         </xctk:EditorTemplateDefinition>
 
-        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerAxisRangeCollectionDataTemplate}">
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerAxisMappingCollectionDataTemplate}">
             <xctk:EditorTemplateDefinition.TargetProperties>
-                <xctk:TargetPropertyType Type="{x:Type ld:GameControllerAxisRangeCollection}"/>
+                <xctk:TargetPropertyType Type="{x:Type ld:GameControllerAxisMappingCollection}"/>
             </xctk:EditorTemplateDefinition.TargetProperties>
         </xctk:EditorTemplateDefinition>
 
-        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerMappingCollectionDataTemplate}"
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerButtonMappingCollectionDataTemplate}"
                                        TargetProperties="ActiveButtonMappings">
         </xctk:EditorTemplateDefinition>
-        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerAxisRangeCollectionDataTemplate}"
-                                       TargetProperties="ActiveAxisRanges">
+        <xctk:EditorTemplateDefinition EditingTemplate="{StaticResource GameControllerAxisMappingCollectionDataTemplate}"
+                                       TargetProperties="ActiveAxisMappings">
         </xctk:EditorTemplateDefinition>
 
     </xctk:EditorDefinitionCollection>
@@ -219,9 +218,7 @@
                                 ShowTitle="False" BorderThickness="0">
                 <xctk:PropertyGrid.PropertyDefinitions>
                     <xctk:PropertyDefinition TargetProperties="ActiveButtonMappings,
-                                             ActiveAxisRanges,
-                                             SwapXYAxis,
-                                             SwapXYRotations"/>
+                                             ActiveAxisMappings"/>
                 </xctk:PropertyGrid.PropertyDefinitions>
             </xctk:PropertyGrid>
         </StackPanel>
@@ -267,9 +264,7 @@
                                 ShowTitle="False" BorderThickness="0">
                                 <xctk:PropertyGrid.PropertyDefinitions>
                                     <xctk:PropertyDefinition TargetProperties="ActiveButtonMappings,
-                                                             ActiveAxisRanges,
-                                                             SwapXYAxis,
-                                                             SwapXYRotation"/>
+                                                             ActiveAxisMappings"/>
                                 </xctk:PropertyGrid.PropertyDefinitions>
                             </xctk:PropertyGrid>
                         </Expander>

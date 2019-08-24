@@ -41,9 +41,8 @@ namespace Lunatic.TelescopeController.ViewModel
    public enum GameControllerCurrentSetting
    {
       None,
-      Command,
-      AxisRange,
-      DeadZone
+      ButtonCommand,
+      AxisCommand
    }
 
    /// <summary>
@@ -79,9 +78,9 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private GameControllerCurrentSetting _CurrentSetting;
 
-      private GameControllerMapping _SelectedButtonMapping;
+      private GameControllerButtonMapping _SelectedButtonMapping;
 
-      public GameControllerMapping SelectedButtonMapping
+      public GameControllerButtonMapping SelectedButtonMapping
       {
          get
          {
@@ -89,40 +88,26 @@ namespace Lunatic.TelescopeController.ViewModel
          }
          set
          {
-            _CurrentSetting = GameControllerCurrentSetting.Command;
+            _CurrentSetting = GameControllerCurrentSetting.ButtonCommand;
             Set(ref _SelectedButtonMapping, value);
          }
       }
 
-      private GameControllerAxisRange _SelectedAxisRange;
+      private GameControllerAxisMapping _SelectedAxisMapping;
 
-      public GameControllerAxisRange SelectedAxisRange
+      public GameControllerAxisMapping SelectedAxisMapping
       {
          get
          {
-            return _SelectedAxisRange;
+            return _SelectedAxisMapping;
          }
          set
          {
-            _CurrentSetting = GameControllerCurrentSetting.AxisRange;
-            Set(ref _SelectedAxisRange, value);
+            _CurrentSetting = GameControllerCurrentSetting.AxisCommand;
+            Set(ref _SelectedAxisMapping, value);
          }
       }
 
-      private GameControllerAxisRange _SelectedDeadZoneRange;
-
-      public GameControllerAxisRange SelectedDeadZoneRange
-      {
-         get
-         {
-            return _SelectedDeadZoneRange;
-         }
-         set
-         {
-            _CurrentSetting = GameControllerCurrentSetting.DeadZone;
-            Set(ref _SelectedDeadZoneRange, value);
-         }
-      }
 
       private bool _ControllerConnected = false;
 
@@ -166,7 +151,7 @@ namespace Lunatic.TelescopeController.ViewModel
       {
          _OriginalController = gameController;
          PopProperties();
-         ControllerConnected = GameControllerService.IsInstanceConnected(_OriginalController.InstanceGuid);
+         ControllerConnected = GameControllerService.IsInstanceConnected(_OriginalController.Id);
       }
 
       public async Task StartGameControllerTask()
@@ -179,7 +164,7 @@ namespace Lunatic.TelescopeController.ViewModel
             }
             else if (value.Notification == GameControllerUpdateNotification.ConnectedChanged)
             {
-               ControllerConnected = GameControllerService.IsInstanceConnected(_OriginalController.InstanceGuid);
+               ControllerConnected = GameControllerService.IsInstanceConnected(_OriginalController.Id);
             }
          });
 
@@ -190,81 +175,116 @@ namespace Lunatic.TelescopeController.ViewModel
          {
             await Task.Run(() =>
             {
+               System.Diagnostics.Debug.WriteLine("Game Controller Configuration task STARTED.");
                bool notResponding = false;
                // Initialize DirectInput
-               var directInput = new DirectInput();
-
-               while (true)
+               using (var directInput = new DirectInput())
                {
-                  token.ThrowIfCancellationRequested();
-                  try
+
+                  while (true)
                   {
-                     // Instantiate the joystick
-                     Joystick joystick = new Joystick(directInput, _OriginalController.InstanceGuid);
-                     // Set BufferSize in order to use buffered data.
-                     joystick.Properties.BufferSize = 128;
-
-                     // Acquire the joystick
-                     joystick.Acquire();
-
-
-                     while (true)
+                     token.ThrowIfCancellationRequested();
+                     try
                      {
-                        try
+                        // Instantiate the joystick
+                        using (Joystick joystick = new Joystick(directInput, _OriginalController.Id))
                         {
-                           token.ThrowIfCancellationRequested();
-                           joystick.Poll();
-                           JoystickUpdate[] datas = joystick.GetBufferedData();
-                           // Check for POV as this needs special handling to take the first value
-                           JoystickUpdate povUpdate = datas.Where(s => s.Offset == JoystickOffset.PointOfViewControllers0).OrderBy(s => s.Sequence).FirstOrDefault();
-                           if (povUpdate.Timestamp > 0)
+                           joystick.Properties.Range = new InputRange(-500, 500);
+                           joystick.Properties.DeadZone = 2000;
+                           joystick.Properties.Saturation = 8000;
+                           // Set BufferSize in order to use buffered data.
+                           joystick.Properties.BufferSize = 128;
+
+                           // If configuring populate the joystick objects.
+                           if (_Controller.JoystickObjects.Count == 0)
                            {
-                              if (progress != null)
+                              foreach (DeviceObjectInstance doi in joystick.GetObjects())
                               {
-                                 progress.Report(new GameControllerUpdate(povUpdate));
+                                 JoystickOffset offset;
+                                 if (GameControllerService.USAGE_OFFSET.TryGetValue(doi.Usage, out offset))
+                                 {
+                                    if (((int)doi.ObjectId & (int)DeviceObjectTypeFlags.Axis) != 0)
+                                    {
+                                       _Controller.JoystickObjects.Add(offset, doi.Name);
+                                    }
+                                    else if (((int)doi.ObjectId & (int)DeviceObjectTypeFlags.Button) != 0)
+                                    {
+                                       _Controller.JoystickObjects.Add(offset, doi.Name);
+                                    }
+                                    else if (((int)doi.ObjectId & (int)DeviceObjectTypeFlags.PointOfViewController) != 0)
+                                    {
+                                       _Controller.JoystickObjects.Add(offset, doi.Name);
+                                    }
+                                 }
+
                               }
                            }
-                           else
+
+
+                           // Acquire the joystick
+                           joystick.Acquire();
+
+
+                           while (true)
                            {
-                              foreach (JoystickUpdate state in datas.Where(s => s.Value != -1)) // Just take the down clicks not the up.
+                              try
                               {
-                                 if (progress != null)
+                                 token.ThrowIfCancellationRequested();
+                                 joystick.Poll();
+                                 JoystickUpdate[] datas = joystick.GetBufferedData();
+                                 // Check for POV as this needs special handling to take the first value
+                                 JoystickUpdate povUpdate = datas.Where(s => s.Offset == JoystickOffset.PointOfViewControllers0).OrderBy(s => s.Sequence).FirstOrDefault();
+                                 if (povUpdate.Timestamp > 0)
                                  {
-                                    progress.Report(new GameControllerUpdate(state));
+                                    if (progress != null)
+                                    {
+                                       progress.Report(new GameControllerUpdate(povUpdate));
+                                    }
+                                 }
+                                 else
+                                 {
+                                    foreach (JoystickUpdate state in datas.Where(s => s.Value != -1)) // Just take the down clicks not the up.
+                                    {
+                                       if (progress != null)
+                                       {
+                                          progress.Report(new GameControllerUpdate(state));
+                                       }
+                                    }
+                                 }
+                                 if (notResponding)
+                                 {
+                                    notResponding = false;
+                                    progress.Report(new GameControllerUpdate());
                                  }
                               }
+                              catch (SharpDX.SharpDXException)
+                              {
+                                 notResponding = true;
+                                 progress.Report(new GameControllerUpdate());
+                                 Thread.Sleep(2000);
+                                 break;
+                              }
                            }
-                           if (notResponding)
-                           {
-                              notResponding = false;
-                              progress.Report(new GameControllerUpdate());
-                           }
-                        }
-                        catch (SharpDX.SharpDXException)
-                        {
-                           notResponding = true;
-                           progress.Report(new GameControllerUpdate());
-                           Thread.Sleep(2000);
-                           break;
                         }
                      }
-                  }
-                  catch (SharpDX.SharpDXException)
-                  {
-                     notResponding = true;
-                     progress.Report(new GameControllerUpdate());
-                     Thread.Sleep(2000);
-                  }
+                     catch (SharpDX.SharpDXException)
+                     {
+                        notResponding = true;
+                        progress.Report(new GameControllerUpdate());
+                        Thread.Sleep(2000);
+                     }
 
+                  }
                }
             });
          }
          catch (OperationCanceledException)
          {
+            System.Diagnostics.Debug.WriteLine("Game Controller Configuration task CANCELLED.");
          }
       }
 
-      private void StopGameControllerTask()
+      public void StopGameControllerTask()
       {
          if (_cts != null)
          {
@@ -275,186 +295,59 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private void ProcessUpdate(JoystickUpdate update)
       {
-         GameControllerMapping unsetMapping = null;
-         GameControllerButton button = GameControllerButton.UNMAPPED;
-         int offset = (int)update.Offset;
-         if (_CurrentSetting == GameControllerCurrentSetting.Command && offset >= 48 && offset <= 57)
-         {
-            button = (GameControllerButton)(offset - 48);
-            // Buttons 0 - 9
-            if (SelectedButtonMapping != null)
-            {
-               SelectedButtonMapping.Button = button;
-               unsetMapping = Controller.ButtonMappings.Where(m => m.Command != SelectedButtonMapping.Command && m.Button == button).FirstOrDefault();
-            }
-         }
-         else if (_CurrentSetting == GameControllerCurrentSetting.Command && update.Offset == JoystickOffset.PointOfViewControllers0)
+         GameControllerButtonMapping unsetButtonMapping = null;
+         GameControllerAxisMapping unsetAxisMapping = null;
+         string name = "<Unknown>";
+         _Controller.JoystickObjects.TryGetValue(update.Offset, out name);
+
+         if (_CurrentSetting == GameControllerCurrentSetting.ButtonCommand && update.RawOffset >= 48 && update.RawOffset <= 175)
          {
             if (SelectedButtonMapping != null)
             {
-               // POV 0
-               switch (update.Value)
+               SelectedButtonMapping.JoystickOffset = update.Offset;
+               SelectedButtonMapping.Name = name;
+               unsetButtonMapping = Controller.ButtonMappings.Where(m => m.Command != SelectedButtonMapping.Command && m.JoystickOffset == update.Offset).FirstOrDefault();
+            }
+         }
+         else if (_CurrentSetting == GameControllerCurrentSetting.ButtonCommand && update.RawOffset >= 32 && update.RawOffset <= 44) // POV controls
+         {
+            if (SelectedButtonMapping != null)
+            {
+               GameControllerPOVDirection direction = GameController.GetPOVDirection(update);
+               if (direction != GameControllerPOVDirection.UNMAPPED)
                {
-                  case 0:
-                     button = GameControllerButton.POV_N;
-                     break;
-                  case 4500:
-                     button = GameControllerButton.POV_NE;
-                     break;
-                  case 9000:
-                     button = GameControllerButton.POV_E;
-                     break;
-                  case 13500:
-                     button = GameControllerButton.POV_SE;
-                     break;
-                  case 18000:
-                     button = GameControllerButton.POV_S;
-                     break;
-                  case 22500:
-                     button = GameControllerButton.POV_SW;
-                     break;
-                  case 27000:
-                     button = GameControllerButton.POV_W;
-                     break;
-                  case 31500:
-                     button = GameControllerButton.POV_NW;
-                     break;
-               }
-               if (button != GameControllerButton.UNMAPPED)
-               {
-                  SelectedButtonMapping.Button = button;
-                  unsetMapping = Controller.ButtonMappings.Where(m => m.Command != SelectedButtonMapping.Command && m.Button == button).FirstOrDefault();
+                  SelectedButtonMapping.JoystickOffset = update.Offset;
+                  SelectedButtonMapping.Name = $"{name} ({direction})";
+                  SelectedButtonMapping.POVDirection = direction;
+                  unsetButtonMapping = Controller.ButtonMappings.Where(m => m.Command != SelectedButtonMapping.Command && m.JoystickOffset == update.Offset && m.POVDirection == direction).FirstOrDefault();
                }
             }
          }
-         else if (offset < 20)
+         else if (update.RawOffset <= 20) // Axis
          {
-            GameControllerAxisRange currentRange = null;
-            if (_CurrentSetting == GameControllerCurrentSetting.AxisRange)
+            if (_CurrentSetting == GameControllerCurrentSetting.AxisCommand)
             {
-               currentRange = SelectedAxisRange;
-            }
-            else if (_CurrentSetting == GameControllerCurrentSetting.DeadZone)
-            {
-               currentRange = SelectedDeadZoneRange;
-            }
-
-            if (currentRange != null)
-            {
-               switch (currentRange.Axis)
+               if (SelectedAxisMapping != null)
                {
-                  case GameControllerAxis.X:
-                     if (update.Offset == JoystickOffset.X)
-                     {
-                        if (currentRange.MinimumValue.HasValue)
-                        {
-                           currentRange.MinimumValue = Math.Min(currentRange.MinimumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MinimumValue = update.Value;
-                        }
-                        if (currentRange.MaximumValue.HasValue)
-                        {
-                           currentRange.MaximumValue = Math.Max(currentRange.MaximumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MaximumValue = update.Value;
-                        }
-                     }
-                     break;
-                  case GameControllerAxis.Y:
-                     if (update.Offset == JoystickOffset.Y)
-                     {
-                        if (currentRange.MinimumValue.HasValue)
-                        {
-                           currentRange.MinimumValue = Math.Min(currentRange.MinimumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MinimumValue = update.Value;
-                        }
-                        if (currentRange.MaximumValue.HasValue)
-                        {
-                           currentRange.MaximumValue = Math.Max(currentRange.MaximumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MaximumValue = update.Value;
-                        }
-                     }
-                     break;
-                  case GameControllerAxis.Z:
-                     if (update.Offset == JoystickOffset.Z)
-                     {
-                        if (currentRange.MinimumValue.HasValue)
-                        {
-                           currentRange.MinimumValue = Math.Min(currentRange.MinimumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MinimumValue = update.Value;
-                        }
-                        if (currentRange.MaximumValue.HasValue)
-                        {
-                           currentRange.MaximumValue = Math.Max(currentRange.MaximumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MaximumValue = update.Value;
-                        }
-                     }
-                     break;
-                  case GameControllerAxis.RX:
-                     if (update.Offset == JoystickOffset.RotationX)
-                     {
-                        if (currentRange.MinimumValue.HasValue)
-                        {
-                           currentRange.MinimumValue = Math.Min(currentRange.MinimumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MinimumValue = update.Value;
-                        }
-                        if (currentRange.MaximumValue.HasValue)
-                        {
-                           currentRange.MaximumValue = Math.Max(currentRange.MaximumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MaximumValue = update.Value;
-                        }
-                     }
-                     break;
-                  case GameControllerAxis.RY:
-                     if (update.Offset == JoystickOffset.RotationY)
-                     {
-                        if (currentRange.MinimumValue.HasValue)
-                        {
-                           currentRange.MinimumValue = Math.Min(currentRange.MinimumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MinimumValue = update.Value;
-                        }
-                        if (currentRange.MaximumValue.HasValue)
-                        {
-                           currentRange.MaximumValue = Math.Max(currentRange.MaximumValue.Value, update.Value);
-                        }
-                        else
-                        {
-                           currentRange.MaximumValue = update.Value;
-                        }
-                     }
-                     break;
+                  SelectedAxisMapping.JoystickOffset = update.Offset;
+                  SelectedAxisMapping.Name = name;
+                  unsetAxisMapping = Controller.AxisMappings.Where(m => m.Command != SelectedAxisMapping.Command && m.JoystickOffset == update.Offset).FirstOrDefault();
                }
             }
-
          }
-         if (unsetMapping != null)
+
+         if (unsetButtonMapping != null)
          {
-            unsetMapping.Button = GameControllerButton.UNMAPPED;
+            unsetButtonMapping.JoystickOffset = null;
+            unsetButtonMapping.Name = null;
+            unsetButtonMapping.POVDirection = GameControllerPOVDirection.UNMAPPED;
+         }
+
+         if (unsetAxisMapping != null)
+         {
+            unsetAxisMapping.Name = null;
+            unsetAxisMapping.JoystickOffset = null;
+            unsetAxisMapping.ReverseDirection = false;
          }
       }
 
@@ -462,9 +355,6 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private RelayCommand<GameControllerCurrentSetting> _SetCurrentSettingCommand;
 
-      /// <summary>
-      /// Adds a new chart to the active model
-      /// </summary>
       public RelayCommand<GameControllerCurrentSetting> SetCurrentSettingCommand
       {
          get
@@ -480,67 +370,46 @@ namespace Lunatic.TelescopeController.ViewModel
          }
       }
 
-      private RelayCommand<GameControllerMapping> _ClearCommandCommand;
+      private RelayCommand<GameControllerButtonMapping> _ClearCommandCommand;
 
       /// <summary>
       /// Adds a new chart to the active model
       /// </summary>
-      public RelayCommand<GameControllerMapping> ClearCommandCommand
+      public RelayCommand<GameControllerButtonMapping> ClearCommandCommand
       {
          get
          {
             return _ClearCommandCommand
-                ?? (_ClearCommandCommand = new RelayCommand<GameControllerMapping>(
+                ?? (_ClearCommandCommand = new RelayCommand<GameControllerButtonMapping>(
                                       (mapping) =>
                                       {
-                                         mapping.Button = GameControllerButton.UNMAPPED;
+                                         mapping.JoystickOffset = null;
                                       }
 
                                       ));
          }
       }
 
-      private RelayCommand<GameControllerAxisRange> _ClearAxisRangeCommand;
+      private RelayCommand<GameControllerAxisMapping> _ClearAxisMappingCommand;
 
       /// <summary>
       /// Adds a new chart to the active model
       /// </summary>
-      public RelayCommand<GameControllerAxisRange> ClearAxisRangeCommand
+      public RelayCommand<GameControllerAxisMapping> ClearAxisMappingCommand
       {
          get
          {
-            return _ClearAxisRangeCommand
-                ?? (_ClearAxisRangeCommand = new RelayCommand<GameControllerAxisRange>(
-                                      (range) =>
+            return _ClearAxisMappingCommand
+                ?? (_ClearAxisMappingCommand = new RelayCommand<GameControllerAxisMapping>(
+                                      (mapping) =>
                                       {
-                                         range.MinimumValue = null;
-                                         range.MaximumValue = null;
+                                         mapping.JoystickOffset = null;
                                       }
 
                                       ));
          }
       }
 
-      private RelayCommand<GameControllerAxisRange> _ClearDeadZoneCommand;
-
-      /// <summary>
-      /// Adds a new chart to the active model
-      /// </summary>
-      public RelayCommand<GameControllerAxisRange> ClearDeadZoneCommand
-      {
-         get
-         {
-            return _ClearDeadZoneCommand
-                ?? (_ClearDeadZoneCommand = new RelayCommand<GameControllerAxisRange>(
-                                      (range) =>
-                                      {
-                                         range.MinimumValue = null;
-                                         range.MaximumValue = null;
-                                      }
-
-                                      ));
-         }
-      }
       protected override bool OnSaveCommand()
       {
          StopGameControllerTask();
@@ -557,33 +426,25 @@ namespace Lunatic.TelescopeController.ViewModel
       public void PopProperties()
       {
          _Controller = new GameController(_OriginalController.Id, _OriginalController.Name);
-         _Controller.SwapXYAxis = _OriginalController.SwapXYAxis;
-         _Controller.SwapXYRotation = _OriginalController.SwapXYRotation;
-         foreach (GameControllerMapping originalMapping in _OriginalController.ButtonMappings)
+         foreach (GameControllerButtonMapping originalMapping in _OriginalController.ButtonMappings)
          {
-            GameControllerMapping newMapping = _Controller.ButtonMappings.Where(m => m.Command == originalMapping.Command).FirstOrDefault();
+            GameControllerButtonMapping newMapping = _Controller.ButtonMappings.Where(m => m.Command == originalMapping.Command).FirstOrDefault();
             if (newMapping != null)
             {
-               newMapping.Button = originalMapping.Button;
+               newMapping.JoystickOffset = originalMapping.JoystickOffset;
+               newMapping.Name = originalMapping.Name;
+
             }
          }
-         foreach (GameControllerAxisRange originalRange in _OriginalController.AxisRanges)
+         foreach (GameControllerAxisMapping originalMapping in _OriginalController.AxisMappings)
          {
-            GameControllerAxisRange newRange = _Controller.AxisRanges.Where(r => r.Axis == originalRange.Axis).FirstOrDefault();
-            if (newRange != null)
+            GameControllerAxisMapping newMapping = _Controller.AxisMappings.Where(m => m.Command == originalMapping.Command).FirstOrDefault();
+            if (newMapping != null)
             {
-               newRange.MinimumValue = originalRange.MinimumValue;
-               newRange.MaximumValue = originalRange.MaximumValue;
-               newRange.SwapDirection = originalRange.SwapDirection;
-            }
-         }
-         foreach (GameControllerAxisRange originalRange in _OriginalController.AxisDeadZones)
-         {
-            GameControllerAxisRange newRange = _Controller.AxisDeadZones.Where(r => r.Axis == originalRange.Axis).FirstOrDefault();
-            if (newRange != null)
-            {
-               newRange.MinimumValue = originalRange.MinimumValue;
-               newRange.MaximumValue = originalRange.MaximumValue;
+               newMapping.JoystickOffset = originalMapping.JoystickOffset;
+               newMapping.Name = originalMapping.Name;
+               newMapping.ReverseDirection = originalMapping.ReverseDirection;
+
             }
          }
       }
@@ -592,33 +453,23 @@ namespace Lunatic.TelescopeController.ViewModel
       public void PushProperties()
       {
          _OriginalController.Name = _Controller.Name;
-         _OriginalController.SwapXYAxis = _Controller.SwapXYAxis;
-         _OriginalController.SwapXYRotation = _Controller.SwapXYRotation;
-         foreach (GameControllerMapping newMapping in _Controller.ButtonMappings)
+         foreach (GameControllerButtonMapping newMapping in _Controller.ButtonMappings)
          {
-            GameControllerMapping originalMapping = _OriginalController.ButtonMappings.Where(m => m.Command == newMapping.Command).FirstOrDefault();
+            GameControllerButtonMapping originalMapping = _OriginalController.ButtonMappings.Where(m => m.Command == newMapping.Command).FirstOrDefault();
             if (originalMapping != null)
             {
-               originalMapping.Button = newMapping.Button;
+               originalMapping.JoystickOffset = newMapping.JoystickOffset;
+               originalMapping.Name = newMapping.Name;
             }
          }
-         foreach (GameControllerAxisRange newRange in _Controller.AxisRanges)
+         foreach (GameControllerAxisMapping newMapping in _Controller.AxisMappings)
          {
-            GameControllerAxisRange originalRange = _OriginalController.AxisRanges.Where(r => r.Axis == newRange.Axis).FirstOrDefault();
-            if (originalRange != null)
+            GameControllerAxisMapping originalMapping = _OriginalController.AxisMappings.Where(m => m.Command == newMapping.Command).FirstOrDefault();
+            if (originalMapping != null)
             {
-               originalRange.MinimumValue = newRange.MinimumValue;
-               originalRange.MaximumValue = newRange.MaximumValue;
-               originalRange.SwapDirection = newRange.SwapDirection;
-            }
-         }
-         foreach (GameControllerAxisRange newRange in _Controller.AxisDeadZones)
-         {
-            GameControllerAxisRange originalRange = _OriginalController.AxisDeadZones.Where(r => r.Axis == newRange.Axis).FirstOrDefault();
-            if (originalRange != null)
-            {
-               originalRange.MinimumValue = newRange.MinimumValue;
-               originalRange.MaximumValue = newRange.MaximumValue;
+               originalMapping.JoystickOffset = newMapping.JoystickOffset;
+               originalMapping.Name = newMapping.Name;
+               originalMapping.ReverseDirection = newMapping.ReverseDirection;
             }
          }
       }

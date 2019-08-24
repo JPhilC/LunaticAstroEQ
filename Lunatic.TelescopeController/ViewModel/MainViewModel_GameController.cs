@@ -38,7 +38,7 @@ namespace Lunatic.TelescopeController.ViewModel
          {
             if (value.Notification == GameControllerUpdateNotification.ConnectedChanged)
             {
-               ControllerConnected = GameControllerService.IsInstanceConnected(_Controller.InstanceGuid);
+               ControllerConnected = GameControllerService.IsInstanceConnected(_Controller.Id);
             }
             else if (value.Notification != GameControllerUpdateNotification.JoystickUpdate) {
                ProcessUpdate(value);
@@ -52,6 +52,7 @@ namespace Lunatic.TelescopeController.ViewModel
          {
             await Task.Run(() =>
             {
+               System.Diagnostics.Debug.WriteLine("Game controller command task STARTED.");
                bool notResponding = false;
                // Initialize DirectInput
                var directInput = new DirectInput();
@@ -62,9 +63,13 @@ namespace Lunatic.TelescopeController.ViewModel
                   try
                   {
                      // Instantiate the joystick
-                     Joystick joystick = new Joystick(directInput, _Controller.InstanceGuid);
+                     Joystick joystick = new Joystick(directInput, _Controller.Id);
+                     joystick.Properties.Range = new InputRange(-500, 500);
+                     joystick.Properties.DeadZone = 2000;
+                     joystick.Properties.Saturation = 8000;
                      // Set BufferSize in order to use buffered data.
                      joystick.Properties.BufferSize = 128;
+
 
                      // Acquire the joystick
                      joystick.Acquire();
@@ -91,11 +96,11 @@ namespace Lunatic.TelescopeController.ViewModel
                            {
                               if (buttonUpdates.Any())
                               {
-                                 ProcessButtons(buttonUpdates, progress);
+                                 // ProcessButtons(buttonUpdates, progress);
                               }
                               if (povUpdates.Any())
                               {
-                                 ProcessPOV(povUpdates, progress);
+                                 // ProcessPOV(povUpdates, progress);
                               }
                            }
                         }
@@ -120,6 +125,7 @@ namespace Lunatic.TelescopeController.ViewModel
          }
          catch (OperationCanceledException)
          {
+            System.Diagnostics.Debug.WriteLine("Game controller command task CANCELLED.");
          }
       }
 
@@ -133,12 +139,13 @@ namespace Lunatic.TelescopeController.ViewModel
       }
 
 
+      /*
       private void ProcessButtons(IEnumerable<JoystickUpdate> updates, IProgress<GameControllerUpdate> progress)
       {
          foreach (JoystickUpdate state in updates) // Just take the down clicks not the up.
          {
             GameControllerButton button = (GameControllerButton)(state.RawOffset - 48);
-            GameControllerMapping mapping = Settings.GameControllers.ActiveGameController.ButtonMappings.Where(m => m.Button == button).FirstOrDefault();
+            GameControllerButtonMapping mapping = Settings.GameControllers.ActiveGameController.ButtonMappings.Where(m => m.Button == button).FirstOrDefault();
             if (mapping != null)
             {
                if (state.Value == 0)
@@ -156,7 +163,7 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private void ProcessPOV(IEnumerable<JoystickUpdate> updates, IProgress<GameControllerUpdate> progress)
       {
-         GameControllerMapping previousMapping = null;
+         GameControllerButtonMapping previousMapping = null;
          foreach (JoystickUpdate state in updates) // Just take the down clicks not the up.
          {
             GameControllerButton button = GetPOVButton(state);
@@ -164,7 +171,7 @@ namespace Lunatic.TelescopeController.ViewModel
             {
                continue;
             }
-            GameControllerMapping mapping = Settings.GameControllers.ActiveGameController.ButtonMappings.Where(m => m.Button == button).FirstOrDefault();
+            GameControllerButtonMapping mapping = Settings.GameControllers.ActiveGameController.ButtonMappings.Where(m => m.Button == button).FirstOrDefault();
             if (mapping != null)
             {
                if (state.Value == -1)
@@ -186,45 +193,15 @@ namespace Lunatic.TelescopeController.ViewModel
             }
          }
       }
+      */
 
-      private GameControllerButton GetPOVButton(JoystickUpdate update)
-      {
-         GameControllerButton button = GameControllerButton.UNMAPPED;
-         switch (update.Value)
-         {
-            case 0:
-               button = GameControllerButton.POV_N;
-               break;
-            case 4500:
-               button = GameControllerButton.POV_NE;
-               break;
-            case 9000:
-               button = GameControllerButton.POV_E;
-               break;
-            case 13500:
-               button = GameControllerButton.POV_SE;
-               break;
-            case 18000:
-               button = GameControllerButton.POV_S;
-               break;
-            case 22500:
-               button = GameControllerButton.POV_SW;
-               break;
-            case 27000:
-               button = GameControllerButton.POV_W;
-               break;
-            case 31500:
-               button = GameControllerButton.POV_NW;
-               break;
-         }
-         return button;
-      }
+      
 
 
 
       private void ProcessUpdate(GameControllerUpdate update)
       {
-         System.Diagnostics.Debug.WriteLine($"Controller notification:{update.Notification}, command: {update.Command}");
+         System.Diagnostics.Debug.WriteLine($"Controller notification:{update.Notification}, Commands: Button - [{update.ButtonCommand}], Axis - [{update.AxisCommand}]");
       }
       //else if (offset < 20)
       //{
