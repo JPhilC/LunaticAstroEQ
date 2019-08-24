@@ -334,6 +334,7 @@ namespace Lunatic.TelescopeController.ViewModel
          }
       }
 
+
       private RelayCommand<GameController> _ConfigureGameControllerCommand;
 
       /// <summary>
@@ -344,9 +345,12 @@ namespace Lunatic.TelescopeController.ViewModel
          get
          {
             return _ConfigureGameControllerCommand
-                ?? (_ConfigureGameControllerCommand = new RelayCommand<GameController>(
+                ?? (_ConfigureGameControllerCommand = new RelayCommand<GameController>(async 
                                       (controller) =>
                                       {
+                                         // Stop the main viewmodel game controller task
+                                         StopGameControllerTask();
+
                                          GameControllerViewModel vm = new GameControllerViewModel(controller);
                                          GameControllerWindow controllerWindow = new GameControllerWindow(vm);
                                          controllerWindow.Owner = App.Current.MainWindow;
@@ -357,6 +361,10 @@ namespace Lunatic.TelescopeController.ViewModel
                                             RaisePropertyChanged("ActiveGameControllerName");
                                          }
                                          vm.Cleanup();   // Unregister any messages etc.
+
+                                         // Restart viewmodel controller task
+                                         await StartGameControllerTask();
+
                                       },
                                       (controller) => GameControllerService.IsInstanceConnected(controller.Id)
 

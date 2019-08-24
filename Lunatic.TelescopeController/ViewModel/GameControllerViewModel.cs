@@ -156,7 +156,7 @@ namespace Lunatic.TelescopeController.ViewModel
 
       public async Task StartGameControllerTask()
       {
-         var progressHandler = new Progress<GameControllerUpdate>(value =>
+         var progressHandler = new Progress<GameControllerProgressArgs>(value =>
          {
             if (value.Notification == GameControllerUpdateNotification.JoystickUpdate)
             {
@@ -168,7 +168,7 @@ namespace Lunatic.TelescopeController.ViewModel
             }
          });
 
-         var progress = progressHandler as IProgress<GameControllerUpdate>;
+         var progress = progressHandler as IProgress<GameControllerProgressArgs>;
          _cts = new CancellationTokenSource();
          var token = _cts.Token;
          try
@@ -238,7 +238,7 @@ namespace Lunatic.TelescopeController.ViewModel
                                  {
                                     if (progress != null)
                                     {
-                                       progress.Report(new GameControllerUpdate(povUpdate));
+                                       progress.Report(new GameControllerProgressArgs(povUpdate));
                                     }
                                  }
                                  else
@@ -247,20 +247,20 @@ namespace Lunatic.TelescopeController.ViewModel
                                     {
                                        if (progress != null)
                                        {
-                                          progress.Report(new GameControllerUpdate(state));
+                                          progress.Report(new GameControllerProgressArgs(state));
                                        }
                                     }
                                  }
                                  if (notResponding)
                                  {
                                     notResponding = false;
-                                    progress.Report(new GameControllerUpdate());
+                                    progress.Report(new GameControllerProgressArgs());
                                  }
                               }
                               catch (SharpDX.SharpDXException)
                               {
                                  notResponding = true;
-                                 progress.Report(new GameControllerUpdate());
+                                 progress.Report(new GameControllerProgressArgs());
                                  Thread.Sleep(2000);
                                  break;
                               }
@@ -270,7 +270,7 @@ namespace Lunatic.TelescopeController.ViewModel
                      catch (SharpDX.SharpDXException)
                      {
                         notResponding = true;
-                        progress.Report(new GameControllerUpdate());
+                        progress.Report(new GameControllerProgressArgs());
                         Thread.Sleep(2000);
                      }
 
@@ -432,6 +432,7 @@ namespace Lunatic.TelescopeController.ViewModel
             if (newMapping != null)
             {
                newMapping.JoystickOffset = originalMapping.JoystickOffset;
+               newMapping.POVDirection = originalMapping.POVDirection;
                newMapping.Name = originalMapping.Name;
 
             }
@@ -459,6 +460,7 @@ namespace Lunatic.TelescopeController.ViewModel
             if (originalMapping != null)
             {
                originalMapping.JoystickOffset = newMapping.JoystickOffset;
+               originalMapping.POVDirection = newMapping.POVDirection;
                originalMapping.Name = newMapping.Name;
             }
          }

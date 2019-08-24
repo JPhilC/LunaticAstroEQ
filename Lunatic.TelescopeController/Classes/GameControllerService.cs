@@ -115,6 +115,18 @@ namespace Lunatic.TelescopeController
       SE
    }
 
+   [TypeConverter(typeof(EnumTypeConverter))]
+   public enum GameControllerUpdateNotification
+   {
+      [Description("Connected state changed.")]
+      ConnectedChanged,
+      [Description("Game controller update")]
+      JoystickUpdate,
+      [Description("Command on")]
+      CommandDown,
+      [Description("Command off")]
+      CommandUp,
+   }
 
    public abstract class GameControllerMapping : ObservableObject
    {
@@ -547,42 +559,45 @@ namespace Lunatic.TelescopeController
       }
    }
 
-   public enum GameControllerUpdateNotification
-   {
-      ConnectedChanged,
-      JoystickUpdate,
-      CommandDown,
-      CommandUp,
-   }
 
-   public class GameControllerUpdate
+   public class GameControllerProgressArgs
    {
       public GameControllerUpdateNotification Notification { get; set; }
 
       public JoystickUpdate Update { get; set; }
 
-      public GameControllerButtonCommand ButtonCommand { get; set; }
-      public GameControllerAxisCommand AxisCommand { get; set; }
+      public GameControllerButtonCommand? ButtonCommand { get; set; }
+      public GameControllerAxisCommand? AxisCommand { get; set; }
 
-      public GameControllerUpdate(JoystickUpdate update)
+      public bool Highspeed { get; set; } = false;
+
+      public bool Reverse { get; set; } = false;
+
+      public GameControllerProgressArgs(JoystickUpdate update)
       {
          this.Notification = GameControllerUpdateNotification.JoystickUpdate;
          this.Update = update;
       }
 
-      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerButtonCommand command)
+      public GameControllerProgressArgs(GameControllerUpdateNotification notification, GameControllerButtonCommand command)
       {
          this.Notification = notification;
          this.ButtonCommand = command;
       }
 
-      public GameControllerUpdate(GameControllerUpdateNotification notification, GameControllerAxisCommand command)
+      public GameControllerProgressArgs(GameControllerUpdateNotification notification, GameControllerAxisCommand command)
       {
          this.Notification = notification;
          this.AxisCommand = command;
       }
 
-      public GameControllerUpdate()
+      public GameControllerProgressArgs(GameControllerUpdateNotification notification, GameControllerAxisCommand command, bool reverse, bool highspeed):this(notification, command)
+      {
+         this.Reverse = reverse;
+         this.Highspeed = highspeed;
+      }
+
+      public GameControllerProgressArgs()
       {
          this.Notification = GameControllerUpdateNotification.ConnectedChanged;
       }
@@ -750,86 +765,15 @@ namespace Lunatic.TelescopeController
 
       }
 
-      /*
-      public static void UpdateAvailableGameControllers_Old(TelescopeControlSettings settings)
-      {
-         // Switch off active controller if it is not connected
-         foreach (GameController gameController in settings.GameControllers)
-         {
-            if (gameController.IsActiveGameController)
-            {
-               gameController.WasActiveGameController = true;
-               gameController.IsActiveGameController = false;
-            }
-            gameController.IsConnected = false;
-            gameController.InstanceGuid = Guid.Empty;
-         }
-
-         using (DirectInput directInput = new DirectInput())
-         {
-            foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
-            {
-               GameController controller = settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
-               if (controller == null)
-               {
-                  controller = new GameController(deviceInstance.ProductGuid, deviceInstance.ProductName)
-                  {
-                     InstanceGuid = deviceInstance.InstanceGuid
-                  };
-                  settings.GameControllers.Add(controller);
-               }
-               else
-               {
-                  controller.IsConnected = true;
-                  controller.InstanceGuid = deviceInstance.InstanceGuid;
-               }
-            }
-
-            // If Gamepad not found, look for a Joystick
-            foreach (var deviceInstance in directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices))
-            {
-               GameController existing = settings.GameControllers.Where(c => c.Id == deviceInstance.ProductGuid).FirstOrDefault();
-               if (existing == null)
-               {
-                  settings.GameControllers.Add(new GameController(deviceInstance.ProductGuid, deviceInstance.InstanceName)
-                  {
-                     InstanceGuid = deviceInstance.InstanceGuid
-                  });
-               }
-               else
-               {
-                  existing.IsConnected = true;
-                  existing.InstanceGuid = deviceInstance.InstanceGuid;
-               }
-            }
-         }
-         settings.GameControllers.SetActiveGameController();   // or Not
-      }
-      */
 
       public static bool IsInstanceConnected(Guid instanceGuid)
       {
          using (DirectInput directInput = new DirectInput())
          {
-            return directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices).Any(d => d.InstanceGuid == instanceGuid);
+            return (directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices).Any(d => d.InstanceGuid == instanceGuid)
+                  || directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices).Any(d => d.InstanceGuid == instanceGuid));
          }
       }
-
-
-      public static void ListAvailableGameControllers()
-      {
-         using (DirectInput directInput = new DirectInput())
-         {
-            System.Diagnostics.Debug.WriteLine("GAME CONTROLLERS");
-            foreach (DeviceInstance deviceInstance in directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
-            {
-               System.Diagnostics.Debug.WriteLine($"{deviceInstance.ProductName} - Instance Id: {deviceInstance.InstanceGuid}, instance name: {deviceInstance.InstanceName}");
-            }
-            System.Diagnostics.Debug.WriteLine("");
-         }
-      }
-
-
 
    }
 }

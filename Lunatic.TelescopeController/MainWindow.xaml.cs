@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using Lunatic.TelescopeController.ViewModel;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -79,6 +80,13 @@ namespace Lunatic.TelescopeController
          }
       }
 
+      protected override void OnClosing(CancelEventArgs e)
+      {
+         base.OnClosing(e);
+         _ViewModel.StopGameControllerTask();   // In case the window is closed with the X button.
+      }
+
+
       private void Window_Closed(object sender, EventArgs e)
       {
          _ViewModel.StopGameControllerTask();
@@ -87,7 +95,7 @@ namespace Lunatic.TelescopeController
 
       private async void Windows_Loaded(object sender, RoutedEventArgs e)
       {
-         // await _ViewModel.StartGameControllerTask();
+         await _ViewModel.StartGameControllerTask();
       }
    }
 }

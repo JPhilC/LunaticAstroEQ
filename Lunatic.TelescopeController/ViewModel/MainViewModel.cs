@@ -777,10 +777,6 @@ End Property
             GameControllerService.UpdateAvailableGameControllers(_Settings);
             GameControllersAvailable = _Settings.GameControllers.Any(c => c.IsConnected);
             _Controller = _Settings.GameControllers.ActiveGameController;
-            if (_Controller != null)
-            {
-               ControllerConnected = GameControllerService.IsInstanceConnected(_Controller.Id);
-            }
             #endregion
 
             // Get current temperature via call to OpenWeatherAPI
@@ -802,11 +798,29 @@ End Property
                   ConfigureGameControllerCommand.RaiseCanExecuteChanged(); ;
                }
             });
-            MessengerInstance.Register<ActiveGameControllerChangedMessage>(this, message =>
+
+            MessengerInstance.Register<ActiveGameControllerChangedMessage>(this, async message =>
             {
                System.Diagnostics.Debug.WriteLine($"Old active controller = {message.OldController?.Name}");
                System.Diagnostics.Debug.WriteLine($"New active controller = {message.NewController?.Name}");
+               if (message.OldController != null && _controllerTokenSource != null)
+               {
+                  StopGameControllerTask();
+               }
+               int tryCt = 0;
+               while (_controllerTokenSource != null && tryCt < 10)
+               {
+                  Thread.Sleep(2000);
+                  tryCt++;
+               }
+               _Controller = _Settings.GameControllers.ActiveGameController;
+               if (_Controller != null)
+               {
+                  await StartGameControllerTask();
+               }
             });
+
+
          }
 
       }
