@@ -13,11 +13,65 @@ namespace Lunatic.TelescopeController.ViewModel
 {
    public partial class MainViewModel
    {
+
+      protected class GameControllerButtonCommandState
+      {
+         public GameControllerButtonCommand Command { get; set; }
+
+         public int Value { get; set; }
+
+
+         public int Count { get; set; }
+
+         public long Timestamp { get; set; }
+
+
+         public GameControllerButtonCommandState(GameControllerButtonCommand command, int value)
+         {
+            Command = command;
+            Value = value;
+            Timestamp = DateTime.Now.Ticks;
+         }
+
+         public void Increment()
+         {
+            Count++;
+         }
+
+      }
+
+      protected class GameControllerAxisCommandState
+      {
+         public GameControllerAxisCommand Command { get; set; }
+         public bool Highspeed { get; set; }
+
+         public bool Reverse { get; set; }
+
+         public long Timestamp { get; set; }
+
+         public GameControllerAxisCommandState(GameControllerAxisCommand command, bool highspeed, bool reverse)
+         {
+            Command = command;
+            Highspeed = highspeed;
+            Reverse = reverse;
+            Timestamp = DateTime.Now.Ticks;
+         }
+
+      }
+
+      // Used to record button command states
+      private List<GameControllerButtonCommandState> _ButtomCommandHistory = new List<GameControllerButtonCommandState>();
+
+      // User to record axis command states;
+      private List<GameControllerAxisCommandState> _AxisCommandHistory = new List<GameControllerAxisCommandState>();
+
       private CancellationTokenSource _controllerTokenSource;
 
       private GameController _Controller = null;
 
       private bool _ControllerConnected = false;
+
+      private JoystickUpdate _PreviousPOVState = new JoystickUpdate();
 
       public bool ControllerConnected
       {
@@ -159,49 +213,197 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private void ProcessButtons(GameController controller, IEnumerable<JoystickUpdate> updates, IProgress<GameControllerProgressArgs> progress)
       {
+         System.Diagnostics.Debug.WriteLine($"ProcessButtons, count={updates.Count()})");
          foreach (JoystickUpdate state in updates) // Just take the down clicks not the up.
          {
             GameControllerButtonMapping mapping = controller.ButtonMappings.Where(m => m.JoystickOffset == state.Offset).FirstOrDefault();
-            if (mapping != null)
-            {
-               if (state.Value == 0)
-               {
-                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command));
-               }
-               else
-               {
-                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command));
-               }
-            }
+            // Need to change 0 (button up to -1) so that we can share the same processing methods as the POV.
+            ProcessButtonMapping(mapping, (state.Value == 0 ? -1 : state.Value), progress);
          }
       }
 
       private void ProcessPOVs(GameController controller, IEnumerable<JoystickUpdate> updates, IProgress<GameControllerProgressArgs> progress)
       {
-
-         GameControllerButtonCommand? currentCommand = null;
+         System.Diagnostics.Debug.WriteLine($"ProcessPOVs, count={updates.Count()})");
+         GameControllerPOVDirection previousPOVDirection = GameControllerPOVDirection.UNMAPPED;
+         GameControllerButtonMapping previousMapping = null;
          foreach (JoystickUpdate state in updates)
          {
-            if (state.Value > -1)
+            System.Diagnostics.Debug.WriteLine($"Process state ({state.Value}), previous state timestamp = {_PreviousPOVState.Timestamp}");
+
+            if (_PreviousPOVState.Timestamp != 0)
             {
-               GameControllerPOVDirection povDirection = GameController.GetPOVDirection(state);
-               GameControllerButtonMapping mapping = controller.ButtonMappings.Where(m => m.JoystickOffset == state.Offset && m.POVDirection == povDirection).FirstOrDefault();
-               if (mapping != null)
+               // Get previous stuff
+               previousPOVDirection = GameController.GetPOVDirection(_PreviousPOVState);
+               previousMapping = controller.ButtonMappings.Where(m => m.JoystickOffset == _PreviousPOVState.Offset && m.POVDirection == previousPOVDirection).FirstOrDefault();
+            }
+            GameControllerPOVDirection povDirection = GameController.GetPOVDirection(state);
+            if (povDirection == GameControllerPOVDirection.UNMAPPED)
+            {
+               if (previousMapping != null)
                {
-                  currentCommand = mapping.Command;
-                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, currentCommand.Value));
+                  ProcessButtonMapping(previousMapping, -1, progress);
+               }
+               _PreviousPOVState = new JoystickUpdate();
+            }
+            else
+            {
+               if (povDirection != previousPOVDirection && previousPOVDirection != GameControllerPOVDirection.UNMAPPED)
+               {
+                  // switch from one direction to another without coming up so need to UP the previous mapping.
+                  ProcessButtonMapping(previousMapping, -1, progress);
+               }
+               GameControllerButtonMapping mapping = controller.ButtonMappings.Where(m => m.JoystickOffset == state.Offset && m.POVDirection == povDirection).FirstOrDefault();
+               ProcessButtonMapping(mapping, state.Value, progress);
+               _PreviousPOVState = state;
+            }
+         }
+      }
+
+      private void ProcessButtonMapping(GameControllerButtonMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
+      {
+         if (mapping != null)
+         {
+            switch (mapping.Command)
+            {
+               case GameControllerButtonCommand.Sync:
+                  ProcessDoubleClickButton(mapping, stateValue, progress);
+                  break;
+               case GameControllerButtonCommand.North:
+               case GameControllerButtonCommand.South:
+               case GameControllerButtonCommand.West:
+               case GameControllerButtonCommand.East:
+                  ProcessDownAndUpButtonClick(mapping, stateValue, progress);
+                  break;
+               default:
+                  ProcessCancellableButtonClick(mapping, stateValue, progress);
+                  break;
+            }
+         }
+      }
+
+      /// <summary>
+      /// Processes a button click where the command can be cancelled by holding the button down for more than 2 seconds.
+      /// </summary>
+      private void ProcessCancellableButtonClick(GameControllerButtonMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
+      {
+         System.Diagnostics.Debug.WriteLine("ProcessCancellableButtonClick");
+         long now = DateTime.Now.Ticks;
+         GameControllerButtonCommandState history = _ButtomCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
+         if (history == null || history.Value != stateValue)
+         {
+            // Not seen the command or seen it and the state has changed
+            if (stateValue >= 0)
+            {
+               if (history == null) // Initial command down
+               {
+                  _ButtomCommandHistory.Add(new GameControllerButtonCommandState(mapping.Command, stateValue));
+                  // progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command));
                }
             }
             else
             {
-               if (currentCommand.HasValue)
+               if (history != null)
                {
-                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, currentCommand.Value));
-                  currentCommand = null;
+                  if (now - history.Timestamp < 15E6) // Test to make sure that press is less than 1.5 seconds.Allows command to be cancelled by long hold.
+                  {
+                     progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command));
+                  }
+                  // Remove history record
+                  _ButtomCommandHistory.Remove(history);
                }
             }
          }
       }
+
+      /// <summary>
+      /// Processes a button click where the command can be cancelled by holding the button down for more than 2 seconds.
+      /// </summary>
+      private void ProcessDownAndUpButtonClick(GameControllerButtonMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
+      {
+         System.Diagnostics.Debug.WriteLine($"ProcessDownAndUpButtonClick ({stateValue})");
+         long now = DateTime.Now.Ticks;
+         GameControllerButtonCommandState history = _ButtomCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
+         if (history == null || history.Value != stateValue)
+         {
+            // Not seen the command or seen it and the state has changed
+            if (stateValue >= 0)
+            {
+               if (history == null) // Initial command down
+               {
+                  System.Diagnostics.Debug.WriteLine("Add history, report");
+                  _ButtomCommandHistory.Add(new GameControllerButtonCommandState(mapping.Command, stateValue));
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command));
+               }
+            }
+            else
+            {
+               if (history != null)
+               {
+                  System.Diagnostics.Debug.WriteLine("Remove history, report");
+                  // Remove history record
+                  _ButtomCommandHistory.Remove(history);
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command));
+               }
+            }
+         }
+      }
+
+
+      /// <summary>
+      /// Processes a button click where it must be double clicked within second.
+      /// </summary>
+      private void ProcessDoubleClickButton(GameControllerButtonMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
+      {
+         System.Diagnostics.Debug.WriteLine($"ProcessDoubleClickButton value = {stateValue}");
+         long now = DateTime.Now.Ticks;
+         GameControllerButtonCommandState history = _ButtomCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
+         if (history == null)
+         {
+            // Not seen the command or seen it and the state has changed
+            if (stateValue >= 0)
+            {
+               _ButtomCommandHistory.Add(new GameControllerButtonCommandState(mapping.Command, stateValue));
+            }
+         }
+         else
+         {
+            System.Diagnostics.Debug.WriteLine($"History counter = {history.Count}");
+            if (stateValue >= 0)
+            {
+               if ((now - history.Timestamp) < 10E06)  // Second click must be within 1 second
+               {
+                  // Increment the history count
+                  history.Increment();
+               }
+               history.Timestamp = now;
+            }
+            else
+            {
+               // Button up
+               if (now - history.Timestamp >= 15E6) // Test to make sure that press is less than 1.5 seconds.Allows command to be cancelled by long hold.
+               {
+                  // Remove history record
+                  _ButtomCommandHistory.Remove(history);
+               }
+               else
+               {
+                  if (history.Count > 0)
+                  {
+                     _ButtomCommandHistory.Remove(history);
+                     progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command));
+                  }
+                  else
+                  {
+                     // Update timestamp and value
+                     history.Timestamp = now;
+                     history.Value = stateValue;
+                  }
+               }
+            }
+         }
+      }
+
 
       private void ProcessAxes(GameController controller, IEnumerable<JoystickUpdate> updates, IProgress<GameControllerProgressArgs> progress)
       {
