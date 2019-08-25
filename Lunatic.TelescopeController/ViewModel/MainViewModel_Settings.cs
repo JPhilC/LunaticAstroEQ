@@ -345,7 +345,7 @@ namespace Lunatic.TelescopeController.ViewModel
          get
          {
             return _ConfigureGameControllerCommand
-                ?? (_ConfigureGameControllerCommand = new RelayCommand<GameController>(async 
+                ?? (_ConfigureGameControllerCommand = new RelayCommand<GameController>( 
                                       (controller) =>
                                       {
                                          // Stop the main viewmodel game controller task
@@ -362,9 +362,11 @@ namespace Lunatic.TelescopeController.ViewModel
                                          }
                                          vm.Cleanup();   // Unregister any messages etc.
 
-                                         // Restart viewmodel controller task
-                                         await StartGameControllerTask();
-
+                                         if (IsConnected)
+                                         {
+                                            // Restart viewmodel controller task
+                                            StartGameControllerTask();
+                                         }
                                       },
                                       (controller) => GameControllerService.IsInstanceConnected(controller.Id)
 

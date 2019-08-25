@@ -45,6 +45,7 @@ using System.Windows;
 using System.Windows.Threading;
 using System.Globalization;
 using GalaSoft.MvvmLight.Messaging;
+using System.Threading.Tasks;
 
 namespace Lunatic.TelescopeController.ViewModel
 {
@@ -814,9 +815,9 @@ End Property
                   tryCt++;
                }
                _Controller = _Settings.GameControllers.ActiveGameController;
-               if (_Controller != null)
+               if (_Controller != null && IsConnected)
                {
-                  await StartGameControllerTask();
+                  StartGameControllerTask();
                }
             });
 
@@ -1254,6 +1255,10 @@ End Property
             _DisplayTimer.Start();
             StatusMessage = "Connected to " + DriverName + ".";
             AlignSiteDetails();
+
+            StartGameControllerTask();
+
+
          }
          catch (Exception ex)
          {
@@ -1264,6 +1269,7 @@ End Property
 
       private void Disconnect()
       {
+         StopGameControllerTask();
          _DisplayTimer.Stop();
          _ProcessingDisplayTimerTick = false;
          if (Driver != null)
@@ -1589,6 +1595,24 @@ End Property
 
       #endregion
 
+
+      #region Sync command ...
+      private RelayCommand _SyncCommand;
+
+      public RelayCommand SyncCommand
+      {
+         get
+         {
+            return _SyncCommand
+               ?? (_SyncCommand = new RelayCommand(() =>
+               {
+                  Announce("Sync to target");
+                  // Driver.SyncToTarget();
+               }, () => { return (IsConnected ); }));   // Check that we are connected
+         }
+      }
+
+      #endregion
       #endregion
 
 
@@ -1601,6 +1625,7 @@ End Property
          ParkCommand.RaiseCanExecuteChanged();
          StartTrackingCommand.RaiseCanExecuteChanged();
          GotoCommand.RaiseCanExecuteChanged();
+         SyncCommand.RaiseCanExecuteChanged();
       }
 
 
@@ -1635,6 +1660,6 @@ End Property
       }
       #endregion
 
-      
+
    }
 }

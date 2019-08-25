@@ -95,7 +95,7 @@ namespace Lunatic.TelescopeController
 
       private async void Windows_Loaded(object sender, RoutedEventArgs e)
       {
-         await _ViewModel.StartGameControllerTask();
+         // await _ViewModel.StartGameControllerTask();
       }
    }
 }

@@ -85,19 +85,15 @@ namespace Lunatic.TelescopeController.ViewModel
          }
       }
 
-      public async Task StartGameControllerTask()
+      private GameController _PoledController = null;
+
+      public void StartGameControllerTask()
       {
-         GameController controllerInstance = null;
-         if (_Controller == null)
-         {
-            return;
-         }
-         controllerInstance = _Controller;
          var progressHandler = new Progress<GameControllerProgressArgs>(value =>
          {
             if (value.Notification == GameControllerUpdateNotification.ConnectedChanged)
             {
-               ControllerConnected = GameControllerService.IsInstanceConnected(controllerInstance.Id);
+               ControllerConnected = GameControllerService.IsInstanceConnected(_PoledController.Id);
             }
             else if (value.Notification != GameControllerUpdateNotification.JoystickUpdate)
             {
@@ -110,9 +106,15 @@ namespace Lunatic.TelescopeController.ViewModel
          var token = _controllerTokenSource.Token;
          try
          {
-            await Task.Run(() =>
+            Task.Factory.StartNew(() =>
             {
-               System.Diagnostics.Debug.WriteLine($"Game controller command task STARTED. ({controllerInstance.Name})");
+               if (_Controller == null)
+               {
+                  return;
+               }
+               _PoledController = _Controller;
+               bool cancelled = false;
+               System.Diagnostics.Debug.WriteLine($"Game controller command task STARTED. ({_PoledController.Name})");
                bool notResponding = false;
                // Initialize DirectInput
                using (var directInput = new DirectInput())
@@ -124,7 +126,7 @@ namespace Lunatic.TelescopeController.ViewModel
                      try
                      {
                         // Instantiate the joystick
-                        using (Joystick joystick = new Joystick(directInput, controllerInstance.Id))
+                        using (Joystick joystick = new Joystick(directInput, _PoledController.Id))
                         {
                            joystick.Properties.Range = new InputRange(-10000, 10000);
                            joystick.Properties.DeadZone = 100;
@@ -158,15 +160,15 @@ namespace Lunatic.TelescopeController.ViewModel
                                  {
                                     if (buttonUpdates.Any())
                                     {
-                                       ProcessButtons(controllerInstance, buttonUpdates, progress);
+                                       ProcessButtons(_PoledController, buttonUpdates, progress);
                                     }
                                     if (povUpdates.Any())
                                     {
-                                       ProcessPOVs(controllerInstance, povUpdates, progress);
+                                       ProcessPOVs(_PoledController, povUpdates, progress);
                                     }
                                     if (axisUpdates.Any())
                                     {
-                                       ProcessAxes(controllerInstance, axisUpdates, progress);
+                                       ProcessAxes(_PoledController, axisUpdates, progress);
                                     }
                                  }
                               }
@@ -177,6 +179,13 @@ namespace Lunatic.TelescopeController.ViewModel
                                  Thread.Sleep(2000);
                                  break;
                               }
+                              catch (OperationCanceledException)
+                              {
+                                 System.Diagnostics.Debug.WriteLine($"Game controller command task CANCELLED. ({_PoledController.Name})");
+                                 cancelled = true;
+                                 break;
+                              }
+
                            }
                         }
                      }
@@ -186,18 +195,29 @@ namespace Lunatic.TelescopeController.ViewModel
                         progress.Report(new GameControllerProgressArgs());
                         Thread.Sleep(2000);
                      }
+                     catch (OperationCanceledException)
+                     {
+                        System.Diagnostics.Debug.WriteLine($"Game controller command task CANCELLED. ({_PoledController.Name})");
+                        cancelled = true;
+                        break;
+                     }
 
+                     // Outer loop
+                     if (cancelled)
+                     {
+                        break;
+                     }
                   }
-               }
-            });
+               }  // Using DirectInput
+            }, _controllerTokenSource.Token);
          }
          catch (OperationCanceledException)
          {
-            System.Diagnostics.Debug.WriteLine($"Game controller command task CANCELLED. ({controllerInstance.Name})");
+            System.Diagnostics.Debug.WriteLine($"Game controller command task CANCELLED. ({_PoledController.Name})");
          }
          finally
          {
-            controllerInstance = null;
+            _PoledController = null;
          }
       }
 
@@ -526,6 +546,7 @@ namespace Lunatic.TelescopeController.ViewModel
             if (update.ButtonCommand.HasValue)
             {
                System.Diagnostics.Debug.WriteLine($"==> Command: {update.Notification}, Commands: Button - [{update.ButtonCommand}] <==");
+               HandleButtonCommand(update.ButtonCommand.Value, update.Notification);
             }
             else if (update.AxisCommand.HasValue)
             {
@@ -542,5 +563,44 @@ namespace Lunatic.TelescopeController.ViewModel
       }
 
 
+      private void HandleButtonCommand(GameControllerButtonCommand command, GameControllerUpdateNotification notification)
+      {
+         switch (command)
+         {
+            case GameControllerButtonCommand.UnPark:
+               if (notification == GameControllerUpdateNotification.CommandUp)
+               {
+                  if (ParkCommand.CanExecute(null))
+                  {
+                     if (IsParked)
+                     {
+                        ParkCommand.Execute(null);
+                     }
+                  }
+               }
+               break;
+            case GameControllerButtonCommand.ParkToHome:
+               if (notification == GameControllerUpdateNotification.CommandUp)
+               {
+                  if (ParkCommand.CanExecute(null))
+                  {
+                     if (!IsParked)
+                     {
+                        ParkCommand.Execute(null);
+                     }
+                  }
+               }
+               break;
+            case GameControllerButtonCommand.Sync:
+               if (notification == GameControllerUpdateNotification.CommandUp)
+               {
+                  if (SyncCommand.CanExecute(null))
+                  {
+                        SyncCommand.Execute(null);
+                  }
+               }
+               break;
+         }
+      }
    }
 }
