@@ -126,9 +126,9 @@ namespace Lunatic.TelescopeController.ViewModel
                         // Instantiate the joystick
                         using (Joystick joystick = new Joystick(directInput, controllerInstance.Id))
                         {
-                           joystick.Properties.Range = new InputRange(-5000, 5000);
-                           joystick.Properties.DeadZone = 5;
-                           joystick.Properties.Saturation = 4800;
+                           joystick.Properties.Range = new InputRange(-10000, 10000);
+                           joystick.Properties.DeadZone = 100;
+                           joystick.Properties.Saturation = 9990;
                            // Set BufferSize in order to use buffered data.
                            joystick.Properties.BufferSize = 128;
 
@@ -152,7 +152,7 @@ namespace Lunatic.TelescopeController.ViewModel
                                  }
                                  // Check for POV updates
                                  IEnumerable<JoystickUpdate> povUpdates = datas.Where(s => s.Offset == JoystickOffset.PointOfViewControllers0).OrderBy(s => s.Sequence);
-                                 IEnumerable<JoystickUpdate> axisUpdates = datas.Where(s => s.RawOffset < 20).OrderBy(s => s.Sequence);
+                                 IEnumerable<JoystickUpdate> axisUpdates = datas.Where(s => s.RawOffset <= 20).OrderBy(s => s.Sequence);
                                  IEnumerable<JoystickUpdate> buttonUpdates = datas.Where(s => s.RawOffset >= 48 && s.RawOffset <= 57).OrderBy(s => s.Sequence);
                                  if (progress != null)
                                  {
@@ -213,7 +213,6 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private void ProcessButtons(GameController controller, IEnumerable<JoystickUpdate> updates, IProgress<GameControllerProgressArgs> progress)
       {
-         System.Diagnostics.Debug.WriteLine($"ProcessButtons, count={updates.Count()})");
          foreach (JoystickUpdate state in updates) // Just take the down clicks not the up.
          {
             GameControllerButtonMapping mapping = controller.ButtonMappings.Where(m => m.JoystickOffset == state.Offset).FirstOrDefault();
@@ -224,13 +223,10 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private void ProcessPOVs(GameController controller, IEnumerable<JoystickUpdate> updates, IProgress<GameControllerProgressArgs> progress)
       {
-         System.Diagnostics.Debug.WriteLine($"ProcessPOVs, count={updates.Count()})");
          GameControllerPOVDirection previousPOVDirection = GameControllerPOVDirection.UNMAPPED;
          GameControllerButtonMapping previousMapping = null;
          foreach (JoystickUpdate state in updates)
          {
-            System.Diagnostics.Debug.WriteLine($"Process state ({state.Value}), previous state timestamp = {_PreviousPOVState.Timestamp}");
-
             if (_PreviousPOVState.Timestamp != 0)
             {
                // Get previous stuff
@@ -287,7 +283,6 @@ namespace Lunatic.TelescopeController.ViewModel
       /// </summary>
       private void ProcessCancellableButtonClick(GameControllerButtonMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
       {
-         System.Diagnostics.Debug.WriteLine("ProcessCancellableButtonClick");
          long now = DateTime.Now.Ticks;
          GameControllerButtonCommandState history = _ButtomCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
          if (history == null || history.Value != stateValue)
@@ -321,7 +316,6 @@ namespace Lunatic.TelescopeController.ViewModel
       /// </summary>
       private void ProcessDownAndUpButtonClick(GameControllerButtonMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
       {
-         System.Diagnostics.Debug.WriteLine($"ProcessDownAndUpButtonClick ({stateValue})");
          long now = DateTime.Now.Ticks;
          GameControllerButtonCommandState history = _ButtomCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
          if (history == null || history.Value != stateValue)
@@ -331,7 +325,6 @@ namespace Lunatic.TelescopeController.ViewModel
             {
                if (history == null) // Initial command down
                {
-                  System.Diagnostics.Debug.WriteLine("Add history, report");
                   _ButtomCommandHistory.Add(new GameControllerButtonCommandState(mapping.Command, stateValue));
                   progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command));
                }
@@ -340,7 +333,6 @@ namespace Lunatic.TelescopeController.ViewModel
             {
                if (history != null)
                {
-                  System.Diagnostics.Debug.WriteLine("Remove history, report");
                   // Remove history record
                   _ButtomCommandHistory.Remove(history);
                   progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command));
@@ -355,7 +347,6 @@ namespace Lunatic.TelescopeController.ViewModel
       /// </summary>
       private void ProcessDoubleClickButton(GameControllerButtonMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
       {
-         System.Diagnostics.Debug.WriteLine($"ProcessDoubleClickButton value = {stateValue}");
          long now = DateTime.Now.Ticks;
          GameControllerButtonCommandState history = _ButtomCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
          if (history == null)
@@ -368,7 +359,6 @@ namespace Lunatic.TelescopeController.ViewModel
          }
          else
          {
-            System.Diagnostics.Debug.WriteLine($"History counter = {history.Count}");
             if (stateValue >= 0)
             {
                if ((now - history.Timestamp) < 10E06)  // Second click must be within 1 second
@@ -407,24 +397,125 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private void ProcessAxes(GameController controller, IEnumerable<JoystickUpdate> updates, IProgress<GameControllerProgressArgs> progress)
       {
+         // System.Diagnostics.Debug.WriteLine($"ProcessAxis ({updates.Count()})");
          foreach (JoystickUpdate state in updates) // Just take the down clicks not the up.
          {
-            System.Diagnostics.Debug.WriteLine(state.Value);
             GameControllerAxisMapping mapping = controller.AxisMappings.Where(m => m.JoystickOffset == state.Offset).FirstOrDefault();
-            if (mapping != null)
+            ProcessAxisMapping(mapping, state.Value, progress);
+         }
+      }
+
+      private void ProcessAxisMapping(GameControllerAxisMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
+      {
+         if (mapping != null)
+         {
+            switch (mapping.Command)
             {
-               bool highSpeed = (state.Value <= -4000 || state.Value >= 4000);
-               GameControllerUpdateNotification notification = (state.Value != 0 ? GameControllerUpdateNotification.CommandDown : GameControllerUpdateNotification.CommandUp);
-               bool reverse = (state.Value < 0);
-               if (mapping.ReverseDirection)
+               case GameControllerAxisCommand.SlewNSDualSpeed:
+               case GameControllerAxisCommand.SlewEWDualSpeed:
+                  ProcessDualSpeedAxis(mapping, stateValue, progress);
+                  break;
+
+               case GameControllerAxisCommand.SlewNSHighSpeed:
+               case GameControllerAxisCommand.SlewEWHighSpeed:
+                  ProcessAxis(mapping, stateValue, true, progress);
+                  break;
+               default:
+                  ProcessAxis(mapping, stateValue, false, progress);
+                  break;
+            }
+         }
+
+      }
+
+      private void ProcessDualSpeedAxis(GameControllerAxisMapping mapping, int stateValue, IProgress<GameControllerProgressArgs> progress)
+      {
+         if (mapping != null)
+         {
+            System.Diagnostics.Debug.Write($" {stateValue}");
+            bool highspeed = (stateValue <= -9900 || stateValue >= 9900);
+            bool reverse = (stateValue <= -10);
+            bool stop = (stateValue > -10 && stateValue < 10);
+            if (mapping.ReverseDirection)
+            {
+               System.Diagnostics.Debug.WriteLine("(Reversed direction)");
+               reverse = !reverse;
+            }
+            GameControllerAxisCommandState history = _AxisCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
+            if (history == null)
+            {
+               if (!stop)
                {
-                  reverse = !reverse;
+                  // New command
+                  _AxisCommandHistory.Add(new GameControllerAxisCommandState(mapping.Command, highspeed, reverse));
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command, reverse, highspeed));
                }
-               progress.Report(new GameControllerProgressArgs(notification, mapping.Command, reverse, highSpeed));
+            }
+            else
+            {
+               // See if command has changed
+               if (stop)
+               {
+                  // Issue command up and remove history
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command, history.Reverse, history.Highspeed));
+                  _AxisCommandHistory.Remove(history);
+               }
+               else if (history.Highspeed != highspeed || history.Reverse != reverse)
+               {
+                  // There has been a change of something so stop and restart
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command, history.Reverse, history.Highspeed));
+                  history.Highspeed = highspeed;
+                  history.Reverse = reverse;
+                  if (reverse)
+                  {
+                     System.Diagnostics.Debug.Write("(Reverse)");
+                  }
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command, reverse, highspeed));
+               }
             }
          }
       }
 
+      private void ProcessAxis(GameControllerAxisMapping mapping, int stateValue, bool highspeed, IProgress<GameControllerProgressArgs> progress)
+      {
+         if (mapping != null)
+         {
+            bool reverse = (stateValue <= -10);
+            bool stop = (stateValue > -10 && stateValue < 10);
+            if (mapping.ReverseDirection)
+            {
+               reverse = !reverse;
+            }
+            GameControllerAxisCommandState history = _AxisCommandHistory.Where(h => h.Command == mapping.Command).FirstOrDefault();
+            if (history == null)
+            {
+               if (!stop)
+               {
+                  // New command
+                  _AxisCommandHistory.Add(new GameControllerAxisCommandState(mapping.Command, highspeed, reverse));
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command, reverse, highspeed));
+               }
+            }
+            else
+            {
+               // See if command has changed
+               if (stop)
+               {
+                  // Issue command up and remove history
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command, false, false));
+                  _AxisCommandHistory.Remove(history);
+               }
+               else if (history.Reverse != reverse)
+               {
+                  // There has been a change of something so stop and restart
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandUp, mapping.Command, false, false));
+                  history.Highspeed = highspeed;
+                  history.Reverse = reverse;
+                  progress.Report(new GameControllerProgressArgs(GameControllerUpdateNotification.CommandDown, mapping.Command, highspeed, reverse));
+               }
+            }
+         }
+      }
 
 
 
@@ -434,11 +525,18 @@ namespace Lunatic.TelescopeController.ViewModel
          {
             if (update.ButtonCommand.HasValue)
             {
-               System.Diagnostics.Debug.WriteLine($"Controller notification:{update.Notification}, Commands: Button - [{update.ButtonCommand}], Axis - [{update.AxisCommand}]");
+               System.Diagnostics.Debug.WriteLine($"==> Command: {update.Notification}, Commands: Button - [{update.ButtonCommand}] <==");
             }
             else if (update.AxisCommand.HasValue)
             {
-               System.Diagnostics.Debug.WriteLine($"Controller notification:{update.Notification}, Commands: Axis - [{update.AxisCommand}], highspeed - [{update.Highspeed}], reverse - [{update.Reverse}]");
+               if (update.Notification == GameControllerUpdateNotification.CommandUp)
+               {
+                  System.Diagnostics.Debug.WriteLine($"\n==> Command: Stop - [{update.AxisCommand}] <==");
+               }
+               else
+               {
+                  System.Diagnostics.Debug.WriteLine($"\n==> Command: {(update.Reverse ? "Reverse" : "Forward")} {(update.Highspeed ? "highspeed" : "lowspeed")} - [{update.AxisCommand}] <==");
+               }
             }
          }
       }
