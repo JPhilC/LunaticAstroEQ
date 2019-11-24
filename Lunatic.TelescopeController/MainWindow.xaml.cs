@@ -61,6 +61,26 @@ namespace Lunatic.TelescopeController
          {
             this.Topmost = true;
          }
+
+         // Hook up to the viewmodels close actions
+         if (_ViewModel.SaveAndCloseAction == null)
+         {
+            _ViewModel.SaveAndCloseAction = new Action(() =>
+            {
+               if (_ViewModel.IsConnected)
+               {
+                  MessageBoxResult result = MessageBox.Show("Program is currently connected to your mount. Press OK to confirm that you want to disconnect and close the program.", "Confirm Disconnection", MessageBoxButton.OKCancel, MessageBoxImage.Exclamation);
+                  if (result != MessageBoxResult.OK)
+                  {
+                     return;
+                  }
+                  // Disconnect.
+                  _ViewModel.ConnectCommand.Execute(null);
+               }
+               this.Close();
+            });
+         }
+
       }
 
       private void _ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -80,6 +100,7 @@ namespace Lunatic.TelescopeController
          }
       }
 
+
       protected override void OnClosing(CancelEventArgs e)
       {
          base.OnClosing(e);
@@ -91,6 +112,7 @@ namespace Lunatic.TelescopeController
       {
          _ViewModel.StopGameControllerTask();
          WeakEventManager<MainViewModel, System.ComponentModel.PropertyChangedEventArgs>.RemoveHandler(_ViewModel, "PropertyChanged", _ViewModel_PropertyChanged);
+         _ViewModel.SaveAndCloseAction = null;
       }
 
       private async void Windows_Loaded(object sender, RoutedEventArgs e)
