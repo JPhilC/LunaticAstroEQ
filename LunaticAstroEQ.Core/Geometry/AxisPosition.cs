@@ -203,8 +203,13 @@ namespace ASCOM.LunaticAstroEQ.Core.Geometry
 
       public bool Equals(AxisPosition obj, double toleranceDegrees)
       {
-         return ((Math.Abs(obj.RAAxis.Value - this.RAAxis.Value) < toleranceDegrees)
-            && (Math.Abs(obj.DecAxis.Value - this.DecAxis.Value) < toleranceDegrees));
+         double deltaRA = Math.Abs(obj.RAAxis.Value - this.RAAxis.Value);
+         deltaRA = (deltaRA + 180) % 360 - 180;
+         double deltaDec = Math.Abs(obj.DecAxis.Value - this.DecAxis.Value);
+         deltaDec = (deltaDec + 180) % 360 - 180;
+         System.Diagnostics.Debug.WriteLine($"Delta RA/Dec = {deltaRA:##0.000000000}/{deltaDec:#0.000000000}, Tol: {toleranceDegrees:#0.000000000}");
+         return (deltaRA <= toleranceDegrees
+            && deltaDec <= toleranceDegrees);
       }
 
       public override string ToString()

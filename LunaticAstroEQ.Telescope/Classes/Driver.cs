@@ -76,6 +76,7 @@ namespace ASCOM.LunaticAstroEQ
     /// </summary>
     [Guid("3b88ba0e-c3ed-4154-add1-cab66da84bae")]
     [ProgId("ASCOM.LunaticAstroEQ.Telescope")]
+    [ComVisible(true)]
     [ServedClassName("AstroEQ & Synta telescope mounts")]
     [ClassInterface(ClassInterfaceType.None)]
 #endif

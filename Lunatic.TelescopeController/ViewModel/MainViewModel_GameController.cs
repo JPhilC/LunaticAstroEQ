@@ -558,6 +558,7 @@ namespace Lunatic.TelescopeController.ViewModel
                {
                   System.Diagnostics.Debug.WriteLine($"\n==> Command: {(update.Reverse ? "Reverse" : "Forward")} {(update.Highspeed ? "highspeed" : "lowspeed")} - [{update.AxisCommand}] <==");
                }
+               HandleAxisCommand(update.AxisCommand.Value, update.Notification, update.Reverse, update.Highspeed);
             }
          }
       }
@@ -565,6 +566,7 @@ namespace Lunatic.TelescopeController.ViewModel
 
       private void HandleButtonCommand(GameControllerButtonCommand command, GameControllerUpdateNotification notification)
       {
+         int index;
          switch (command)
          {
             case GameControllerButtonCommand.UnPark:
@@ -596,10 +598,82 @@ namespace Lunatic.TelescopeController.ViewModel
                {
                   if (SyncCommand.CanExecute(null))
                   {
-                        SyncCommand.Execute(null);
+                     SyncCommand.Execute(null);
                   }
                }
                break;
+            case GameControllerButtonCommand.IncrementPreset:
+               index = Settings.SlewRatePresets.IndexOf(Settings.SlewRatePreset);
+               if (index < Settings.SlewRatePresets.Count-1)
+               {
+                  Settings.SlewRatePreset = Settings.SlewRatePresets[index + 1];
+               }
+               break;
+
+            case GameControllerButtonCommand.DecrementPreset:
+               index = Settings.SlewRatePresets.IndexOf(Settings.SlewRatePreset);
+               if (index > 0)
+               {
+                  Settings.SlewRatePreset = Settings.SlewRatePresets[index - 1];
+               }
+               break;
+         }
+      }
+
+
+      private void HandleAxisCommand(GameControllerAxisCommand command, GameControllerUpdateNotification notification, bool reverse, bool highspeed)
+      {
+         if (IsParked || !IsConnected)
+         {
+            return;
+         }
+         ASCOM.DeviceInterface.TelescopeAxes axis = ASCOM.DeviceInterface.TelescopeAxes.axisPrimary;
+         double rate;
+         switch (command)
+         {
+            case GameControllerAxisCommand.SlewNSLowSpeed:
+            case GameControllerAxisCommand.SlewNSHighSpeed:
+            case GameControllerAxisCommand.SlewNSDualSpeed:
+               if (highspeed)
+               {
+                  rate = MaxDecSlewRate * Constants.SIDEREAL_RATE_DEGREES;
+               }
+               else
+               {
+                  rate = Settings.SlewRatePreset.DecRate * Constants.SIDEREAL_RATE_DEGREES;
+               }
+               axis = ASCOM.DeviceInterface.TelescopeAxes.axisSecondary;
+               break;
+
+            case GameControllerAxisCommand.SlewEWLowSpeed:
+            case GameControllerAxisCommand.SlewEWHighSpeed:
+            case GameControllerAxisCommand.SlewEWDualSpeed:
+               if (highspeed)
+               {
+                  rate = MaxRASlewRate * Constants.SIDEREAL_RATE_DEGREES;
+               }
+               else
+               {
+                  rate = Settings.SlewRatePreset.RARate * Constants.SIDEREAL_RATE_DEGREES;
+               }
+               axis = ASCOM.DeviceInterface.TelescopeAxes.axisPrimary;
+               break;
+
+            default:
+               return;
+         }
+         if (notification == GameControllerUpdateNotification.CommandUp)
+         {
+            // Stop slew
+            Driver.MoveAxis(axis, 0.0);
+         }
+         else if (notification == GameControllerUpdateNotification.CommandDown)
+         {
+            if (reverse)
+            {
+               rate = -rate;
+            }
+            Driver.MoveAxis(axis, rate);
          }
       }
    }

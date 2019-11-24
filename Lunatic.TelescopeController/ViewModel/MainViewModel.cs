@@ -946,6 +946,8 @@ End Property
 
             RaisePropertyChanged("IsSlewing");
             RaiseCanExecuteChanged();
+            System.Diagnostics.Debug.WriteLine($"Parked - {IsParked}");
+            System.Diagnostics.Debug.WriteLine($"Slewing - {IsSlewing}");
             _ProcessingDisplayTimerTick = false;
          }
       }
