@@ -27,10 +27,6 @@ namespace Lunatic.TelescopeController
       EmergencyStop,
       [Description("Park To Home")]
       ParkToHome,
-      [Description("Park To User Defined")]
-      ParkToUserDefined,
-      [Description("Park To Current Position")]
-      ParkToCurrentPosition,
       [Description("UnPark")]
       UnPark,
       [Description("Slew North")]
@@ -49,28 +45,16 @@ namespace Lunatic.TelescopeController
       SolarRate,
       [Description("Custom Rate")]
       CustomRate,
+      [Description("Stop Tracking")]
+      StopTracking,
       [Description("Reverse RA")]
       ReverseRA,
       [Description("Reverse Dec")]
       ReverseDec,
-      [Description("Increate RA Rate")]
-      IncreaseRARate,
-      [Description("Decrease RA Rate")]
-      DecreaseRARate,
-      [Description("Increase DEC Rate")]
-      IncreaseDECRate,
-      [Description("Decrease DEC Rate")]
-      DecreaseDECRate,
       [Description("Increment Preset")]
       IncrementPreset,
       [Description("Decrement Preset")]
       DecrementPreset,
-      [Description("Alignment Accept")]
-      AlignmentAccept,
-      [Description("Alignment Cancel")]
-      AlignmentCancel,
-      [Description("Alignment End")]
-      AlignmentEnd,
       [Description("Sync")]
       Sync
    }

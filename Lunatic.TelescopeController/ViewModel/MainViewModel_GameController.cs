@@ -563,6 +563,7 @@ namespace Lunatic.TelescopeController.ViewModel
          }
       }
 
+      #region Handling controller buttons ...
 
       private void HandleButtonCommand(GameControllerButtonCommand command, GameControllerUpdateNotification notification)
       {
@@ -604,12 +605,11 @@ namespace Lunatic.TelescopeController.ViewModel
                break;
             case GameControllerButtonCommand.IncrementPreset:
                index = Settings.SlewRatePresets.IndexOf(Settings.SlewRatePreset);
-               if (index < Settings.SlewRatePresets.Count-1)
+               if (index < Settings.SlewRatePresets.Count - 1)
                {
                   Settings.SlewRatePreset = Settings.SlewRatePresets[index + 1];
                }
                break;
-
             case GameControllerButtonCommand.DecrementPreset:
                index = Settings.SlewRatePresets.IndexOf(Settings.SlewRatePreset);
                if (index > 0)
@@ -617,9 +617,88 @@ namespace Lunatic.TelescopeController.ViewModel
                   Settings.SlewRatePreset = Settings.SlewRatePresets[index - 1];
                }
                break;
+            case GameControllerButtonCommand.EmergencyStop:
+               if (notification == GameControllerUpdateNotification.CommandUp)
+               {
+                  if (StopSlewCommand.CanExecute(SlewButton.Stop))
+                  {
+                     StopSlewCommand.Execute(SlewButton.Stop);
+                  }
+               }
+               break;
+            case GameControllerButtonCommand.North:
+               HandleSlewButton(SlewButton.North, notification);
+               break;
+            case GameControllerButtonCommand.South:
+               HandleSlewButton(SlewButton.South, notification);
+               break;
+            case GameControllerButtonCommand.East:
+               HandleSlewButton(SlewButton.East, notification);
+               break;
+            case GameControllerButtonCommand.West:
+               HandleSlewButton(SlewButton.West, notification);
+               break;
+            case GameControllerButtonCommand.ReverseRA:
+               if (notification == GameControllerUpdateNotification.CommandUp)
+               {
+                  Settings.ReverseRA = !Settings.ReverseRA;
+               }
+               break;
+            case GameControllerButtonCommand.ReverseDec:
+               if (notification == GameControllerUpdateNotification.CommandUp)
+               {
+                  Settings.ReverseDec = !Settings.ReverseDec;
+               }
+               break;
+            case GameControllerButtonCommand.SiderealRate:
+               HandleStartStopTrackingButton(TrackingMode.Sidereal, notification);
+               break;
+            case GameControllerButtonCommand.LunarRate:
+               HandleStartStopTrackingButton(TrackingMode.Lunar, notification);
+               break;
+            case GameControllerButtonCommand.SolarRate:
+               HandleStartStopTrackingButton(TrackingMode.Solar, notification);
+               break;
+            case GameControllerButtonCommand.CustomRate:
+               HandleStartStopTrackingButton(TrackingMode.Custom, notification);
+               break;
+            case GameControllerButtonCommand.StopTracking:
+               HandleStartStopTrackingButton(TrackingMode.Stop, notification);
+               break;
+
          }
       }
 
+      private void HandleStartStopTrackingButton(TrackingMode mode, GameControllerUpdateNotification notification)
+      {
+         if (notification == GameControllerUpdateNotification.CommandUp)
+         {
+            if (StartTrackingCommand.CanExecute(mode))
+            {
+               StartTrackingCommand.Execute(mode);
+            }
+         }
+      }
+
+      private void HandleSlewButton(SlewButton button, GameControllerUpdateNotification notification)
+      {
+         if (notification == GameControllerUpdateNotification.CommandUp)
+         {
+            if (StopSlewCommand.CanExecute(button))
+            {
+               StopSlewCommand.Execute(button);
+            }
+         }
+         else if (notification == GameControllerUpdateNotification.CommandDown)
+         {
+            if (StartSlewCommand.CanExecute(button))
+            {
+               StartSlewCommand.Execute(button);
+            }
+         }
+      }
+
+      #endregion
 
       private void HandleAxisCommand(GameControllerAxisCommand command, GameControllerUpdateNotification notification, bool reverse, bool highspeed)
       {
